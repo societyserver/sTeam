@@ -21,8 +21,9 @@
 constant cvs_version="$Id: applauncher.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
 
-void upload(object editor, string file, int last_mtime, object obj, object xslobj)
+void upload(object editor, string file, int last_mtime, object obj, object xslobj, function|void exit_callback)
 {
+  int exit_status = editor->status();
   int new_mtime=file_stat(file)->mtime;
   if(new_mtime > last_mtime)
   {
@@ -39,8 +40,10 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
       Process.create_process(({ "screen", "-X", "wall", message }));
     }
   }
-  if(!editor->status())
-    call_out(upload, 1, editor, file, new_mtime, obj, xslobj);
+  if(exit_status != 2)
+    call_out(upload, 1, editor, file, new_mtime, obj, xslobj, exit_callback);
+  else if (exit_callback)
+    exit_callback(editor->wait());
 }
 
 
@@ -59,13 +62,14 @@ array edit(object obj)
   Stdio.write_file(dir+"/"+filename, content||"", 0600);
   
   //array command=({ "screen", "-X", "screen", "vi", dir+"/"+filename });
-  array command=({ "vim", "--servername", "VIM", "--remote-wait", dir+"/"+filename });
+  //array command=({ "vim", "--servername", "VIM", "--remote-wait", dir+"/"+filename });
+  array command=({ getenv("EDITOR")||"vim", dir+"/"+filename });
   object editor=Process.create_process(command,
-                                     ([ "cwd":dir, "env":getenv() ]));
+                                     ([ "cwd":dir, "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
   return ({ editor, dir+"/"+filename });
 } 
 
-int applaunch(object obj)
+int applaunch(object obj, function exit_callback)
 {
   object xslobj;
   if(obj->get_identifier()[sizeof(obj->get_identifier())-8..]==".xsl.xml")
@@ -81,8 +85,7 @@ int applaunch(object obj)
   mixed status;
   //while(!(status=editor->status()))
 
-  if(!editor->status())
-    call_out(upload, 1, editor, file, file_stat(file)->mtime, obj, xslobj);
+  call_out(upload, 1, editor, file, file_stat(file)->mtime, obj, xslobj, exit_callback);
 
 //  signal(signum("SIGINT"), prompt);
   return -1;
