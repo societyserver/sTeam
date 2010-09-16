@@ -1296,7 +1296,7 @@ mapping response_noaccess(object obj, mapping vars)
 
 
     // on the admin port users are already logged in - so just show no access
-    if ( this_user() == _GUEST )
+    if ( this_user() == _GUEST && (__admin_port || !_Server->query_config("secure_credentials")) )
       result->error = 401;
     else
       result->error = (__admin_port ? 403 : 
