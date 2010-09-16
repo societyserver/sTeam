@@ -65,6 +65,7 @@ void install_spm(object spmModule, string pname)
 
 static void check_spms()
 {
+  call_out(check_spms, 86400); // once a day ought to be enough!
   object _spm = connection->send_cmd( 0, "get_module", "SPM" );
   if ( !objectp(_spm) )
     werror("Failed to find SPM Module !\n");
@@ -78,7 +79,6 @@ static void check_spms()
         werror( "Error while installing %s : %O\n%O", file, err[0], err[1] );
     }
   }
-  call_out(check_spms, 30);
 }
 
 static void run()
