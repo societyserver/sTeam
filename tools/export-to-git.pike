@@ -119,37 +119,37 @@ void get_object(object obj)
              versions = ([ 1:obj ]);
          }
 
-             array this_history = ({});
-             foreach(versions; int nr; object version)
-             {
-                 this_history += ({ ([ "obj":version, "version":nr, "time":version->query_attribute("OBJ_LAST_CHANGED") ]) });
-             }
-             sort(this_history->version, this_history);
-             this_history += ({ ([ "obj":obj, "version":this_history[-1]->version+1, "time":obj->query_attribute("OBJ_LAST_CHANGED") ]) });
-             
-             int timestamp = 0;
-             string oldname;
-             foreach(this_history; int nr; mapping version)
-             {
-                string newname;
-                if (version->obj->query_attribute("OBJ_VERSIONOF"))
-                    newname = version->obj->query_attribute("OBJ_VERSIONOF")->query_attribute("OBJ_PATH");
-                else
-                    newname = version->obj->query_attribute("OBJ_PATH");
-                if (oldname && oldname != newname)
-                {
-                    werror("rename %s -> %s\n", oldname, newname);
-                    version->oldname = oldname;
-                }
-                oldname = newname;
-                version->name = newname;
-                if (timestamp > version->obj->query_attribute("OBJ_LAST_CHANGED"))
-                {
-                   werror("timeshift! %d -> %d\n", timestamp, version->obj->query_attribute("OBJ_LAST_CHANGED"));
-                }
-             }
-             history += this_history[1..];
-             export_and_add(this_history[0]); 
+         array this_history = ({});
+         foreach(versions; int nr; object version)
+         {
+             this_history += ({ ([ "obj":version, "version":nr, "time":version->query_attribute("OBJ_LAST_CHANGED"), "path":obj->query_attribute("OBJ_PATH") ]) });
+         }
+         sort(this_history->version, this_history);
+         this_history += ({ ([ "obj":obj, "version":this_history[-1]->version+1, "time":obj->query_attribute("OBJ_LAST_CHANGED"), "path":obj->query_attribute("OBJ_PATH") ]) });
+         
+         int timestamp = 0;
+         string oldname;
+         foreach(this_history; int nr; mapping version)
+         {
+            string newname;
+            if (version->obj->query_attribute("OBJ_VERSIONOF"))
+                newname = version->obj->query_attribute("OBJ_VERSIONOF")->query_attribute("OBJ_PATH");
+            else
+                newname = version->obj->query_attribute("OBJ_PATH");
+            if (oldname && oldname != newname)
+            {
+                werror("rename %s -> %s\n", oldname, newname);
+                version->oldname = oldname;
+            }
+            oldname = newname;
+            version->name = newname;
+            if (timestamp > version->obj->query_attribute("OBJ_LAST_CHANGED"))
+            {
+               werror("timeshift! %d -> %d\n", timestamp, version->obj->query_attribute("OBJ_LAST_CHANGED"));
+            }
+         }
+         history += this_history[1..];
+         export_and_add(this_history[0]); 
     }
     if (obj->get_object_class() & CLASS_CONTAINER && obj->query_attribute("OBJ_PATH") != "/home")
     {
@@ -167,13 +167,30 @@ void export_and_add(mapping doc)
     string content = doc->obj->get_content();
     if (!content)
         return;
-    Stdio.write_file(options->dest+doc->name, content);
-    Process.create_process(({ "git", "add", options->dest+doc->name }), ([ "cwd":options->dest ]))->wait();
+    string actual;
+    object err = catch
+    {
+        Stdio.write_file(options->dest+doc->name, content);
+        actual = doc->name;
+    };
+    if (err)
+    {
+        Stdio.write_file(options->dest+doc->path, content);
+        actual = doc->path;
+    }
+    Process.create_process(({ "git", "add", options->dest+actual }), ([ "cwd":options->dest ]))->wait();
 }
 
-void commit(string message)
+string commit(string message)
 {
-    Process.create_process(({ "git", "commit", "-m", message }), ([ "cwd":options->dest ]))->wait();
+    Stdio.File output = Stdio.File();
+    int errno = Process.create_process(({ "git", "commit", "-m", message }), ([ "cwd":options->dest, "stdout":output->pipe() ]))->wait();
+    output->read();
+    if (!errno)
+    {
+      Process.create_process(({ "git", "rev-parse", "HEAD" }), ([ "cwd":options->dest, "stdout":output->pipe() ]))->wait();
+      return output->read();
+    } 
 }
 
 int main(int argc, array(string) argv)
@@ -188,7 +205,7 @@ int main(int argc, array(string) argv)
         export_and_add(doc);
         // commitmessage: name, version nr, object_id
         string message = sprintf("%s - %d - %d", doc->obj->get_identifier(), doc->obj->get_object_id(), doc->version);
-        commit(message);
-        // FIXME: get hash and add to object.
+        string hash = commit(message)-"\n";
+        doc->obj->set_attribute("git-version", hash);
     }
 }
