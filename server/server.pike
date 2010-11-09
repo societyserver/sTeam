@@ -1901,13 +1901,13 @@ void load_objects()
     ASSERTINFO(admin->get_permission() == ROLE_ALL_ROLES, 
 	       "Wrong permissions for admin group !");
 
-    object groups = _Persistence->lookup_group("PrivGroups");
+    object groups = _Persistence->lookup_group("Groups");
     if ( !objectp(groups) ) {
-        MESSAGE("** Creating PrivGroups");
+        MESSAGE("** Creating Groups");
 	factory = get_factory(CLASS_GROUP);
-	vars["name"] = "PrivGroups";
+	vars["name"] = "Groups";
 	groups = factory->execute(vars);
-	ASSERTINFO(objectp(groups), "Failed to create PrivGroups user group!");
+	ASSERTINFO(objectp(groups), "Failed to create Groups user group!");
 	groups->set_attribute(OBJ_DESC, 
 			      "The group to create private groups in.");
 	groups->sanction_object(steam, SANCTION_INSERT|SANCTION_READ);
