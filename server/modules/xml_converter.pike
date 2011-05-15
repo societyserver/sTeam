@@ -1280,7 +1280,7 @@ string get_acquired_access(object obj)
  * @return xml description of the given function or object.
  * @author Thomas Bopp (astra@upb.de) 
  */
-string describe_acquire(function|object|int acquire)
+string describe_acquire(function|object|string acquire)
 {
     if ( functionp(acquire) && acquire == THIS->obj->get_environment ) 
     {
@@ -1289,7 +1289,7 @@ string describe_acquire(function|object|int acquire)
 	    return "<function><name>get_environment</name><id>"+
 		acquire->get_object_id()+ "</id></function>\n";
     }
-    else if ( intp(acquire) && acquire == REG_ACQ_ENVIRONMENT )
+    else if ( stringp(acquire) && acquire == REG_ACQ_ENVIRONMENT )
 	return "<function><name>get_environment</name></function>";
     else if ( objectp(acquire) )
 	return compose_scalar(acquire);

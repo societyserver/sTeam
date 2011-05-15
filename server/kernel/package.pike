@@ -332,7 +332,7 @@ mapping get_components()
 static void
 pck_reg_attribute(object obj, int|string key, mixed def, mixed acq)
 {
-    if ( intp(acq) && acq == REG_ACQ_ENVIRONMENT )
+    if ( stringp(acq) && acq == REG_ACQ_ENVIRONMENT )
 	obj->set_acquire_attribute(key, obj->get_environment);
     else if ( objectp(acq) ) {
 	if ( obj->get_object_id() != acq->get_object_id() )
