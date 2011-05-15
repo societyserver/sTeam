@@ -769,12 +769,12 @@ bool set_attributes(mapping attr)
     return true;
 }
 
-static void do_set_acquire_attribute(mixed index, void|object|function|int acquire)
+static void do_set_acquire_attribute(mixed index, void|object|function|string acquire)
 {
     object acq;
 
     // quick and dirty hack, because protocoll cannot send functions
-    if ( intp(acquire) && acquire == REG_ACQ_ENVIRONMENT )
+    if ( stringp(acquire) && acquire == REG_ACQ_ENVIRONMENT )
       acquire = get_environment;
 
     if ( functionp(acquire) ) 
