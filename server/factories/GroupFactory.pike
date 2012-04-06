@@ -47,6 +47,7 @@ static void init_factory()
 				 CMD_TYPE_ARRAY, ({ }), 0, CONTROL_ATTR_USER,
 				 EVENT_ATTRIBUTES_QUERY, EVENT_ATTRIBUTES_CHANGE));
     register_attribute(UserAttribute(GROUP_WORKROOM,"workroom",CMD_TYPE_OBJECT,0));
+    register_attribute(UserAttribute(GROUP_PUBLICROOM,"workroom",CMD_TYPE_OBJECT,0));
     register_attribute(UserAttribute(GROUP_CALENDAR,"calendar",CMD_TYPE_OBJECT,0));
     register_attribute(UserAttribute(GROUP_MAXSIZE,"Group Maximum Pending Size",
 				     CMD_TYPE_INT, 0));

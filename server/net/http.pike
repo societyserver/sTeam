@@ -34,10 +34,17 @@ import httplib;
 #define DEBUG_HTTP
 
 #ifdef DEBUG_HTTP
-#define HTTP_DEBUG(s, args...) get_module("log")->log_debug("http", s, args)
+// #define HTTP_DEBUG(s, args...) get_module("log")->log_debug("http", s, args)
+#define HTTP_DEBUG(s, args...) debug_http("http", s, args)
 #else
 #define HTTP_DEBUG(s, args...)
 #endif
+
+mixed debug_http(string type, string s, mixed ... args)
+{
+    werror(sprintf("%s: %s\n", type, s), @args);
+    return get_module("log")->log_debug("http", s, args);
+}
 
 object                    _fp;
 static object      __notfound;
@@ -818,6 +825,7 @@ mapping run_request(object req)
 {
     mapping result = ([ ]);
     mixed              err;
+    string host = (req->request_headers->host || _Server->get_server_name());
 
 
     // see if the server is ready for requests
@@ -846,7 +854,8 @@ mapping run_request(object req)
     //  find the requested object
     req->not_query = url_to_string(req->not_query);
     not_query = req->not_query;
-    req->not_query = rewrite_url(req->not_query, req->request_headers);
+//    if (!__admin_port)
+//      req->not_query = rewrite_url(req->not_query, req->request_headers);
 
 
     // cookie based authorization
@@ -894,7 +903,8 @@ mapping run_request(object req)
       return result;
     }
 
-    object obj = _fp->path_to_object(req->not_query);
+    HTTP_DEBUG("run_request(): calling %O->url_to_object(%O,%O)", _fp, host, req->not_query);
+    object obj = _fp->url_to_object(req->not_query, host);
     if ( !objectp(obj) ) {
       obj = _fp->path_to_object(req->not_query, 1);
     }
@@ -1049,7 +1059,7 @@ string rewrite_url(string url, mapping headers)
     // http://steam.uni-paderborn.de : /steam
     if ( mappingp(virtual_hosts) ) {
       foreach(indices(virtual_hosts), string host) 
-	if ( search(headers->host, host) >= 0 )
+	if ( search(headers->host, host) >= 0 && _fp->path_to_object(virtual_hosts[host] + url))
 	  return virtual_hosts[host] + url;
     }
     return url;
@@ -1654,6 +1664,7 @@ int get_last_response()
     return __touch; 
 }
 
+string get_vhost(){ return __request->request_headers->host; }
 string get_socket_name() { return "http"; }
 int is_closed() { return __finished; }
 int get_client_features() { return 0; }
