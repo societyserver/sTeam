@@ -2005,7 +2005,7 @@ void load_objects()
     if ( objectp(home) ) {
 	home->set_attribute(OBJ_NAME, "home");
 	home->move(room);
-	catch(home->set_attribute(OBJ_URL, "/home"));
+	catch(home->set_attribute(OBJ_URL, "/"));
     }
     MESSAGE("Placing WIKI module");
     object wiki = get_module("wiki");
