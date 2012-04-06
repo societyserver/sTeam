@@ -921,12 +921,14 @@ mapping run_request(object req)
 	else
 	    m->type = "content";
     }
-    if ( m->type == "content" ) {
-      if ( objectp(obj) && obj->get_object_class() & CLASS_LINK ) {
-	if ( objectp(obj->get_link_object()) )
-	  obj = obj->get_link_object();
-      }
-    }
+    // don't silently replace link objects with the destination,
+    // the context of the link object is needed to properly display the content with a stylesheet.
+    //if ( m->type == "content" ) {
+    //  if ( objectp(obj) && obj->get_object_class() & CLASS_LINK ) {
+    //    if ( objectp(obj->get_link_object()) )
+    //      obj = obj->get_link_object();
+    //  }
+    //}
 
     object _obj = obj;
     if ( m->object ) 
