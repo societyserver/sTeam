@@ -24,6 +24,7 @@ inherit "/kernel/module";
 #include <attributes.h>
 #include <access.h>
 
+#define MODULE_VERSION "0.3"
 //! The rss module return rss code for objects in steam.
 //! It is also able to read and parse external rss streams
 
@@ -131,8 +132,8 @@ string rss_document(object o, string mode, object fp, string server)
   link = server + link;
   
   rss = "<item>\n"+
-    " <title>"+o->get_identifier() + "</title>\n"+
-    " <description>"+o->query_attribute(OBJ_DESC)+"</description>\n"+
+    " <title>"+ (o->query_attribute(OBJ_DESC)||o->get_identifier()) + "</title>\n"+
+    //" <description>"+o->query_attribute(OBJ_DESC)+"</description>\n"+
     " <link>"+link+"</link>\n";
   if ( mode == "2.0" ) {
     rss +=
@@ -249,7 +250,7 @@ mixed rss(object obj, void|object fp, string|void v, mapping|void vars)
     "<description>"+obj->query_attribute(OBJ_DESC)+"</description>\n"+
     "<link>"+server+fp->object_to_filename(obj)+"</link>\n";
   
-  rss += "<generator>http://societyserver.org/scripts/rss.pike?module_version=0.2</generator>\n";
+  rss += "<generator>http://societyserver.org/scripts/rss.pike?module_version="+MODULE_VERSION+"</generator>\n";
   
   array inv;
   
