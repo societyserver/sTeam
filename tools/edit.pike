@@ -43,6 +43,8 @@ int main(int argc, array(string) argv)
     file = _Server->get_module("filepath:tree")->path_to_object(options->file);
   else // FIXME: try to find out how to use relative paths
     file = _Server->get_module("filepath:tree")->path_to_object(options->file);
+  if (file->get_class() == "Link")
+      file = file->get_link_object();
   return applaunch(file, exit);
 }
 
