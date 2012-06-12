@@ -30,14 +30,14 @@ constant cvs_version="$Id: export-to-git.pike.in,v 1.1 2010/09/28 14:19:52 marti
 array history = ({});
 object _Server;
 
-void git_object(object obj, string to)
+void git_object(object obj)
 {
     if (obj->get_object_class() & CLASS_DOCUMENT)
     {
          mapping versions = obj->query_attribute("DOC_VERSIONS");
-         if (!sizeof(versions))
+         if (!sizeof(versions) || !versions[obj->query_attribute("DOC_VERSION")])
          {
-             versions = ([ 1:obj ]);
+             versions[obj->query_attribute("DOC_VERSION")]=obj;
          }
 
          array this_history = ({});
@@ -46,7 +46,6 @@ void git_object(object obj, string to)
              this_history += ({ ([ "obj":version, "version":nr, "time":version->query_attribute("DOC_LAST_MODIFIED"), "path":obj->query_attribute("OBJ_PATH") ]) });
          }
          sort(this_history->version, this_history);
-         this_history += ({ ([ "obj":obj, "version":this_history[-1]->version+1, "time":obj->query_attribute("DOC_LAST_MODIFIED"), "path":obj->query_attribute("OBJ_PATH") ]) });
          
          int timestamp = 0;
          string oldname;
@@ -54,9 +53,16 @@ void git_object(object obj, string to)
          {
             string newname;
             if (version->obj->query_attribute("OBJ_VERSIONOF"))
+            {
                 newname = version->obj->query_attribute("OBJ_VERSIONOF")->query_attribute("OBJ_PATH");
+                version->object_id = version->obj->query_attribute("OBJ_VERSIONOF")->get_object_id();
+            }
             else
+            {
                 newname = version->obj->query_attribute("OBJ_PATH");
+                version->object_id = version->obj->get_object_id();
+                version->ishead=1;
+            }
             if (oldname && oldname != newname)
             {
                 werror("rename %s -> %s\n", oldname, newname);
@@ -72,34 +78,47 @@ void git_object(object obj, string to)
          //git_add(this_history[0]); 
          history += this_history;
     }
-    if (obj->get_object_class() & CLASS_CONTAINER && obj->query_attribute("OBJ_PATH") != "/home")
+    if (obj->get_object_class() & CLASS_CONTAINER && obj->query_attribute("OBJ_PATH") != "/home" && !(obj->get_object_class() & CLASS_USER))
     {
-        mkdir(to+obj->query_attribute("OBJ_PATH"));
-
         foreach(obj->get_inventory();; object cont)
         {
-            git_object(cont, to);
+            git_object(cont);
         }
     }
 }
 
-void git_add(mapping doc, string to)
+void git_add(mapping doc, string to, void|string source, void|string save_as)
 {
-    string content = doc->obj->get_content();
+    string content;
+    catch
+    {
+        content = doc->obj->get_content();
+    };
+
     if (!content)
         return;
-    string actual;
+
+    if (!source)
+        source = "";
+    if (!save_as)
+        save_as = "";
+
+    string actual_dest;
     object err = catch
     {
-        Stdio.write_file(to+doc->name, content);
-        actual = doc->name;
+        actual_dest = save_as+doc->name[sizeof(source)..];
+        write("writing: %O -> %s %s\n", doc->obj, to, actual_dest);
+        mkdir(dirname(to+actual_dest));
+        Stdio.write_file(to+actual_dest, content);
     };
     if (err)
     {
-        Stdio.write_file(to+doc->path, content);
-        actual = doc->path;
+        actual_dest = save_as+doc->path[sizeof(source)..];
+        write("writing: %O -> %s %s\n", doc->obj, to, actual_dest);
+        Stdio.mkdirhier(dirname(to+actual_dest));
+        Stdio.write_file(to+actual_dest, content);
     }
-    Process.create_process(({ "git", "add", to+actual }), ([ "cwd":to ]))->wait();
+    Process.create_process(({ "git", "add", to+actual_dest }), ([ "cwd":to ]))->wait();
 }
 
 string git_commit(string message, string to, string author, int time)
@@ -130,19 +149,23 @@ int main(int argc, array(string) argv)
     array opt = Getopt.find_all_options(argv,aggregate(
     ({"update",Getopt.NO_ARG,({"-U","--update"})}),
     ({"restart",Getopt.NO_ARG,({"-R","--restart"})}),
+    ({"save_as",Getopt.HAS_ARG,({"-s","--save-as"})}),
     ));
     options += mkmapping(opt[*][0], opt[*][1]);
 
+    options->source = argv[-2];
     options->dest = argv[-1];
+    if (options->dest[-1]!='/')
+        options->dest += "/";
     _Server=conn->SteamObj(0);
-    export_to_git(OBJ("/"), options->dest+"/root", ({ OBJ("/home") }));
+    export_to_git(OBJ(options->source), options->dest, options->save_as, ({  }));
 }
 
-void export_to_git(object from, string to, void|array(object) exclude)
+void export_to_git(object from, string to, void|string save_as, void|array(object) exclude)
 {
     git_init(to);
 
-    git_object(from, to);
+    git_object(from);
     //git_commit("initial state");
     sort(history->time, history);
     foreach(history;; mapping doc)
@@ -150,18 +173,26 @@ void export_to_git(object from, string to, void|array(object) exclude)
         mapping git_version = doc->obj->query_attribute("git-version");
         if (!mappingp(git_version))
             git_version = ([]);
-        if (options->restart || !git_version[to])
+        if (options->restart || !git_version[to] || !mappingp(git_version[to]) || git_version[to]->ishead!=doc->version)
         {
-            git_add(doc, to);
-            string message = sprintf("%s - %d - %d", doc->obj->get_identifier(), doc->obj->get_object_id(), doc->version);
+            git_add(doc, to, options->source, options->save_as);
+            string message = sprintf("%s - %d - %d", doc->obj->get_identifier(), doc->object_id, doc->version);
             object author = doc->obj->query_attribute("DOC_USER_MODIFIED")||doc->obj->query_attribute("OBJ_OWNER");
             string author_name = "unknown";
             if (author)
                 author_name = author->get_user_name();
             string author_field = sprintf("%s <%s@%s>", author_name, author_name, _Server->get_server_name());
             string hash = git_commit(message, to, author_field, doc->time);
-            git_version[to] = hash;
-            doc->obj->set_attribute("git-version", git_version);
+            git_version[to] = ([ "hash":hash ]);
+            if (doc->ishead)
+            {
+                write("\nishead: "+message+"\n");
+                git_version[to]->ishead=doc->version;
+            }
+            catch
+            {
+                doc->obj->set_attribute("git-version", git_version);
+            };
         }
     }
 }
