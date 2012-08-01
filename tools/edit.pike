@@ -42,17 +42,29 @@ mapping conn_options = ([]);
 int main(int argc, array(string) argv)
 {
   mapping options=init(argv);
+
+  werror("%O\n", options->files);
+
+  foreach(options->files;; string file)
+  {
+    call_out(edit, 0, file);
+  }
+  return -1;
+}
+
+void edit(string file)
+{
   object _Server=conn->SteamObj(0);
-  object file;
-  if ((string)(int)options->file == options->file)
-    file = conn->find_object(options->file);
-  else if (options->file[0] == '/')
-    file = _Server->get_module("filepath:tree")->path_to_object(options->file);
+  object o;
+  if ((string)(int)file == file)
+    o = conn->find_object(file);
+  else if (file[0] == '/')
+    o = _Server->get_module("filepath:tree")->path_to_object(file);
   else // FIXME: try to find out how to use relative paths
-    file = _Server->get_module("filepath:tree")->path_to_object(options->file);
-  if (file->get_class() == "Link")
-      file = file->get_link_object();
-  return applaunch(file, exit);
+    o = _Server->get_module("filepath:tree")->path_to_object(file);
+  if (o->get_class() == "Link")
+      o = o->get_link_object();
+  call_out(applaunch, 0, o, lambda(mixed ... args){ return; });
 }
 
 mapping init(array argv)
@@ -79,6 +91,7 @@ mapping init(array argv)
     options->port=(int)options->port;
 
   options->file = argv[-1];
+  options->files = argv[1..] - ({0});
 
   string server_path = "/usr/local/lib/steam";
 
