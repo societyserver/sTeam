@@ -905,9 +905,13 @@ mapping run_request(object req)
 
     HTTP_DEBUG("run_request(): calling %O->url_to_object(%O,%O)", _fp, host, req->not_query);
     object obj = _fp->url_to_object(req->not_query, host);
-    if ( !objectp(obj) ) {
+
+    if (!objectp(obj) && host[..3] == "www.")
+	return low_answer(301, "Found",
+			  ([ "Location": (__admin_port ? "https://" : "http://" )+host[4..]+req->full_query ]));
+
+    if ( !objectp(obj) )
       obj = _fp->path_to_object(req->not_query, 1);
-    }
 
     mapping m = req->variables;
 
