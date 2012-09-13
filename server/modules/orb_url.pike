@@ -424,8 +424,9 @@ object old_path_to_object(string path)
 }
 
 
-object url_to_object(string path, void|string host)
+object url_to_object(string path, void|string _host)
 {
+    string host = _host;
     if (!host)
         host = _Server->get_server_name();
 
@@ -435,7 +436,11 @@ object url_to_object(string path, void|string host)
     object usergroup = lookup_vhost(host);
     object hostdest;
 
-    if (!objectp(usergroup))
+    // fail if we can't find a requested host, 
+    // but don't fail if it's the default host
+    if (!objectp(usergroup) && _host)
+        return 0;
+    else if (!objectp(usergroup))
         return new_path_to_object(path);
     else
         hostdest = resolve_vhost(host);
