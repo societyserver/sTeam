@@ -30,6 +30,12 @@ inherit "/kernel/orb";
 #include <events.h>
 #include <database.h>
 
+#ifdef URL_DEBUG
+#define DEBUG_URL(s, args...) werror("[orb:url] "+s+"\n", args)
+#else
+#define DEBUG_URL(s, args...)
+#endif
+
 static mapping mPathCache = ([ ]);
 static mapping newPathCache = ([ ]);
 
@@ -450,7 +456,7 @@ object url_to_object(string path, void|string _host)
     if (sizeof(path) > 1 && path[-1] == '/')
        path = path[..sizeof(path)-2];
 
-    werror("filepath:url path: %O:%O\n", host, path);
+    DEBUG_URL("path: %O:%O", host, path);
 
     if (path == "/")
         return hostdest;
@@ -578,7 +584,7 @@ string old_object_to_filename(object obj)
 
 string object_to_filename(object obj, void|string server_name)
 {
-    werror("new_object_to_filename(%O, %O)\n", obj, server_name);
+    DEBUG_URL("new_object_to_filename(%O, %O)", obj, server_name);
     string path;
 //    path = get_value(obj->get_object_id());
     if ( !stringp(path) ) 
@@ -588,7 +594,7 @@ string object_to_filename(object obj, void|string server_name)
 	    string vpath = module->contains_virtual(obj);
 	    if ( stringp(vpath) )
             {
-                werror("new_object_to_filename(%O): %O-%O-%O\n", obj, module, vpath, mVirtualPath[module]);
+                DEBUG_URL("new_object_to_filename(%O): %O-%O-%O", obj, module, vpath, mVirtualPath[module]);
 		return mVirtualPath[module] + vpath;
             }
 	}
@@ -596,14 +602,14 @@ string object_to_filename(object obj, void|string server_name)
 
     object owner = obj->query_attribute("OBJ_OWNER") || obj->get_root_environment()->query_attribute("OBJ_OWNER");
 //    if (objectp(CALLER) && CALLER->get_vhost)
-//        werror("new_object_to_filename(%O) caller w vhost:%O\n", obj, CALLER->get_vhost());
+//        DEBUG_URL("new_object_to_filename(%O) caller w vhost:%O", obj, CALLER->get_vhost());
 //    else
-//        werror("new_object_to_filename(%O) caller:%O\n", obj, CALLER);
+//        DEBUG_URL("new_object_to_filename(%O) caller:%O", obj, CALLER);
 //    object socket = Caller.get_socket(this, backtrace());
 //    if (socket && socket->get_vhost)
-//        werror("new_object_to_filename(%O) socket w vhost: %O\n", obj, socket->get_vhost());
+//        DEBUG_URL("new_object_to_filename(%O) socket w vhost: %O", obj, socket->get_vhost());
 //    else
-//        werror("new_object_to_filename(%O) socket: %O\n", obj, socket);
+//        DEBUG_URL("new_object_to_filename(%O) socket: %O", obj, socket);
     
     if (owner && obj->get_object_id() == (owner->query_attribute("GROUP_PUBLICROOM") || 
                 owner->query_attribute("USER_PUBLICROOM") ||
@@ -616,7 +622,7 @@ string object_to_filename(object obj, void|string server_name)
             server_name = socket->get_vhost();
         object vhost_owner = lookup_vhost(server_name);
         
-        werror("new_object_to_filename(%O) %O - %O - socket: %O\n", obj, server_name, vhost_owner, socket);
+        DEBUG_URL("new_object_to_filename(%O) %O - %O - socket: %O", obj, server_name, vhost_owner, socket);
 
         if (vhost_owner)
         {
@@ -638,7 +644,7 @@ string object_to_filename(object obj, void|string server_name)
             path = "/"+owner->get_identifier();
     }
     else
-        werror("new_object_to_filename(%O) env: %O owner: %O root: %O owner: %O socket: %O room: %O\n", obj, obj->get_environment(), obj->query_attribute("OBJ_OWNER"), obj->get_root_environment(), owner, Caller.get_socket(this, backtrace()), 
+        DEBUG_URL("new_object_to_filename(%O) env: %O owner: %O root: %O owner: %O socket: %O room: %O", obj, obj->get_environment(), obj->query_attribute("OBJ_OWNER"), obj->get_root_environment(), owner, Caller.get_socket(this, backtrace()), 
                (owner && (owner->query_attribute("GROUP_PUBLICROOM") ||
                           owner->query_attribute("USER_PUBLICROOM") ||
                           owner->query_attribute("GROUP_WORKROOM") ||
@@ -662,7 +668,7 @@ string object_to_filename(object obj, void|string server_name)
 
     if ( !path )
         steam_error("Unable to resolve path for "+obj->describe());
-    werror("new_object_to_filename(%O) result: %O\n", obj, path);
+    DEBUG_URL("new_object_to_filename(%O) result: %O", obj, path);
     return path;
 }
 
