@@ -131,6 +131,7 @@ mixed execute(mapping variables)
     // first add to instances
     aoInstances += ({ obj->this() });
     aoInstances -= ({ 0 });
+    obj->sanction_object(query_attribute("DOC_USER_MODIFIED"), SANCTION_ALL);
     obj->sanction_object(get_creator(), SANCTION_ALL);
 
     obj->set_attribute(OBJ_NAME, variables["name"]);
