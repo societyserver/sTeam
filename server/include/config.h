@@ -28,7 +28,7 @@
 //#define VERIFY_CMOD 1
 #define DEBUG_SECURITY
 #define DEBUG_EVENTS 1
-#define DEBUG_HTTP 1
+//#define DEBUG_HTTP 1
 #define DEBUG_SECURITY
 //#define TASK_DEBUG 1
 //#define DEBUG_PROTOCOLL

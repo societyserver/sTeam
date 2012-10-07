@@ -827,6 +827,8 @@ mapping run_request(object req)
     mixed              err;
     string host = (req->request_headers->host || _Server->get_server_name());
 
+    //HTTP_DEBUG("run_request(%O)", req->request_headers);
+    //HTTP_DEBUG("run_request(): host = %O,%O", req->request_headers->host, host);
 
     // see if the server is ready for requests
     if ( !objectp(get_module("package:web") ) && 
@@ -1085,7 +1087,6 @@ void http_request(object req)
     __request = req;
     __touch   = time();
 
-    HTTP_DEBUG("HTTP: %O(%O)",req, req->request_headers);
 
     // read body always...., if body is too large abort.
     len = (int)req->request_headers["content-length"];
