@@ -1127,7 +1127,6 @@ void http_request(object req)
 			"type": "text/html", ]);
 	}
     }
-    set_this_user(0);
     if (slow) {
       tt = get_time_millis() - tt;
       loaded_objects = master()->get_in_memory() - loaded_objects;
@@ -1147,6 +1146,7 @@ void http_request(object req)
       respond( req, result );
       __finished = 1;
     }
+    set_this_user(0);
 }
 
 /**
@@ -1605,8 +1605,11 @@ static void respond(object req, mapping result)
 	    if ( length != strlen(result->data) )
 		steam_error("Length mismatch in http!\n");
     }
-    get_module("log")->log("http", LOG_LEVEL_INFO, "%s - - %s \"%s\" %d %d \"%s\" \"%s\"",
+    // FIXME: hits should be logged seperately
+    get_module("log")->log("http", LOG_LEVEL_ERROR, "%s %s - %s %s \"%s\" %d %d \"%s\" \"%s\"",
+                           __request->request_headers->host || "none", 
 			   get_ip() || "unknown", 
+                           (this_user()?this_user()->get_identifier():"-"),
 			   timelib.event_time(time()), 
 			   __request->request_raw,
 			   result->error,
