@@ -453,6 +453,7 @@ array(object) get_instances()
 {
   array instances = ({ });
 
+  clean_instances();
   for ( int i = 0; i < sizeof(aoInstances); i++ ) {
     if ( objectp(aoInstances[i]) && 
 	 aoInstances[i]->status() != PSTAT_FAIL_DELETED && 
@@ -466,23 +467,40 @@ void clean_instances()
 {
     aoInstances-= ({ 0 });
     
-    foreach(aoInstances, object instance) {
-      if( objectp(instance) && (instance->status() == PSTAT_FAIL_COMPILE
-|| instance->status() == PSTAT_FAIL_DELETED) )
-      {
-	  aoInstances-= ({ instance });
-	  instance->delete();
-      }
+    foreach(aoInstances, object instance)
+    {
+        // FIXME: something manages to produce a broken object instance once in a while
+        // the broken instance appears to have a working status() but no get_class()
+        // maybe also no is_object() but that is yet untested.
+        if (!objectp(instance)
+            || instance->status() == PSTAT_FAIL_COMPILE
+            || instance->status() == PSTAT_FAIL_DELETED
+            || !instance->is_object
+            || !instance->is_object()
+            || !instance->get_object_id
+            || !instance->get_object_id())
+        {
+            aoInstances-= ({ instance });
+            instance->delete();
+        }
     }
 }
 
 object get_instance() 
 {
     clean_instances();
-    foreach ( aoInstances, object instance ) {
-	if ( objectp(instance) && instance->status() != PSTAT_FAIL_DELETED 
-	     && instance->status() != PSTAT_FAIL_COMPILE)
-	    return instance;
+    foreach ( aoInstances, object instance )
+    {
+        // FIXME: something manages to produce a broken object instance once in a while
+        // the broken instance appears to have a working status() but no get_class()
+        // maybe also no is_object() but that is yet untested.
+	if (objectp(instance)
+            && instance->status() != PSTAT_FAIL_DELETED
+            && instance->status() != PSTAT_FAIL_COMPILE
+            && instance->is_object
+            && instance->is_object()
+            && instance->get_object_id() != 0)
+                return instance;
     }
     return 0;
 }
