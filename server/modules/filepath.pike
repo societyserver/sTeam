@@ -211,7 +211,8 @@ object resolve_path(string|object env, string path, void|int rs_links)
     path = "/" + path;
   if ( path[-1] == '/' ) 
     path = path[..strlen(path)-2];
-  
+ 
+  // FIXME: why is there a db search done here? it matches objects on / that are otherwise expected to be found in env
   if (objectp(db_handle)) {
     mixed err = catch {
       string query = "select ob_id from ob_data where ob_attr='OBJ_PATH' and ob_data='\""+db_handle->quote(path)+"\"'";

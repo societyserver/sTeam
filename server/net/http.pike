@@ -1272,7 +1272,7 @@ string|int|mapping show_object(object obj, mapping vars)
     }
 
     string lang = client_map->language;
-    // the standard presentation port shouild behave like a normal webserver
+    // the standard presentation port should behave like a normal webserver
     // so, if present, index files are used instead of the container.
     if ( !__admin_port && obj->get_object_class() & CLASS_CONTAINER )
     {
