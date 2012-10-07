@@ -105,7 +105,7 @@ void git_add(mapping doc, string to)
 string git_commit(string message, string to, string author, int time)
 {
     Stdio.File output = Stdio.File();
-    int errno = Process.create_process(({ "git", "commit", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMIT_DATE":ctime(time) ]), "cwd":to, "stdout":output->pipe() ]))->wait();
+    int errno = Process.create_process(({ "git", "commit", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to, "stdout":output->pipe() ]))->wait();
     output->read();
     if (!errno)
     {
