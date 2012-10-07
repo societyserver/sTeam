@@ -513,7 +513,7 @@ class Message
 	mHeader["to"] = get_quoted_name( rcptUser ) + "<" +
           rcptUser->get_user_name() + "@" + _Server->get_server_name() + ">";
       else
-	steam_error("Unable to determine \"To:\"-Header for E-Mail !\n");
+	steam_error("oMessage_ID: " + oMessage->get_object_id() + " Unable to determine \"To:\"-Header for E-Mail !\n");
       
       tmp = oMessage->query_attribute(DOC_MIME_TYPE);
       if ( !stringp(tmp) || sizeof(tmp) < 1 )
