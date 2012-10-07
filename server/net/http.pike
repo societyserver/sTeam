@@ -992,6 +992,7 @@ mapping run_request(object req)
     m->__internal = ([ 
       "request_headers": req->request_headers, 
       "client": ({ "Mozilla", }), 
+      "full_query": req->full_query
     ]);
     m->referer = referer;
     m->interface = (__admin_port ? "admin" : "public" );
