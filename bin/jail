@@ -1,0 +1,81 @@
+#!/bin/sh
+
+SERVER_DIR=$1
+SANDBOX_DIR=$2
+CONFIG_DIR=$3
+SYSTEM_USER=$4
+
+echo "["`date "+%Y-%m-%d %H:%M:%S"`"] jail: Preparing Sandbox in $SANDBOX_DIR ..."
+
+cd $SANDBOX_DIR
+
+# prepare server code:
+cd $SERVER_DIR
+tar -czf $SANDBOX_DIR/server.tgz *
+tar -xzf $SANDBOX_DIR/server.tgz --directory $SANDBOX_DIR
+rm -f $SANDBOX_DIR/server.tgz
+cd $SANDBOX_DIR
+
+# prepare /dev:
+tar -czf $SANDBOX_DIR/devs.tgz --directory / dev/null dev/random dev/urandom
+tar -xzf $SANDBOX_DIR/devs.tgz --directory $SANDBOX_DIR
+if [ ! -d $SANDBOX_DIR/dev ]
+  then
+    mkdir $SANDBOX_DIR/dev
+    echo "["`date "+%Y-%m-%d %H:%M:%S"`"] jail: Created $SANDBOX_DIR/dev" 1>&2
+fi
+if [ ! -e $SANDBOX_DIR/dev/null ]
+  then
+    ln -s /dev/null $SANDBOX_DIR/dev/null
+    echo "["`date "+%Y-%m-%d %H:%M:%S"`"] jail: Created symlink to /dev/null" 1>&2
+fi
+if [ ! -e $SANDBOX_DIR/dev/random ]
+  then
+    ln -s /dev/random $SANDBOX_DIR/dev/random
+    echo "["`date "+%Y-%m-%d %H:%M:%S"`"] jail: Created symlink to /dev/random" 1>&2
+fi
+if [ ! -e $SANDBOX_DIR/dev/urandom ]
+  then
+    ln -s /dev/urandom $SANDBOX_DIR/dev/urandom
+    echo "["`date "+%Y-%m-%d %H:%M:%S"`"] jail: Created symlink to /dev/urandom" 1>&2
+fi
+rm -f $SANDBOX_DIR/devs.tgz
+
+# prepare /etc:
+tar -czhf $SANDBOX_DIR/etcs.tgz --directory / etc/resolv.conf
+tar -xzf $SANDBOX_DIR/etcs.tgz --directory $SANDBOX_DIR
+rm -f $SANDBOX_DIR/etcs.tgz
+
+# prepare config dir:
+STRIPPED_CONFIG_DIR=`echo $CONFIG_DIR | sed -e "s|/\(.*\)|\1|g"`
+if [ "$STRIPPED_CONFIG_DIR" != "$CONFIG_DIR" ]; then
+    tar -czhf $SANDBOX_DIR/configs.tgz --directory / $STRIPPED_CONFIG_DIR
+else
+    tar -czhf $SANDBOX_DIR/configs.tgz $CONFIG_DIR
+fi
+tar -xzf $SANDBOX_DIR/configs.tgz --directory $SANDBOX_DIR
+rm -f $SANDBOX_DIR/configs.tgz
+
+# prepare /lib/libgcc_s libraries (if present):
+if [ -f /lib/libgcc_s.so1 ]
+  then
+    tar -czhf $SANDBOX_DIR/libs.tgz --directory / lib/libgcc_s.so1
+    tar -xzf $SANDBOX_DIR/libs.tgz --directory $SANDBOX_DIR
+    rm -f $SANDBOX_DIR/libs.tgz
+fi
+if [ -f /lib/libgcc_s.so.1 ]
+  then
+    tar -czhf $SANDBOX_DIR/libs.tgz --directory / lib/libgcc_s.so.1
+    tar -xzf $SANDBOX_DIR/libs.tgz --directory $SANDBOX_DIR
+    rm -f $SANDBOX_DIR/libs.tgz
+fi
+
+# make sandbox readable and change its owner to the "nobody" user:
+if [ "x$SYSTEM_USER" = "x" ]
+  then
+    SYSTEM_USER="nobody"
+fi
+chown -R $SYSTEM_USER $SANDBOX_DIR
+chmod -R a+r $SANDBOX_DIR
+chmod -R o-rwx $SANDBOX_DIR$CONFIG_DIR
+find $SANDBOX_DIR -type d -exec chmod a+rx {} \;

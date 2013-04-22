@@ -1,0 +1,559 @@
+#!/usr/local/lib/steam/bin/steam
+
+/* Copyright (C) 2000-2005  Thomas Bopp, Thorsten Hampel, Ludger Merkens
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * 
+ * $Id: spm.in,v 1.5 2010/02/16 21:21:09 astra Exp $
+ */
+
+constant cvs_version="$Id: spm.in,v 1.5 2010/02/16 21:21:09 astra Exp $";
+
+//! steam package manager main script
+//! Installs packages into the main server 
+//! Uploads files by coal and runs pike scripts for preinst and postinst
+
+#include <classes.h>
+#include <attributes.h>
+
+string tmp_dir = "/tmp";
+string pck_name = "";
+
+string tmp_dir_name;
+
+static object oInstall;
+
+static int debug_output = 0;
+static int force = 0;
+
+static mapping vars = ([ "port":1900  ]);
+
+object find_object(int id)
+{
+    if ( objectp(oInstall) )
+	oInstall->find_object(id);
+    return 0;
+}
+
+void list_packages( void|string name )
+{
+  if ( stringp(name) && sizeof(name) < 1 ) name = UNDEFINED;
+  object conn = ((program)"connection.pike")();
+  conn->set_debug( debug_output );
+
+  conn->start( "steam.open-steam.org", 1900, "guest", "guest" );
+
+  object _filepath = conn->send_cmd( 0, "get_module", "filepath:tree" );
+  object _packages = conn->send_cmd( _filepath, "path_to_object",
+                                    "/home/admin/packages" );
+  array package_objs = conn->send_cmd( _packages, "get_inventory" );
+  mapping packages = ([ ]);
+  foreach ( package_objs, object pck ) {
+    string desc = conn->send_cmd( pck, "query_attribute", OBJ_DESC );
+    if ( !stringp(desc) ) desc = "";
+    packages[pck->get_identifier()] = desc;
+  }
+
+  werror("List of packages " + (stringp(name) ? "containing '"+name+"' " : "") + "on sTeam server:\n");
+  foreach( sort(indices(packages)), string package ) {
+    if ( stringp(name) && (search(package, name) < 0) ) continue;
+    werror(" " + package + " : \t" + (string)packages[package] + "\n");
+  }
+}
+
+int get_package(string pck_name, string filename)
+{
+    object conn = ((program)"connection.pike")();
+    conn->set_debug( debug_output );
+    
+    conn->start("steam.open-steam.org", 1900, "guest", "guest");
+    string content = conn->get_package(pck_name);
+    if ( !stringp(content) )
+    return 0;
+    conn->close();
+    object f = Stdio.File(filename, "wct", 0600);
+    f->write(content);
+    f->close();
+    return 1;
+}
+
+static string|int get_value(string val)
+{
+   int      d;
+   if ( sscanf(val, "%d", d) == 1 && (string)d == val )
+     return d;
+   return val;
+}
+
+void read_configs(string fname)
+{
+    string configs = Stdio.read_file(fname);
+    mapping conf = ([ ]);
+
+    if ( !stringp(configs) ) {
+      werror( "Failed to find config file at " + fname + "\n" );
+      return;
+    }
+    array lines = configs / "\n";
+    foreach(lines, string line) {
+     if ( strlen(line) == 0 )
+       continue;
+     if ( line[0] == '#' ) // comment
+       continue;
+     string key;
+     mixed  val;
+ 
+     if ( sscanf(line, "%s=%s", key, val) != 2 ) {
+       continue;
+     } 
+     string v;
+     if ( sscanf(val, "hbs(%s)", v) > 0 ) {
+       conf[key] = get_value(v);
+       continue;
+     }
+     conf[key] = get_value(val);
+    }
+    vars = conf;
+}
+
+
+/** Generate a random valid name for a new directory
+ * Returns the string of a valid directory name in the given directory and
+ * with the given prefix and suffix. The name will thus be
+ * dir+prefix+random+suffix.
+ * At the time of calling, no file with this name existed. The directory
+ * will be created and the path returned.
+ */
+string make_tmp_dirname ( string dir, string prefix, string suffix ) {
+  if ( stringp(tmp_dir_name) && sizeof(tmp_dir_name)>0 )
+    return tmp_dir_name;
+  string full_prefix = dir;
+  if ( ! has_suffix( full_prefix, "/" ) ) full_prefix += "/";
+  full_prefix += prefix;
+  string random_name = "";
+  //Stdio.File tmp_file; // unused
+  mixed err = 0;
+  do {
+    random_name = full_prefix + replace(MIME.encode_base64(random_string(20),1) + suffix,"/","X");
+  } while ( Stdio.exist(random_name) );
+  if ( !Stdio.mkdirhier( random_name ) ) {
+    werror( "Could not create tmp directory: %s\n", random_name );
+    exit( 1 );
+  }
+  tmp_dir_name = random_name;
+  return tmp_dir_name;
+}
+
+
+static void cleanup ()
+{
+  // delete the temporary dir:
+  if ( stringp(tmp_dir_name) && sizeof(tmp_dir_name)>0 ) {
+    if ( Stdio.exist(tmp_dir_name) ) {
+      write( "Deleting temporary directory %s...\n" + tmp_dir_name + "\n");
+      if ( !Stdio.recursive_rm( tmp_dir_name ) )
+        werror( "Could not delete temporary directory: %s\n", tmp_dir_name + "\n");
+    }
+  }
+  //if ( search(pck_name,tmp_dir) == 0 )
+  //  Filesystem.System()->rm( pck_name );
+}
+
+int check_spm(string pname, object spmModule, object connection, void|int force)
+{
+    object tfs = get_filesystem(pname);
+    if ( !objectp(tfs) ) {
+      werror(pname + " not a valid SPM !\n");
+      return 0;
+    }
+    mixed xml = tfs->open("package.xml", "r");
+    string packageXML = xml->read();
+    xml->close();
+    mapping config =spmModule->spm_check_configuration(packageXML);
+    mapping pmod;
+    catch( pmod  = connection->send_cmd(0, "get_module", "package:"+config->name) );
+    if ( !objectp(pmod) )
+      catch( pmod = connection->send_cmd(0, "get_module", config->name) );
+    if ( objectp(pmod) && (pmod->get_object_class() & CLASS_PACKAGE) ) {
+      if ( spmModule->spm_version_value(config->version) <= spmModule->spm_version_value(pmod->get_version()) ) {
+        if ( force ) {
+          write("Found installed package with version %O, forcing installation anyway.\n", pmod->get_version());
+        }
+        else {
+          werror("Found installed package with version %O, skipping installation !\n", pmod->get_version());
+          return 0;
+        }
+      }
+      else {
+        werror( "Found installed package - updating to %O (previous version " +
+                "%O)\n", config->version, pmod->get_version() );
+      }
+    }
+    else if ( objectp(pmod) ) {
+      werror( "Found installed module %O (not a package), installing",
+              pmod->get_identifier() );
+    }
+    return 1;
+}
+
+Filesystem.Base get_filesystem(string pck_name) 
+{
+  if (Stdio.is_dir(pck_name)) {
+     throw( ({ "Directories are not supported!", backtrace() }));
+     //     return Filesystem.System()->cd(pck_name + "/");
+  }
+  else {
+    return Filesystem.Tar(pck_name);
+  }
+}
+
+//! Call Script with package to install, for example
+//! install web.spm
+//! spm is a packed archive with the following directories:
+//! sources/ - files to upload on the server with the present structure
+//! xml/ - xml code to set attributes, access and so on in server files
+//! steam/ - meta information of the package and installation perequesites
+//!
+int main(int argc, array(string) argv)
+{
+  string server_path = "/usr/local/lib/steam";
+  string config_path = "/etc/steam";
+
+  if ( config_path == "" )
+    config_path = server_path + "/config";
+
+  if ( search(argv, "--help") >= 0 ) { 
+      write("SPM: sTeam package manager.\n"+
+	"This utility connects to a running local sTeam server and\n"+
+	"installs new packages. Usage is spm <options>:\n"+
+	" -i --install <package-name>: Installs ar updates a package.\n"+
+	"    The package is either retrieved from the main sTeam server\n"+
+	"    or located on the local disk (package-name can be a path name).\n"+
+        " -o --old-install <package-name>: Installs or updates a package\n"+
+        "    using the old installation mechanism. This is deprecated and\n"+
+        "    you should only use this method when instructed to.\n"+
+        " -f --force : Forces installation of a package, even if the\n"+
+        "              package is already installed with that version.\n"+
+	" -l --list [name] : Lists all packages available for installation\n"+
+        "    on the main sTeam server (www.open-steam.org). If an argument\n"+
+        "    is given, only packages which contain that text are listed.\n"+
+	" -d --dest <directory> : Install the package to the destination"+
+        "    directory.\n"+
+	" -s --server <hostname> : Install on a given server.\n"+
+	" -p --port <port> : use another port for installation\n"+
+        "    (default is 1900).\n"+
+	" -c --configure <package-name> : Just configure a package\n"+
+        "    (if already installed).\n");
+      return 0;
+  }
+
+  atexit( cleanup );
+
+  // get all command line options:
+  array tmp_options = Getopt.find_all_options( argv, ({
+    ({ "install", Getopt.HAS_ARG, ({ "-i", "--install" }) }),
+    ({ "old-install", Getopt.HAS_ARG, ({ "-o", "--old-install" }) }),
+    ({ "list", Getopt.MAY_HAVE_ARG, ({ "-l", "--list" }), ({ }), "" }),
+    ({ "dest", Getopt.HAS_ARG, ({ "-d", "--dest" }) }),
+    ({ "configure", Getopt.HAS_ARG, ({ "-c", "--configure" }) }),
+    ({ "server", Getopt.HAS_ARG, ({ "-s", "--server", "-h", "--host" }) }),
+    ({ "port", Getopt.HAS_ARG, ({ "-p", "--port" }) }),
+    ({ "debug", Getopt.NO_ARG, ({ "--debug" }) }),
+    ({ "force", Getopt.NO_ARG, ({ "-f", "--force" }) }),
+    ({ "unpack", Getopt.NO_ARG, ({ "-u", "--unpack" }) }),
+  }) );
+  // make a mapping out of the options:
+  mapping options = ([ ]);
+  foreach ( tmp_options, array option ) options[ option[0] ] = option[1];
+  if ( options["debug"] ) debug_output = 1;
+  if ( options["force"] ) force = 1;
+
+  master()->add_include_path(server_path+"/server/include");
+  master()->add_program_path(server_path+"/server/");
+  master()->add_program_path(server_path+"/spm/");
+  master()->add_module_path(server_path+"/server/libraries");
+  master()->add_program_path(server_path+"/server/net/coal");
+  add_constant("find_object", find_object);
+  read_configs(config_path+"/steam.cfg");
+
+  if ( options["list"] ) {
+      list_packages( options["list"] );
+      return 0;
+  }
+  
+  pck_name = options["install"];
+  if ( !stringp(pck_name) ) pck_name = options["old-install"];
+  if ( !stringp(pck_name) ) pck_name = options["configure"];
+
+  if ( !stringp(pck_name) ) {
+      werror("Missing filename or URL for installation / configuration...\n");
+      return 1;
+  }
+  string spm_filename = basename( pck_name );
+  sscanf( spm_filename, "%s.gz", spm_filename );
+
+  string url;
+  mkdir(dirname(tmp_dir));
+
+  if ( sscanf(pck_name, "http://%s", url) > 0 ) {
+      // the temporary file for download...
+      
+      mapping headers = ([ ]);
+      string user, pass;
+      if ( sscanf(url, "%s:%s@%s", user, pass, url) == 3 ) {
+      write("User: "+ user + "\n");
+      headers = ([ "authorization": "Basic " + 
+        MIME.encode_base64(user+":"+pass), ]);
+      }
+      write("Connecting to http://" + url+"\n");
+      object query = Protocols.HTTP.get_url("http://"+url, ([ ]), headers);
+      mapping d = query->cast("mapping");
+      //werror("RESULT=\n"+sprintf("%O\n",indices(d)));
+      string data = d->data;
+      string fname;
+      sscanf(url, "%*s/%s", fname);
+      write("Transfered " + strlen(data) + " bytes...\n");
+      tmp_dir_name = make_tmp_dirname(tmp_dir,"spm_","");
+      pck_name = tmp_dir_name + "/" + fname;
+      object f = Stdio.File(pck_name, "wct",0600);
+      f->write(data);
+      f->close();
+      
+      write("Package received...\n");
+  }
+
+  if ( !Stdio.exist(pck_name) ) {
+      write("Getting file from package server...\n");
+      tmp_dir_name = make_tmp_dirname(tmp_dir,"spm_","");
+      string tmp_filename = tmp_dir_name + "/" + pck_name;
+      if ( !get_package(pck_name, tmp_filename) ) {
+        werror("Package not found on server ... Try -l to list packages.\n");
+        return 1;
+      }
+      pck_name = tmp_filename;
+  }
+  master()->add_program_path("../spm");
+
+  if ( sscanf(pck_name, "%s.gz", pck_name) >= 1 ) {
+    write("Unzipping...\n");
+    string destname = pck_name;
+    if ( search(destname,tmp_dir) != 0 ) {
+      tmp_dir_name = make_tmp_dirname(tmp_dir,"spm_","");
+      destname = tmp_dir_name + "/" + destname;
+    }
+    object f = Stdio.File(destname, "wct");
+    int ret = Process.create_process( ({ "gunzip", "-c", "-f",
+        pck_name+".gz" }), ([ "stdout" : f ]))->wait();
+    f->close();
+    if ( search(pck_name,tmp_dir) == 0 )
+      Filesystem.System()->rm( pck_name+".gz" );
+    pck_name = destname;
+  }
+
+  write("Opening spm archive ...");
+  object fsystem = get_filesystem(pck_name);
+  write("ok.\n");
+
+  // check for package.xml
+  if ( !objectp(fsystem) ) {
+    werror("Not a valid spm package (not a tar archive): %s\n", spm_filename);
+    return 1;
+  }
+  if ( options["install"] && 
+     search( fsystem->get_dir(), "/package.xml" )<0 &&
+     search( fsystem->get_dir(), "package.xml" )<0 	    ) {  
+    werror("The package %s is deprecated (it doesn't contain a /package.xml"
+      +" file).\nYou need to install it with the -o or --old-install "
+      +"command instead:\n  spm -o %s\n", spm_filename, spm_filename);
+    werror("Listing: %O", fsystem->get_dir());
+    return 1;
+  }
+  if ( options["old-install"]
+       && search( fsystem->get_dir(), "/package.xml" ) >= 0 ) {
+    werror("The package %s is not deprecated (it contains a /package.xml"
+      +" file).\nYou need to install it with the -i or --install "
+      +"command instead:\n  spm -i %s\n", spm_filename, spm_filename);
+    return 1;
+  }
+
+
+  string server = options["server"];
+  if ( !stringp(server) || sizeof(server) < 1 )
+    server = vars["server"];
+  if ( !stringp(server) || sizeof(server) < 1 )
+    server = vars["ip"];
+  if ( !stringp(server) || sizeof(server) < 1 )
+    server = "localhost";
+
+  int port = 1900;
+  if ( stringp(options["port"]) && sizeof(options["port"]) > 0 )
+    port = (int)(options["port"]);
+  else if ( stringp(vars["port"]) && sizeof(vars["port"]) > 0 )
+    port = (int)(vars["port"]);
+
+  write("Connecting sTeam on "+server+":"+port+"\n");
+  object conn = ((program)"connection.pike")();
+  conn->set_debug( debug_output );
+
+  string pw = Input.read_password("Root Password for server", "steam");
+
+  string pname;
+  if ( sscanf(pck_name, "%s.spm", pname) != 1 ) {
+      pname = pck_name;
+  }
+
+  vars["package"] = (pname / "/")[-1];
+  vars["fs"] = pname+".spm";
+  if ( !stringp(options["dest"]) )
+	vars["dest"] = "/";
+  else 
+	vars["dest"] = options["dest"];
+
+  conn->set_fsystem(fsystem, vars);
+  conn->start(server, port, "root", pw);
+  if ( options->configure ) {
+        //TODO: this is hardcoded to configure only the web package!?
+	conn->configure_web();
+	werror("Configuration of package completed !");
+	return 0;
+  }
+
+  // connect to the server and register the new package module
+  if ( options["old-install"] ) {
+    conn->upload_package(vars);
+    werror("\nInstallation successfull ("+conn->iInstall + " new Files, "+
+           conn->iUpdate + " updated).\n\n");
+    return 0;
+  } else if ( options["install"] ) {
+    object package_file = Stdio.File( pck_name, "r" );
+    object _filepath = conn->send_cmd( 0, "get_module", "filepath:tree" );
+    if ( !objectp(_filepath) ) {
+      werror( "Unable to find filepath module on server!\n" );
+      return 1;
+    }
+    object _spm = conn->send_cmd( 0, "get_module", "SPM" );
+    if ( !objectp(_spm) ) {
+      werror( "Unable to find spm module on server!\n" );
+      return 1;
+    }
+    object dir = conn->send_cmd( _filepath, "path_to_object", "/packages" );
+    object root_dir = conn->send_cmd( _filepath, "path_to_object", "/" );
+    if ( !objectp(dir) || !objectp(root_dir) ) {
+      werror( "Unable to find package or root directory on server!" );
+      return 1;
+    }
+    // check 
+   if ( !check_spm(pck_name, _spm, conn, force) )
+	return 1;
+   
+   if (options["unpack"]) {
+     int tt = get_time_millis();
+     object _docfactory = conn->send_cmd( 0, "get_factory", CLASS_DOCUMENT );
+     object _contfactory = conn->send_cmd( 0, "get_factory", CLASS_CONTAINER );
+     array tarOptions = ({ "tar", "--directory=__tmp__/", "-xf", pck_name });
+     object pck_cont = _contfactory->execute(([ "name": spm_filename, ]));
+     mkdir("__tmp__");
+     object tar_process = Process.create_process( tarOptions,
+						  ([ "env": getenv(),
+						     "cwd": getcwd(),
+						     "stdout": Stdio.stdout,
+						     "stderr": Stdio.stderr,
+						  ]) );
+     int ret = tar_process->wait();
+     werror("UNTAR in %d ms\n", get_time_millis() - tt);
+     fsystem = Filesystem.Traversion("__tmp__");
+     mapping directories = ([ "__tmp__/": pck_cont]);
+     foreach ( fsystem; string dir; string fname) {
+       fname = dir + fname;
+       object cont = directories[dir];
+       if (!objectp(cont)) {
+	 cont = _contfactory->execute( ([ 
+		    "name": basename(dir[..strlen(dir)-2]), ]) );
+	 object ccont = cont;
+	 string d = dir;
+	 while ( ccont != pck_cont ) {
+	   d = dirname(d[..strlen(d)-2]) + "/";
+	   object parent_cont = directories[d];
+
+	   if (!objectp(parent_cont)) {
+	     parent_cont = _contfactory->execute( ([ 
+		     "name": basename(d[..strlen(d)-2]), 
+		     "move": ccont,
+	     ]) );
+	     directories[d] = parent_cont;
+	   }
+	   else {
+	     if (ccont != parent_cont) {
+	       ccont->move(parent_cont);
+	     }
+	   }
+	   ccont = parent_cont;
+	 }
+
+	 directories[dir] = cont;
+       }
+       if (Stdio.is_file(fname)) {
+	 object doc = _docfactory->execute( ([ "name": basename(fname),
+					       "move": cont, ]));
+	 doc->set_content(Stdio.File(fname)->read());
+	 werror("FILE created: %O - %d bytes\n", doc->get_identifier(),
+		doc->get_content_size());
+       }
+     }
+
+     werror("Package Container is %O\n", pck_cont);
+     werror("Uploaded Files in %d ms\n", get_time_millis() - tt);
+
+     // install:
+     conn->send_cmd( _spm, "install_spm", ({ pck_cont, root_dir }) );
+     write( "Installed package %s in %d s ...\n", spm_filename,
+	    (get_time_millis() - tt) / 1000);
+     Stdio.recursive_rm("__tmp__");
+   }
+   else {
+     int tt = get_time_millis();
+     object new_obj = conn->send_cmd( dir, "get_object_byname", spm_filename );
+     if ( !objectp(new_obj) ) {
+       object _docfactory = conn->send_cmd( 0, "get_factory", CLASS_DOCUMENT );
+       if ( !objectp(_docfactory) ) {
+	 werror( "Unable to find document factory on server!\n" );
+	 return 1;
+       }
+       new_obj = conn->send_cmd( _docfactory, "execute", ([ "name": spm_filename, ]) );
+       if ( !objectp(new_obj) ) {
+	 werror( "Could not create temporary package file on server!\n" );
+	 return 1;
+       }
+       conn->send_cmd( new_obj, "move", dir );
+     }
+     conn->send_cmd( new_obj, "set_content", package_file->read() );
+     package_file->close();
+     write( "Uploaded package %s in %d ms...\n", spm_filename, 
+            get_time_millis() - tt);
+     // install:
+     conn->send_cmd( _spm, "install_spm", ({ new_obj, root_dir }) );
+     write( "Installed package %s ...\n", spm_filename );
+     // delete temporary package on server
+     conn->send_cmd( new_obj, "delete" );
+     write( "Deleted temporary package file on server\n" );
+   }
+  }
+}
+
+int get_time_millis () {
+  array tod = System.gettimeofday();
+  return tod[0]*1000 + tod[1]/1000;
+}
+

@@ -1,0 +1,3 @@
+#!/bin/sh
+#ulimit -c 100000000
+exec bin/steam loader.pike $*

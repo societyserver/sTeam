@@ -1,0 +1,325 @@
+#!/usr/lib/steam/steam
+
+/* Copyright (C) 2000-2004  Thomas Bopp, Thorsten Hampel, Ludger Merkens, 
+ *                    2004  Martin Baehr
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ * $Id: import_users,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+ */
+
+constant cvs_version="$Id: import_users,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
+
+inherit "../config";
+
+
+static object oInstall;
+object _Server;
+int test;              // if true then testmode
+
+object find_object(int id)
+{
+    if ( objectp(oInstall) )
+        oInstall->find_object(id);
+    return 0;
+}
+
+object conn, user_factory, user_module, group_module, group_factory;
+
+mapping import_attributes(object obj)
+{
+    mapping attr = ([ ]);
+    object o = obj->get_node("AUTH_OBJECT");
+    if ( !objectp(o) )
+	o = obj;
+    foreach(o->get_nodes("ATTRIBUTE"), object a) {
+	write(a->attributes->NAME + ":" + a->attributes->VALUE+"\n");
+	attr[a->attributes->NAME] = a->attributes->VALUE;
+    }
+    return attr;
+}
+
+
+
+array scan_entry(string data)
+{
+    array result = ({ });
+    int mode = 0;
+    int i, l;
+    string token = "";
+
+    data += ",";
+
+    l = strlen(data);
+    while ( i < l ) {
+	switch ( mode ) {
+	case 0:
+	    if ( data[i] == '\'' ) { mode = 1; token = ""; }
+	    break;
+	case 1:
+	    if ( data[i] == '\'' && data[i+1] == ',' ) { 
+		mode = 0; 
+		result += ({ token });
+		token = ""; 
+	    }
+	    else 
+		token += data[i..i];
+	    break;
+	}
+	i++;
+    }
+    werror("Gescaned: "+ sprintf("%O\n", result));
+    return result;
+}
+
+int main(int argc, array(string) argv)
+{
+
+  mapping options=init(argv);
+
+  object group;
+  if ( options->group ) 
+    group = import_group(options->group, "");
+
+  if ( options->mode=="hyperwave" ) 
+    import_hyperwave(options);
+  else if ( options->mode=="passwd" || options->passwd )
+    import_passwd(options, group);
+  else
+    import_file(options, group);
+}
+  
+void import_passwd(mapping options, object group)
+{
+  mapping users=([]);
+  foreach(Stdio.read_file(options->file)/"\n", string line)
+    if(sizeof(line))
+    {
+      mapping user=([]);
+      string temp;
+      [user->login, user->pw ]=(line/":")[..1];
+      array pwnam=getpwnam(user->login);
+      if(!options->passwd && pwnam)
+      {
+        [user->login, temp, user->uid, user->gid, user->gecos]= pwnam[..4];
+      }
+      users[user->login]=user;
+      users[user->login]->pw=user->pw;
+    }
+
+  if(options->passwd)
+    foreach(Stdio.read_file(options->passwd)/"\n", string line)
+      if(sizeof(line))
+      {
+        mapping user=([]);
+        string temp;
+        [user->login, temp, user->uid, user->gid, user->gecos]=(line/":")[..4];
+        users[user->login]+=user;
+        users[user->login]->email=user->login+"@"+options->domain;
+      }
+
+  foreach(users; string login; mapping user)
+  {
+    if(user->gecos)
+    {
+      user->fullname=(user->gecos/",")[0]/" ";
+      user->name=user->fullname[0];
+      user->firstname=user->fullname[1..]*" ";
+    }
+    user->uid=(int)user->uid;
+    user->gid=(int)user->gid;
+
+    // skip root, bad passwords or anything outside some uid-range
+    if (((options->user && options->user[user->login]) 
+         || !sizeof(options->user)
+        ) && (user->login == "root" ||
+              user->pw[0]!='$' ||
+              user->uid < options->uidmin ||
+              (options->uidmax && user->uid > options->uidmax) ||
+              user->gid != options->gid
+             )
+       )
+       ; //write("skipping %s!\n", user->login);
+    else
+        import_user(user->login, user->pw, user->email, 
+			  user->name, user->firstname, ({ group }));
+
+  }
+}
+
+void import_hyperwave(mapping options)
+{
+  // import hyperwave users and groups
+    object xml_parser=((program)"../server/base/xml_parser")();
+    object n = xml_parser->parse_data(Stdio.read_file(options->file));
+    if ( !objectp(n) ) {
+      werror("Fatal error in Hyperwave export file - unable to parse !");
+    }
+    n = n->get_node("/HWX/EXPORT/AUTHENTICATION");
+    foreach(n->get_nodes("GROUP"), object g ) {
+      write("Importing group\n");
+      mapping g_attr = import_attributes(g);
+      object group = import_group(g_attr->UGroup, g_attr->Descr);
+      
+      foreach(g->get_nodes("USER"), object u) {
+	write("Importing user...\n");
+	mapping u_attr = import_attributes(u);
+	object user = import_user(u_attr->UName, 
+				  u_attr->Passwd, 
+				  u_attr->Email, 
+				  u_attr->Descr,
+				  "",
+				  ({ group }));
+	
+      }
+    }
+    return 0;
+}
+
+void import_file(mapping options, object group)
+{
+  foreach(Stdio.read_file(options->file)/"\n", string user)
+  {
+    string name, pw, email, mnr, first, last;
+    if(sizeof(user)) {
+      if ( user[0] == '#' )
+	continue;;
+      [mnr, last, first, email, pw] = scan_entry(user)[..4];
+      object u = import_user(mnr, pw, email, last, first, ({ group }) );
+      if ( catch(u->set_attribute( "MatrikelNr", mnr )) )
+        werror("Fehler beim setzen der Matrikelnummer von " + mnr + "\n");
+    }
+  }
+}
+
+mapping init(array argv)
+{
+  mapping options = ([ "file":"/etc/shadow", 
+                       "domain":gethostbyname(gethostname())[0],
+                       "uidmin":1000 ]);
+
+  array opt=Getopt.find_all_options(argv,aggregate(
+    ({"file",Getopt.HAS_ARG,({"-f","--file"})}),
+    ({"domain",Getopt.HAS_ARG,({"-d","--domain"})}),
+    ({"mode",Getopt.HAS_ARG,({"-m","--mode"})}),
+    ({"test",Getopt.NO_ARG,({"-t","--test"})}),
+    ({"passwd",Getopt.HAS_ARG,({"-p","--passwd"})}),
+    ({"uidmin",Getopt.HAS_ARG,({"--uidmin"})}),
+    ({"uidmax",Getopt.HAS_ARG,({"--uidmax"})}),
+    ({"gid",Getopt.HAS_ARG,({"--gid"})}),
+    ({"group",Getopt.HAS_ARG,({"-g","--group"})}) ));
+
+  foreach(opt, array option)
+  {
+    options[option[0]]=option[1];
+  }
+  options->user=mkmultiset(argv[1..]-({ 0 }));
+  if ( !options->mode )
+    options->mode = "passwd";
+  if ( options->test )
+    test=1;
+  options->uidmin=(int)options->uidmin;
+  options->uidmax=(int)options->uidmax;
+  options->gid=(int)options->gid;
+  
+//  string server_path = "/usr/lib/steam";
+  string server_path = "../";
+  string config_path = "/etc/steam/";
+
+  master()->add_include_path(server_path+"/server/include");
+  master()->add_program_path(server_path+"/server/");
+  master()->add_program_path(server_path+"/conf/");
+  master()->add_program_path(server_path+"/server/net/coal/");
+  add_constant("find_object", find_object);
+  read_configs(config_path+"/config.txt");
+
+  conn = ((program)"connection.pike")();
+  string pw = read_input("Root Password for server", "steam");
+
+  conn->start("localhost", (int)vars["port"], "root", pw);
+  _Server=conn->SteamObj(0);
+
+  write("_Server: %O", indices(_Server));
+
+  user_factory = _Server->get_factory("User");
+  user_module  = _Server->get_module("users");
+
+  group_factory = _Server->get_factory("Group");
+  group_module  = _Server->get_module("groups");
+  
+  return options;
+}
+
+object import_user(string login, string pw, string email,
+                   string name, string first_name, void|array grp)
+{
+
+  write("importing user: %s %s (%s):", name, first_name, login);
+
+  object user = user_module->lookup(login);
+  if(test)
+  {
+    write("found: %O\n", user);
+    return user;
+  }
+  if(!user)
+    user = user_factory->execute(
+            ([ "name":login, 
+               "pw":(string)random(time()), 
+               "email":email,
+	       "firstname": first_name, 
+               "fullname":name ]) );
+  else
+    write("user %s already exists, ", login);
+  if(grp)
+    foreach(grp, object g)
+      if(g && !g->is_member(user))
+      {
+        write("adding to group %s, ", g->parent_and_group_name());
+        g->add_member(user);
+      }
+
+  if(!user)
+    write("user %s could not be found or created\n", login);
+  else if(user->get_user_password() == pw)
+    ; //write("password for %s has already been set\n", login);
+  else if(user->set_user_password( pw, 1 ) &&
+          user->get_user_password() == pw)
+    write("set passwd, ", login);
+  
+  if(user->get_activation() &&
+     user->activate_user(user_factory->get_activation()))
+    write("%s activated", login);
+  write("\n");
+  return user;
+}
+
+object
+import_group(string name, string desc)
+{
+    write("Importing group="+name+"\n");
+    object group = group_module->lookup(name);
+    if(test)
+    {
+      write("found %O\n", group);
+      return group;
+    }
+    if ( !objectp(group) ) 
+    {
+	group = group_factory->execute( ([ "name": name ]) );
+	group->set_attribute( 104, desc );
+    }
+    return group;
+}

@@ -1,0 +1,150 @@
+#!/usr/local/bin/pike
+
+/* Copyright (C) 2000-2004  Thomas Bopp, Thorsten Hampel, Ludger Merkens
+ * Copyright (C) 2002-2004  Martin Baehr
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ * $Id: export_users.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+ */
+
+constant cvs_version="$Id: export_users.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
+
+
+inherit "/usr/lib/steam/config";
+inherit "../server/base/xml_parser";
+
+static object oInstall;
+
+object find_object(int id)
+{
+    if ( objectp(oInstall) )
+        oInstall->find_object(id);
+    return 0;
+}
+
+object conn, user_factory, user_module, group_module, group_factory;
+
+int main(int argc, array(string) argv)
+{
+
+  mapping options=init(argv);
+  mapping mshadow;
+  array ashadow;
+  [ashadow, mshadow] = read_shadow(options->file);
+
+  write("%O\n", options);
+
+  foreach(ashadow, array user)
+  {
+    string login, pw;
+    if(sizeof(user)>=2)
+    {
+      [login, pw] = user[0..1];
+      if((options->user && options->user[login]) || !options->user)
+      {
+        if(login == "root")
+          write("skipping root!\n");
+        else
+        {
+          string newpw;
+          if(newpw=export_user(login, pw))
+            mshadow[login][1]=newpw;
+        }
+      }
+    }
+  }
+  write_shadow(ashadow, options->file);
+}
+
+mapping init(array argv)
+{
+  mapping options = ([ "file":"/etc/shadow" ]);
+
+  array opt=Getopt.find_all_options(argv,aggregate(
+    ({"file",Getopt.HAS_ARG,({"-f","--file"})}),
+    ));	
+
+  foreach(opt, array option)
+  {
+    options[option[0]]=option[1];
+  }
+  options->user=mkmultiset(argv[1..]-({ 0 }));
+  if(!sizeof(options->user))
+    options->user=0;
+
+  string server_path = "..";
+  string config_path = "/etc/steam/";
+
+  master()->add_include_path(server_path+"/server/include");
+  master()->add_program_path(server_path+"/server/");
+  master()->add_program_path(server_path+"/conf/");
+  master()->add_program_path(server_path+"/server/net/coal/");
+  add_constant("find_object", find_object);
+  read_configs(config_path+"/config.txt");
+
+  conn = ((program)"connection.pike")();
+  string pw = read_input("Root Password for server", "steam");
+
+  conn->start("localhost", (int)vars["port"], "root", pw);
+  user_factory = conn->send_cmd(0, "get_factory", "User");
+  user_module  = conn->send_cmd(0, "get_module", "users");
+
+  group_factory = conn->send_cmd(0, "get_factory", "Group");
+  group_module  = conn->send_cmd(0, "get_module", "groups");
+
+  return options;
+}
+
+string
+export_user(string login, string|void oldpw)
+{
+  string pw;
+
+  write("exporting user: %s\n", login);
+
+  object user = user_module->lookup(login);
+  if(!user)
+    write("user %s does not exist, can't export\n", login);
+  else
+    pw=user->get_user_password();
+
+  if(!pw)
+    write("password for user %s could not be found\n", login);
+  else if(pw==oldpw)
+    write("password for %s is uptodate\n", login);
+  else
+    write("password for %s is %s\n", login, pw);
+  return pw;
+}
+
+array read_shadow(string file)
+{
+  array ashadow= ({});
+  mapping mshadow = ([]);
+
+  foreach(Stdio.read_file(file)/"\n", string user)
+  {
+    ashadow += ({ user/":" });
+    mshadow[ashadow[-1][0]]=ashadow[-1];
+  }
+  return ({ ashadow, mshadow });
+}
+
+int write_shadow(array ashadow, string file)
+{
+  Stdio.write_file(file+".new", (ashadow[*]*":")*"\n");
+  //write("%O", ashadow[..5]);
+}

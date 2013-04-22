@@ -1,0 +1,282 @@
+#!/bin/sh
+
+###########################################################################
+# open-sTeam Backup script
+#
+# This script can be used to backup your sTeam installation, database, etc.
+# However, since many server setups differ, make sure to customize it to your
+# needs and test it to see if everything works as you expect!
+#
+# If you want the script to create backups for you, have it called by the
+# cron daemon on your server (e.g. by registering it in /etc/crontab or
+# /etc/cron.daily). If you use it to create backups, make sure to check
+# whether everything has been backed up correctly, and restore the database
+# from the backup once and check whether your server is running correctly.
+#
+# Adjust the variables in the "Configurable options" block below to match
+# your desired backup strategy and settings. In the default configuration,
+# the script will create a backup in ~root/steam_yyyy-mm-dd (containing
+# the date of the backup. It will create up to 7 backups by default,
+# deleting the oldest ones if necessary. Make sure that you have enough
+# space left in the target directory. The script will also assume that the
+# MySQL database is running on localhost and that the databases can be
+# accessed by the user "steam" with the password "steam".
+
+
+##### Configurable options ################################################
+
+# Name of the backup (used in folder name prefix and email subject):
+BACKUP_NAME="steam"
+
+# Directory in which to put the backup:
+BACKUP_DIR="~root"
+
+# If USE_LATEST_DIR is set to "true", then the most recent backup will be
+# placed in a "latest" folder in the backup directory, and the older backups
+# will be placed in a "old" folder in the backup directory. This can be used
+# if you have an additional backup system that shall only archive the most
+# recent backup.
+USE_LATEST_DIR="false"
+
+# Maximum number of daily backups to store in the backup directory
+# (oldest backups will be deleted when the count is reached):
+MAX_NR_DAILY_BACKUPS=7
+
+# Days on which to copy the backup to an external server (this is a list of
+# numbers separated by spaces, where Monday=1, Tuesday=2, Wednesday=3,
+# Thursday=4, Friday=5, Saturday=6, Sunday=7
+# (e.g. "7": only copies to an external server on sundays, "1 3 5": copies to
+# an external server on mondays, wednesdays and fridays):
+#EXTERNAL_COPY_ON_DAYS="7"
+
+
+### Backup sources options: ###
+# The backup script will use mysqldump to create backups of the MySQL
+# database. You can also specify additional files and directories (separated
+# by spaces) in the ADDITIONAL_FILES setting. This is useful if you have a
+# sTeam server and a PHPsTeam frontend in an Apache webserver, so you could
+# use the ADDITIONAL_FILES setting to backup the Apache config and the PHP
+# files, too.
+
+# Additional files and directories to backup (e.g. webserver, PHPsTeam stuff):
+#ADDITIONAL_FILES="/etc/apache2 /var/www" # e.g. Debian
+#ADDITIONAL_FILES="/etc/httpd /var/www" # e.g. RedHat / Fedora Core
+#ADDITIONAL_FILES="/etc/apache2 /srv/www" # e.g. SUSE Enterprise / OpenSUSE
+
+# Name of the databases to backup: (separated by spaces,
+# default: "steam mysql")
+DATABASES="steam mysql"
+
+# Hostname of the database server (default: localhost)
+DATABASE_HOST="localhost"
+
+# Username by which to login to the database:
+DATABASE_USER="steam"
+
+# Password for the database user:
+DATABASE_PASSWORD="steam"
+
+# Brand name of the sTeam installation to backup (default: steam)
+STEAM_BRAND="steam"
+
+# Directory with the installed steam server:
+# (default is /usr/local/lib/steam (or the brand name instead of "steam"),
+# on Debian the default is /usr/share/steam):
+STEAM_DIR="/usr/local/lib/steam"
+
+
+### External backup server options: ###
+# The script can also copy backups to a different server, e.g. every
+# sunday. You will need to create an ssh key for the user that you are
+# running the backup script with (usually "root") and set it up as an
+# authorized ssh key on the target machine, so that the user can log into
+# the target machine without a password. This can be done by creating an
+# ssh key pair with the ssh-keygen command and inserting the generated
+# public key in the ~/.ssh/authorized_keys file of the user account on the
+# target machine that you want to use for connecting the target machine.
+# If you have trouble setting this up, search the internet for something
+# like "ssh without password".
+# Note: make sure you log in from your source machine to your target machine
+# once using ssh with the EXTERNAL_USER username and the EXTERNAL_HOST
+# hostname, because you might need to let ssh add the fingerprint of the
+# target machine to the list of known hosts once.
+
+# Hostname of an external server on which to put a backup:
+EXTERNAL_HOST="your.server.org"
+
+# Username on the external backup server:
+EXTERNAL_USER="root"
+
+# Directory (path) where to put the backup on the external backup server:
+EXTERNAL_DIR="~root"
+
+
+### Email-Notification options: ###
+# You can specify a number of email addresses (separated by spaces) in the
+# EMAIL option. The backup script will then send the backup log file to each of
+# those addresses when it has finished the backup. You can adjust the subject
+# line of the email through the EMAIL_SUBJECT setting if you want (the string
+# %SIZE% in the subject line will be replaced by the total size of the
+# backup, e.g. "5GB").
+
+# Email addresses (separated by spaces) to which to send the backup log to:
+#EMAIL="your@your.server.org"
+
+# Subject line for the backup log emails:
+EMAIL_SUBJECT="{BACKUP} ${BACKUP_NAME} `date +'%Y-%m-%d %H:%M'` [%SIZE%]"
+
+##### End of configurable options #########################################
+
+
+
+##### Start ###############################################################
+SHORT_DATE=`date +%Y-%m-%d`
+DEST="${BACKUP_DIR}/${BACKUP_NAME}_${SHORT_DATE}"
+LATEST_DIR=""
+ARCHIVE_DIR=""
+DEST="${BACKUP_DIR}/${BACKUP_NAME}_${SHORT_DATE}"
+if [ "${USE_LATEST_DIR}" = "true" ]; then
+    LATEST_DIR="${BACKUP_DIR}/latest"
+    mkdir -p ${LATEST_DIR}
+    ARCHIVE_DIR="${BACKUP_DIR}/old"
+    mkdir -p ${ARCHIVE_DIR}
+    DEST="${LATEST_DIR}/${BACKUP_NAME}"
+    # move previous latest backup to archive:
+    if [ -d ${DEST} ]; then
+        if [ -f ${DEST}/date.log ]; then
+            mv ${DEST} ${ARCHIVE_DIR}/${BACKUP_NAME}_`cat ${DEST}/date.log`
+        fi
+    fi
+fi
+mkdir -p ${DEST} # create directories for backup
+rm -rf ${DEST} # delete any pre-existing folder for current backup
+OLD_BACKUPS=`find ${ARCHIVE_DIR} -type d -name "${BACKUP_NAME}_*" | sort`
+mkdir -p ${DEST}
+chmod 700 ${DEST}
+LOGFILE="${DEST}/backup.log"
+
+echo ${SHORT_DATE} > "${DEST}/date.log"
+
+echo "BACKUP :" `date`
+echo "BACKUP :" `date` > ${LOGFILE}
+echo "Files will be put in : ${DEST}" >> ${LOGFILE}
+echo "Files will be put in : ${DEST}"
+
+
+
+##### Delete old backups ##################################################
+NR_OLD_BACKUPS=0
+for OLD_BACKUP in ${OLD_BACKUPS}; do
+    NR_OLD_BACKUPS=$[${NR_OLD_BACKUPS} + 1]
+done
+for OLD_BACKUP in ${OLD_BACKUPS}; do
+    if [ ${NR_OLD_BACKUPS} -ge ${MAX_NR_DAILY_BACKUPS} ]; then
+        echo "* Deleting old backup: ${OLD_BACKUP}" >> ${LOGFILE}
+	echo "* Deleting old backup: ${OLD_BACKUP}"
+        rm -rf ${OLD_BACKUP} && NR_OLD_BACKUPS=$[${NR_OLD_BACKUPS} - 1]
+    fi
+done
+
+
+
+##### sTeam directories ###################################################
+echo "" >> ${LOGFILE}
+echo "*** Backing up sTeam '${STEAM_BRAND}' :" `date` "***" >> ${LOGFILE}
+echo "*** Backing up sTeam '${STEAM_BRAND}' :" `date` "***"
+
+echo "* Copying /etc/${STEAM_BRAND}" >> ${LOGFILE}
+mkdir -p ${DEST}/etc >> ${LOGFILE} 2>&1
+cp -pR /etc/${STEAM_BRAND} ${DEST}/etc >> ${LOGFILE} 2>&1
+
+echo "* Copying /tmp/lost_data.${STEAM_BRAND}" >> ${LOGFILE}
+mkdir -p ${DEST}/tmp >> ${LOGFILE} 2>&1
+cp -pR /tmp/lost_data.${STEAM_BRAND} ${DEST}/tmp >> ${LOGFILE} 2>&1
+
+echo "* Copying ${STEAM_DIR}" >> ${LOGFILE}
+mkdir -p ${DEST}${STEAM_DIR} >> /dev/null 2>&1
+rmdir ${DEST}${STEAM_DIR} > /dev/null 2>&1
+cp -pR ${STEAM_DIR} ${DEST}${STEAM_DIR} >> ${LOGFILE} 2>&1
+
+
+
+##### Additional directories ##############################################
+if [ "x${ADDITIONAL_FILES}" != "x" ]; then
+    echo "" >> ${LOGFILE}
+    echo "*** Backing up additional files :" `date` "***" >> ${LOGFILE}
+    echo "*** Backing up additional files :" `date` "***"
+
+    for ADD_FILE in ${ADDITIONAL_FILES}; do
+        if [ -d ${ADD_FILE} ]; then
+            echo "* Copying directory ${ADD_FILE}" >> ${LOGFILE}
+            mkdir -p ${DEST}${ADD_FILE} >> /dev/null 2>&1
+            rmdir ${DEST}${ADD_FILE} >> /dev/null 2>&1
+            cp -pR ${ADD_FILE} ${DEST}${ADD_FILE} >> ${LOGFILE} 2>&1
+        elif [ -h ${ADD_FILE} ]; then
+            echo "* Copying symbolic link ${ADD_FILE}" >> ${LOGFILE}
+            # trick to create the target dir for the file:
+            mkdir -p ${DEST}${ADD_FILE} > /dev/null 2>&1
+            rmdir ${DEST}${ADD_FILE} > /dev/null 2>&1
+            # copy the link itself:
+            cp -pR ${ADD_FILE} ${DEST}${ADD_FILE} >> ${LOGFILE} 2>&1
+        elif [ -e ${ADD_FILE} ]; then
+            echo "* Copying file ${ADD_FILE}" >> ${LOGFILE}
+            # trick to create the target dir for the file:
+            mkdir -p ${DEST}${ADD_FILE} > /dev/null 2>&1
+            rmdir ${DEST}${ADD_FILE} > /dev/null 2>&1
+            # copy the link itself:
+            cp -pR ${ADD_FILE} ${DEST}${ADD_FILE} >> ${LOGFILE} 2>&1
+        else
+            echo "* Skipping (does not exist) ${ADDITIONAL_DIR}" >> ${LOGFILE}
+        fi
+    done
+fi
+
+
+##### MySQL databases #####################################################
+echo "" >> ${LOGFILE}
+echo "*** Backing up MySQL database :" `date` "***" >> ${LOGFILE}
+echo "*** Backing up MySQL database :" `date` "***"
+
+mkdir -p ${DEST}/databases >> ${LOGFILE} 2>&1
+DATABASE_OPTIONS="--quote-names --opt --quick --host=${DATABASE_HOST}"
+for DATABASE in ${DATABASES}; do
+    echo "* Running mysqldump on database: ${DATABASE}" >> ${LOGFILE}
+    mysqldump --user="${DATABASE_USER}" --password="${DATABASE_PASSWORD}" ${DATABASE_OPTIONS} --result-file=${DEST}/databases/${DATABASE}.sql ${DATABASE}
+done
+
+
+
+##### Finished ############################################################
+BACKUP_SIZE=`du -h -s ${DEST} 2> /dev/null | sed "s/[[:blank:]]*\([^[:blank:]]*\).*/\1/g"`
+echo "" >> ${LOGFILE}
+echo "*** Finished :" `date` "***" >> ${LOGFILE}
+echo "* Backup size is ${BACKUP_SIZE}" >> ${LOGFILE}
+echo "*** Finished :" `date` "***"
+echo "* Backup size is ${BACKUP_SIZE}"
+
+
+
+##### Copy to external server #############################################
+CURRENT_DAY=`date +%u`
+for DAY in ${EXTERNAL_COPY_ON_DAYS}; do
+    if [ "x${DAY}" == "x${CURRENT_DAY}" ]; then
+	EXTERNAL_ARCHIVE="${BACKUP_NAME}_backup.tar.gz"
+	echo "" >> ${LOGFILE}
+	echo "*** Copying backup to ${EXTERNAL_USER}@${EXTERNAL_HOST}:${EXTERNAL_DIR}/${EXTERNAL_ARCHIVE} :" `date` "***" >> ${LOGFILE}
+	echo "*** Copying backup to ${EXTERNAL_USER}@${EXTERNAL_HOST}:${EXTERNAL_DIR}/${EXTERNAL_ARCHIVE} :" `date` "***"
+        tar -c -z -C ${BACKUP_DIR} -f - "${BACKUP_NAME}_${SHORT_DATE}" | ssh ${EXTERNAL_USER}@${EXTERNAL_HOST} "cat > ${EXTERNAL_DIR}/${EXTERNAL_ARCHIVE}" >> ${LOGFILE} 2>&1
+        echo "*** Finished copying backup :" `date` "***" >> ${LOGFILE}
+        echo "*** Finished copying backup :" `date` "***"
+	break
+    fi
+done
+
+
+
+##### Email log ###########################################################
+MAIL_SUBJECT=`echo ${EMAIL_SUBJECT} | sed "s/%SIZE%/${BACKUP_SIZE}/g"`
+if [ "x${EMAIL}" != "x" ]; then
+    for MAIL_ADDR in ${EMAIL}; do
+	mail -s "${MAIL_SUBJECT}" "${MAIL_ADDR}" < ${LOGFILE}
+    done
+fi
