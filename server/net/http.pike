@@ -753,6 +753,10 @@ static mapping call_command(string cmd, object obj, mapping vars)
 	result->error = 501;
 	result->data = "Not implemented";
     }
+    result->extra_heads += ([
+        "Access-Control-Allow-Origin": vars->__internal->request_headers->origin,
+        "Access-Control-Allow-Headers": vars->__internal->request_headers["access-control-request-headers"]
+	]);
     return result;
 }
 
