@@ -1045,3 +1045,7 @@ mapping find_tags(object obj)
   return 0;
 }
 
+// hack to force pike to load JSON into the chroot
+#if constant(Standards.JSON)
+int json = 1;
+#endif
