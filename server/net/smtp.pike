@@ -187,9 +187,10 @@ int check_rcpt(string user, string domain)
 {
   DEBUG_SMTP("Mail to domain=%s - LOCALDOMAIN=%s", domain, sFQDN);
   
-  int success = 0;
   if( lower_case(domain) == lower_case(sFQDN) )
-    success = 1;
+    return 1;
+  else if (_ADMIN->query_attribute("virtual_hosts")[domain])
+    return 1;
   else {   
     //test if given domain-name matches local ip-adress (->accept it)
     //workaround for multiple domains on same machine
@@ -209,7 +210,7 @@ int check_rcpt(string user, string domain)
     if ( sizeof( (myIPs & remoteIPs) ) > 0 )
       return 1;
   }
-  return success;
+  return 0;
 }
 
 static void rcpt(string recipient)
