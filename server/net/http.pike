@@ -747,6 +747,7 @@ static mapping call_command(string cmd, object obj, mapping vars)
 
     function call = this_object()["handle_"+cmd];
     if ( functionp(call) ) {
+        vars->__internal->request_method = cmd;
 	result = call(obj, vars);
     }
     else {
