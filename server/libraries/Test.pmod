@@ -98,7 +98,7 @@ int start_test ( object|void obj ) {
   if ( suite["started"] == 0 )
     suite["started"] = time();
 
-  object first_test = TestCard( obj, obj->test, 0 );
+  object first_test = TestCard( obj, obj->test, 0, 0);
   suite["pending_calls"] += ({ first_test });
   first_test->enqueue();
   return 1;
