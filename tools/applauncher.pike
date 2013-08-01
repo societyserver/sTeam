@@ -20,24 +20,22 @@
 
 constant cvs_version="$Id: applauncher.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
-
 void upload(object editor, string file, int last_mtime, object obj, object xslobj, function|void exit_callback)
 {
   int exit_status = editor->status();
   int new_mtime=file_stat(file)->mtime;
-  if(new_mtime > last_mtime)
+  string newcontent = Stdio.read_file(file);
+  if(stringp(newcontent) && new_mtime > last_mtime)
   {
     last_mtime=new_mtime;
-    mixed result=obj->set_content(Stdio.read_file(file));
+    mixed result=obj->set_content(newcontent);
     string message=sprintf("%O: upload: %O", obj, result);
-    write(message+"\n");
-    Process.create_process(({ "screen", "-X", "wall", message }));
+    send_message(message);
     if(xslobj)
     {
       result=xslobj->load_xml_structure();
       message=sprintf("%O: load xml struct: %O", xslobj, result);
-      write(message+"\n");
-      Process.create_process(({ "screen", "-X", "wall", message }));
+      send_message(message);
     }
   }
   if(exit_status != 2)
@@ -65,9 +63,19 @@ array edit(object obj)
   //array command=({ "vim", "--servername", "VIM", "--remote-wait", dir+"/"+filename });
   array command=({ getenv("EDITOR")||"vim", dir+"/"+filename });
   object editor=Process.create_process(command,
-                                     ([ "cwd":dir, "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
+                                     ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
   return ({ editor, dir+"/"+filename });
 } 
+
+int send_message(string message)
+{
+  if (getenv("STY"))
+      Process.create_process(({ "screen", "-X", "wall", message }));
+  else if (getenv("TMUX"))
+      Process.create_process(({ "tmux", "display-message", message }));
+  else
+      werror("%s\n", message);
+}
 
 int applaunch(object obj, function exit_callback)
 {
