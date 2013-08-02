@@ -540,6 +540,27 @@ mapping handle_OPTIONS(object obj, mapping vars)
 
 mapping handle_PUT(object obj, mapping vars)
 {
+    // handle_PUT only deals with uploading files via webdav
+    // PUT requests for scripts are done in handle_POST
+    mapping result;
+    if ( obj->get_object_class() & CLASS_SCRIPT ) 
+    {
+        result = handle_POST(obj, vars);
+	if ( !mappingp(result) )
+	  return result;
+    }
+    else if ( vars->type == "execute" &&
+              obj->get_object_class() & CLASS_DOCLPC ) 
+    {
+        result = handle_POST(obj, vars);
+    }
+    else return handle_webdav_PUT(obj, vars);
+
+    return result;
+}
+
+mapping handle_webdav_PUT(object obj, mapping vars)
+{
     __newfile = 0;
 
     if ( !check_precondition(obj) )
@@ -756,7 +777,8 @@ static mapping call_command(string cmd, object obj, mapping vars)
     }
     result->extra_heads += ([
         "Access-Control-Allow-Origin": vars->__internal->request_headers->origin,
-        "Access-Control-Allow-Headers": vars->__internal->request_headers["access-control-request-headers"]
+        "Access-Control-Allow-Headers": vars->__internal->request_headers["access-control-request-headers"],
+        "Access-Control-Allow-Methods": vars->__internal->request_headers["access-control-request-method"],
 	]);
     return result;
 }
