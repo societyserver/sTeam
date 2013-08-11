@@ -23,22 +23,36 @@ constant cvs_version="$Id: applauncher.pike,v 1.1 2008/03/31 13:39:57 exodusd Ex
 void upload(object editor, string file, int last_mtime, object obj, object xslobj, function|void exit_callback)
 {
   int exit_status = editor->status();
-  int new_mtime=file_stat(file)->mtime;
-  string newcontent = Stdio.read_file(file);
-  if(stringp(newcontent) && new_mtime > last_mtime)
+  object new_stat = file_stat(file);
+  int new_mtime;
+  string newcontent;
+
+  if (!new_stat)
+    send_message(sprintf("%s is gone!", file));
+
+  if (new_stat && new_stat->mtime > last_mtime)
+  {
+    new_mtime = new_stat->mtime;
+    newcontent = Stdio.read_file(file);
+    if (!stringp(newcontent))
+      send_message(sprintf("failed to read %s", file));
+  }
+
+  if (stringp(newcontent) && newcontent != obj->get_content())
   {
     last_mtime=new_mtime;
     mixed result=obj->set_content(newcontent);
     string message=sprintf("%O: upload: %O", obj, result);
     send_message(message);
-    if(xslobj)
+    if (xslobj)
     {
       result=xslobj->load_xml_structure();
       message=sprintf("%O: load xml struct: %O", xslobj, result);
       send_message(message);
     }
   }
-  if(exit_status != 2)
+
+  if (exit_status != 2)
     call_out(upload, 1, editor, file, new_mtime, obj, xslobj, exit_callback);
   else if (exit_callback)
     exit_callback(editor->wait());

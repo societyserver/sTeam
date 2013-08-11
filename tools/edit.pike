@@ -24,13 +24,20 @@ constant cvs_version="$Id: edit.pike.in,v 1.0 2010/09/15 14:19:52 martin Exp $";
 
 inherit "/usr/local/lib/steam/tools/applauncher.pike";
 
-void ping()
+void ping(string host, string port, string user, string|void pw)
 {
-  call_out(ping, 60);
-  conn->send_command(14, 0); 
+  call_out(ping, 60, host, port, user, pw);
+  if (conn->is_closed())
+  {
+      if (conn->connect_server(host, port) && user != "guest")
+          conn->login(user, pw, 1);
+  }
+  else
+      conn->send_command(14, 0); 
 }
 
 object conn;
+mapping conn_options = ([]);
 
 int main(int argc, array(string) argv)
 {
@@ -96,9 +103,11 @@ mapping init(array argv)
     sleep(10);
   }
  
-  ping();
   if(lower_case(options->user) == "guest")
+  {
+    ping(options->host, options->port, options->user);
     return options;
+  }
 
   mixed err;
   string pw;
@@ -118,6 +127,7 @@ mapping init(array argv)
     werror("Failed to log in!\nWrong Password!\n");
     exit(1);
   } 
+  ping(options->host, options->port, options->user, pw);
   return options;
 }
 
