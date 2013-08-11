@@ -540,7 +540,7 @@ mapping handle_OPTIONS(object obj, mapping vars)
 
 mapping handle_PUT(object obj, mapping vars)
 {
-    // handle_PUT only deals with uploading files via webdav
+    // original handle_PUT only deals with uploading files via webdav
     // PUT requests for scripts are done in handle_POST
     mapping result;
     if ( obj->get_object_class() & CLASS_SCRIPT ) 
@@ -687,8 +687,10 @@ mapping read_body(object req, int len)
     if ( stringp(req->body_raw) )
       len -= strlen(req->body_raw);
     
-    if ( req->request_type == "PUT" )
-	return ([ ]);
+// i suppose webdav has another method to read the body, 
+// but we need it in __vars to handle PUT for scripts
+//    if ( req->request_type == "PUT" )
+//	return ([ ]);
 
     __toread = len;
     __body = "";
@@ -702,7 +704,7 @@ mapping read_body(object req, int len)
 	return ([ ]);
     
     content_type = lower_case(content_type);
-    if ( search(content_type, "multipart/form-data") >= 0 )
+    if (req->request_type != "PUT"  && search(content_type, "multipart/form-data") >= 0 )
 	return parse_multipart_form_data(req, __body);
     else 
       return ([ "__body": __body, ]);
