@@ -1533,11 +1533,16 @@ mapping response_error(object obj, mapping vars, mixed err)
     "<li>Report Bug: <a href=\"http://www.open-steam.org:8080/jira\">http://www.open-steam.org:8080/jira</a></li>"+
     "</ul>";
   object xsl = OBJ("/stylesheets/errors.xsl");
-  xml =  
-    "<?xml version='1.0' encoding='utf-8'?>\n"+
-    "<error><actions/><message><![CDATA["+xml+"]]></message></error>";
-  html = run_xml(xml, xsl, vars);
-  return ([ "data": html, "type": "text/html", "error": 500, ]);
+  if (xsl)
+  {
+    xml =  
+      "<?xml version='1.0' encoding='utf-8'?>\n"+
+      "<error><actions/><message><![CDATA["+xml+"]]></message></error>";
+    html = run_xml(xml, xsl, vars);
+    return ([ "data": html, "type": "text/html", "error": 500, ]);
+  }
+  else
+    return ([ "data": xml, "type": "text/plain", "error": 500, ]);
 }
 
 mapping response_loginfailed(object obj, mapping vars)
