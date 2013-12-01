@@ -1,0 +1,7 @@
+BRANCH OVERVIEW
+===============
+
+steam-2.9-source is an archive of the source that our server is built with.
+ekita-devel is the binary-build that we are currently running made from that source.
+
+because there is no official public steam repository at the moment, we are collecting our patches in a repository in our binary-build, so that they can be merged into a steam source repository at a later time.
