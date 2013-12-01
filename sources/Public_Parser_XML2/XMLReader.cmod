@@ -1,0 +1,953 @@
+/*
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ * $Id: XMLReader.cmod,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+ */
+
+/*
+ * File licensing and authorship information block.
+ *
+ * Version: MPL 1.1/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Initial Developer of the Original Code is
+ *
+ * Bill Welliver <hww3@riverweb.com>
+ *
+ * Portions created by the Initial Developer are Copyright (C) Bill Welliver
+ * All Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of the LGPL, and not to allow others to use your version
+ * of this file under the terms of the MPL, indicate your decision by
+ * deleting the provisions above and replace them with the notice
+ * and other provisions required by the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL or the LGPL.
+ *
+ * Significant Contributors to this file are:
+ *
+ *
+ */
+
+#define THIS_IS_XML2_XMLREADER 1
+
+#include "xml2.h"
+
+/*! @module Public
+ */
+
+/*! @module Parser
+ */
+
+/*! @module XML2
+ */
+
+/*! @class XMLReader
+ *!
+ *! A simplified parser for XML documents. Similar to the C# XMLReader 
+ *! class.
+ */
+#ifdef HAVE_LIBXML_XMLREADER_H
+
+PIKECLASS XMLReader
+program_flags PROGRAM_USES_PARENT;
+{
+
+  CVAR XMLREADER_OBJECT_DATA   *object_data;
+
+PIKEFUN string _sprintf(int type, mixed t)
+{
+  char * desc;
+
+  push_text("XMLReader()");
+}
+
+/*! @decl void set_autoencode(int a)
+ *!
+ *! turns autoencoding of data to UTF-8 on or off. If you know
+ *! that your input to non-constructor functions is UTF-8,
+ *! you can turn autoencode off, thereby saving conversion 
+ *! time. Otherwise, all input is assumed to be unencoded Pike
+ *! strings (which may be wide).
+ *!
+ */
+PIKEFUN void set_autoencode(int a)
+{
+  THIS->object_data->autoencode = a;
+  pop_stack();
+}
+
+/*! @decl int read()
+ *!
+ *! reads the next node of the document and loads its data.
+ *!
+ *! returns 1 if a node was read, 0 if no additional nodes are available,
+ *!  and throws an error if a parse error occurred.
+ */
+PIKEFUN int read()
+{
+  int res;
+
+  if(THIS->object_data == NULL || THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  res = xmlTextReaderRead(THIS->object_data->reader);
+  if(res == 1) /* we got data to process! */
+  {
+    push_int(1);
+    return;
+  }
+  else if (res == 0)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    Pike_error("unable to parse, result code: %d!\n", res);
+  }
+}
+
+/*! @decl int node_type()
+ *! 
+ *!  returns the type of the current node. Types are described here:
+ *!   http://dotgnu.org/pnetlib-doc/System/Xml/XmlNodeType.html
+ */
+PIKEFUN int node_type()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderNodeType(THIS->object_data->reader);
+}
+
+/*! @decl Node expand()
+ *!
+ */
+
+PIKEFUN object expand()
+{
+  xmlNodePtr node;
+struct object * xnode;
+  struct Node_struct * ns;
+  NODE_OBJECT_DATA * od;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  node = xmlTextReaderExpand(THIS->object_data->reader);
+
+  if(node == NULL)
+  {
+    Pike_error("error expanding node!\n");
+  }
+
+  xnode = NEW_NODE();
+  ns = OBJ2_NODE((xnode));
+  od = (NODE_OBJECT_DATA *)(ns->object_data);
+  od->transient = 1;
+  od->refs = malloc(sizeof(INT32));
+  (* od->refs)=1;
+
+  od->node = node;
+
+  push_object(xnode);  
+}
+
+/*! @decl int depth()
+ *! 
+ *!   returns the depth of the current node within the tree.
+ */
+PIKEFUN int depth()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderDepth(THIS->object_data->reader);
+}
+
+/*! @decl int has_attributes()
+ *! 
+ *!  Does the node have attributes?
+ */
+PIKEFUN int has_attributes()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderHasAttributes(THIS->object_data->reader);
+}
+
+/*! @decl int attribute_count()
+ *! 
+ *!  returns the number of attributes associated with the current node.
+ */
+PIKEFUN int attribute_count()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderAttributeCount(THIS->object_data->reader);
+}
+
+/*! @decl int next_sibling()
+ *! 
+ */
+PIKEFUN int next_sibling()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderNextSibling(THIS->object_data->reader);
+}
+
+/*! @decl int next()
+ *! 
+ */
+PIKEFUN int next()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderNext(THIS->object_data->reader);
+}
+
+/*! @decl int element()
+ *! 
+ */
+PIKEFUN int element()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderMoveToElement(THIS->object_data->reader);
+}
+
+/*! @decl int first_attribute()
+ *! 
+ */
+PIKEFUN int first_attribute()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderMoveToFirstAttribute(THIS->object_data->reader);
+}
+
+/*! @decl int next_attribute()
+ *! 
+ */
+PIKEFUN int next_attribute()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderMoveToNextAttribute(THIS->object_data->reader);
+}
+
+/*! @decl int attribute_no()
+ *! 
+ */
+PIKEFUN int attribute_no(int no)
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderMoveToAttributeNo(THIS->object_data->reader, no);
+}
+
+/*! @decl int attribute_ns(string localName, string namespaceURI)
+ *! 
+ */
+PIKEFUN int attribute_ns(string localName, string namespaceURI)
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  f_rconvert_string_utf8(1);
+  namespaceURI = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  localName = Pike_sp[-1].u.string;
+  f_rconvert_string_utf8(1);
+
+  RETURN xmlTextReaderMoveToAttributeNs(THIS->object_data->reader, 
+    (const xmlChar *)localName->str, (const xmlChar *)namespaceURI->str);
+}
+
+/*! @decl int attribute(string name)
+ *! 
+ */
+PIKEFUN int attribute(string name)
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  f_rconvert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  RETURN xmlTextReaderMoveToAttribute(THIS->object_data->reader, 
+    (const xmlChar *)name->str);
+}
+
+
+/*! @decl int has_value()
+ *! 
+ */
+PIKEFUN int has_value()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderHasValue(THIS->object_data->reader);
+}
+
+/*! @decl int is_default()
+ *! 
+ */
+PIKEFUN int is_default()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderIsDefault(THIS->object_data->reader);
+}
+
+/*! @decl int is_namespace_decl()
+ *! 
+ */
+PIKEFUN int is_namespace_decl()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+#if HAVE_XMLTEXTREADERISNAMESPACEDECL
+  RETURN xmlTextReaderIsNamespaceDecl(THIS->object_data->reader);
+#else
+  Pike_error("This XMLReader does not have xmlTextReaderIsNamespaceDecl.\n");
+#endif /* HAVE_XMLTEXTREADERISNAMESPACEDECL */
+}
+
+/*! @decl int is_empty_element()
+ *! 
+ */
+PIKEFUN int is_empty_element()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderIsEmptyElement(THIS->object_data->reader);
+}
+
+/*! @decl int is_valid()
+ *! 
+ */
+PIKEFUN int is_valid()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderIsValid(THIS->object_data->reader);
+}
+
+/*! @decl int parser_column_number()
+ *! 
+ */
+PIKEFUN int parser_column_number()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+#ifdef HAVE_XMLTEXTREADERGETPARSERCOLUMNNUMBER
+  RETURN xmlTextReaderGetParserColumnNumber(THIS->object_data->reader);
+#else
+  RETURN -1;
+#endif /* HAVE_XMLTEXTREADERGETPARSERCOLUMNNUMBER */
+}
+
+/*! @decl int parser_line_number()
+ *! 
+ */
+PIKEFUN int parser_line_number()
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+#ifdef HAVE_XMLTEXTREADERGETPARSERLINENUMBER
+  RETURN xmlTextReaderGetParserLineNumber(THIS->object_data->reader);
+#else
+  RETURN -1;
+#endif /* HAVE_XMLTEXTREADERGETPARSERLINENUMBER */
+}
+
+/*! @decl int get_parser_prop(int prop)
+ *! 
+ *! @param prop
+ *!   the property to get
+ */
+PIKEFUN int get_parser_prop(int prop)
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderGetParserProp(THIS->object_data->reader, prop);
+}
+
+/*! @decl int set_parser_prop(int prop, int value)
+ *! 
+ *! @param prop
+ *!   the property to set
+ *!
+ *! @param value
+ *!   the value to set
+ */
+PIKEFUN int set_parser_prop(int prop, int value)
+{
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  RETURN xmlTextReaderSetParserProp(THIS->object_data->reader, prop, value);
+}
+
+/*! @decl string name()
+ *! 
+ */
+PIKEFUN string name()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderName(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string get_attribute(string name)
+ *! 
+ */
+PIKEFUN string get_attribute(string name)
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  f_rconvert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  c = xmlTextReaderGetAttribute(THIS->object_data->reader, name->str);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+
+/*! @decl string get_attribute_no(int no)
+ *! 
+ */
+PIKEFUN string get_attribute_no(int no)
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderGetAttributeNo(THIS->object_data->reader, no);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string get_attribute_ns(string localName, string namespaceURI)
+ *! 
+ */
+PIKEFUN string get_attribute(string localName, string namespaceURI)
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  f_rconvert_string_utf8(1);
+  namespaceURI = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_rconvert_string_utf8(1);
+  localName = Pike_sp[-1].u.string;
+
+  c = xmlTextReaderGetAttributeNs(THIS->object_data->reader, 
+         localName->str, namespaceURI->str);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+
+/*! @decl string lookup_namespace(string|void prefix)
+ *! 
+ */
+PIKEFUN string lookup_namespace(string prefix)
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  f_rconvert_string_utf8(1);
+  prefix = Pike_sp[-1].u.string;
+
+  c = xmlTextReaderLookupNamespace(THIS->object_data->reader, prefix->str);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+PIKEFUN string lookup_namespace()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderLookupNamespace(THIS->object_data->reader, NULL);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string xml_lang()
+ *! 
+ */
+PIKEFUN string xml_lang()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderXmlLang(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+
+/*! @decl string prefix()
+ *! 
+ */
+PIKEFUN string prefix()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderPrefix(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string namespaceuri()
+ *! 
+ */
+PIKEFUN string namespaceuri()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderNamespaceUri(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+/*! @decl string baseuri()
+ *! 
+ */
+PIKEFUN string baseuri()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderBaseUri(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string localname()
+ *! 
+ */
+PIKEFUN string localname()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderLocalName(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string value()
+ *! 
+ */
+PIKEFUN string value()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderValue(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string string()
+ *! 
+ */
+PIKEFUN string string()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderReadString(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string inner_xml()
+ *! 
+ */
+PIKEFUN string inner_xml()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderReadInnerXml(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl string outer_xml()
+ *! 
+ */
+PIKEFUN string outer_xml()
+{
+  xmlChar * c;
+
+  if(THIS->object_data->reader == NULL)
+  {
+    Pike_error("no xmlReader!\n");
+  }
+
+  c = xmlTextReaderReadOuterXml(THIS->object_data->reader);
+  if(c != NULL)
+  {
+    push_text(c);
+    xmlFree(c);
+  }
+  else
+    push_int(0);
+}
+
+/*! @decl void create(string xml, string|void url, int|void options, string encoding)
+ *!
+ *!  note that xml is expected to be encoded according to the encoding directive in the
+ *!  xml file, or as UTF-8. All other strings may be in Pike standard string format.
+ */
+PIKEFUN void create(string xml, string url, int options, string encoding)
+{
+  xmlTextReaderPtr reader;
+/*
+  xmlParserCtxtPtr ctxt;
+  xmlSAXHandlerPtr sax;
+ */
+
+  stack_swap_n(2);
+  f_rconvert_string_utf8(1);
+  url = Pike_sp[-1].u.string;
+
+  stack_swap_n(4);
+  f_rconvert_string_utf8(1);
+  encoding = Pike_sp[-1].u.string;
+
+  reader = xmlReaderForMemory(xml->str, xml->len, url->str, 
+               encoding->str, options);
+
+  if(reader == NULL)
+  {
+    Pike_error("unable to get xmlReader\n");
+  }
+
+  add_ref(xml);
+  THIS->object_data->xml = xml;
+  THIS->object_data->reader = reader;
+
+  pop_n_elems(args);
+}
+
+PIKEFUN void create(string xml, string url, int options)
+{
+  xmlTextReaderPtr reader;
+
+  stack_swap_n(2);
+  f_rconvert_string_utf8(1);
+  url = Pike_sp[-1].u.string; 
+
+  reader = xmlReaderForMemory(xml->str, xml->len, url->str, 
+               NULL, options);
+
+  if(reader == NULL)
+  {
+    Pike_error("unable to get xmlReader\n");
+  }
+
+  THIS->object_data->reader = reader;
+  add_ref(xml);
+  THIS->object_data->xml = xml;
+
+  pop_n_elems(args);
+}
+
+PIKEFUN void create(string xml)
+{
+  push_text("noname.xml");
+  push_int(0);
+
+  f_XMLReader_create(3);
+}
+
+INIT
+{
+  XMLREADER_OBJECT_DATA * dta;
+
+  dta = 
+	(XMLREADER_OBJECT_DATA*)malloc(sizeof(XMLREADER_OBJECT_DATA));
+    if (!dta)
+        Pike_error("init_xmlreader: Out of memory!\n");
+
+    dta->reader = NULL;
+    dta->autoencode = 1;
+    THIS->object_data = dta;
+}
+
+EXIT
+{ 
+
+  if(THIS->object_data->reader != NULL)
+  {
+    xmlFreeTextReader(THIS->object_data->reader);
+    THIS->object_data->reader = NULL;
+  }
+  if(THIS->object_data->xml != NULL)
+  {
+    free_string(THIS->object_data->xml);
+    THIS->object_data->xml = NULL;
+  }
+  if(THIS->object_data)
+  {
+    free(THIS->object_data);
+    THIS->object_data = NULL;
+  }
+}
+}
+
+#endif /* HAVE_LIBXML_XMLREADER_H */
+/*! @endclass
+ */
+
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+
+void pike_init_xml2_xmlreader()
+{
+  INIT
+}
+
+void pike_exit_xml2_xmlreader()
+{
+  EXIT
+}

@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<cgi>
+<x-httpd-php>/cgi/bin/php</x-httpd-php>
+</cgi>

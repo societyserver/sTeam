@@ -1,0 +1,22 @@
+#!@PIKE@
+int main(int argc, array argv)
+{
+    master()->add_program_path("../server");
+    master()->add_include_path("../server/include");
+    master()->add_module_path("../server/libraries");
+  
+    add_constant("find_object", find_object);
+
+    object e = ((program)"export.pike")();
+    e->main(argc, argv); 
+}
+//pike -P /home/astra/coreserver/server -I ../server/include export.pike $*
+
+static object oInstall;
+
+object find_object(int id)
+{
+    if ( objectp(oInstall) )
+	oInstall->find_object(id);
+    return 0;
+}

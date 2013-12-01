@@ -1,0 +1,212 @@
+# German translation of the debian template Files
+# Copyright (C) 2006
+# This file is distributed under the same license as the steam package.
+# Alain Schr�der <alain@parkautomat.net>, 2006.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: steam 2.0.1-2\n"
+"Report-Msgid-Bugs-To: alain@debian.org\n"
+"POT-Creation-Date: 2006-03-01 17:58+0100\n"
+"PO-Revision-Date: 2006-03-01 19:40+0100\n"
+"Last-Translator: Alain Schröder <alain@parkautomat.net>\n"
+"Language-Team: Deutsch <alain@parkautomat.net>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Language: German\n"
+"X-Poedit-Country: GERMANY\n"
+
+#. Type: select
+#. Choices
+#: ../steam.templates:3
+msgid "standard, alternative, manual"
+msgstr "Standard, Alternativ, Eigenhändig"
+
+#. Type: select
+#. Description
+#: ../steam.templates:5
+msgid "Ports configuration type:"
+msgstr "Port Konfigurations Art:"
+
+#. Type: select
+#. Description
+#: ../steam.templates:5
+msgid "sTeam provides access through different protocols using their standard ports. sTeam will run into troubles if a different daemon (http, news, mail, jabber, etc) already uses one of those standard ports."
+msgstr "sTeam bietet Zugang zum System über unterschiedliche Protokolle. Dabei werden die üblichen Ports (HTTP, NEWS, Jabber, etc) benutzt. Sollten diese bereits von einem anderen Programm benutzt werden, so kann sTeam auf diese Art nicht benutzt werden."
+
+#. Type: select
+#. Description
+#: ../steam.templates:5
+msgid "You can choose to run sTeam either on the standard ports or on totally alternative ports, which prevents problems with other daemons, or you can configure sTeam manually."
+msgstr "Sie können sTeam entweder auf den üblichen Standard-Ports oder auf komplett unterschiedlichen Ports laufen lassen. Letzteres verhindert Probleme mit anderen bereits laufenden Diensten. Weiterhin können die Ports auch komplett eigenhändig eingestellt werden."
+
+#. Type: string
+#. Description
+#: ../steam.templates:17
+msgid "Port of the SMTP service:"
+msgstr "Port des eMail (SMTP) Dienstes:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:17
+msgid "The SMTP service defaults to 25. It is very likely that you already run another SMTP daemon, which conflicts with sTeam. Please only use port 25 here if you are sure you don't have any other SMTP service running."
+msgstr "Der eMail (SMTP) Dienst nutzt standardmäßig Port 25. Es ist sehr wahrscheinlich, dass bereits ein solcher Dienst läuft und mit sTeam in Konflikt gerät. Bitte nur dann Port 25 nutzen, wenn ganz sicher ist, dass kein SMTP Dienst läuft."
+
+#. Type: string
+#. Description
+#: ../steam.templates:25
+msgid "Smarthost used to deliver emails:"
+msgstr "Smarthost (Relay) zum Versenden von eMails:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:25
+msgid "sTeam is not capable to deliver emails all by itself and needs a smarthost if outgoing emails are allowed."
+msgstr "sTeam kann von sich aus keine eMails an andere Server versenden und braucht einen Smarthost (Relay) falls ausgehende eMails erlaubt sind."
+
+#. Type: string
+#. Description
+#: ../steam.templates:32
+msgid "Port of the NEWS service:"
+msgstr "Port des Usenet (NEWS) Dienstes:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:32
+msgid "sTeam offers internal boards for discussion. They can be accessed using a newsreader (eg.: trn, knode, pan, etc)."
+msgstr "sTeam bietet interne Diskussionsforen. Auf diese kann mit einem Newsreader (z.B.: trn, knode, pan, thunderbird, etc) zugegriffen werden."
+
+#. Type: string
+#. Description
+#: ../steam.templates:32
+msgid "The service runs on port 119 by default and you should only change this, if you are sure another NEWS server is running on this computer."
+msgstr "Dieser Dienst läuft standardmäßig auf Port 119. Dies sollte nur verändert werden, falls sicher ist, dass bereits ein NEWS Dienst (z.B.: inn, leafnode, etc) läuft."
+
+#. Type: string
+#. Description
+#: ../steam.templates:42
+msgid "Port of the POP3 service:"
+msgstr "Port des POP3 Dienstes:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:42
+msgid "sTeam offers access to work rooms using POP3. This means users can access work rooms using their email client."
+msgstr "sTeam bietet Zugriff auf Arbeitsräume über den POP3 Dienst. Dies heißt, dass Benutzer mit ihrem eMail Programm darauf zugreifen können."
+
+#. Type: string
+#. Description
+#: ../steam.templates:42
+msgid "The service runs on port 110 by default and you should only change this, if you are sure another pop3 server is running on this computer."
+msgstr "Der POP3 Dienst läuft standardmäßig auf Port 110 und sollte nur verändert werden, wenn sicher ist, dass bereits ein anderer POP3 Dienst auf dem Computer läuft."
+
+#. Type: string
+#. Description
+#: ../steam.templates:52
+msgid "Port of the IMAP service:"
+msgstr "Port des IMAP Dienstes:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:52
+msgid "sTeam offers access to work rooms using IMAP. This means users can access work rooms using their email client."
+msgstr "sTeam bietet Zugriff auf Arbeitsräume über den IMAP Dienst. Dies heißt, dass Benutzer mit ihrem eMail Programm darauf zugreifen können."
+
+#. Type: string
+#. Description
+#: ../steam.templates:52
+msgid "The service runs on port 143 by default and you should only change this, if you are sure another IMAP server is running on this computer."
+msgstr "Der IMAP Dienst läuft standardmäßig auf Port 143 und sollte nur verändert werden, wenn sicher ist, dass bereits ein anderer IMAP Dienst auf dem Computer läuft."
+
+#. Type: string
+#. Description
+#: ../steam.templates:62
+msgid "Port the IRC service:"
+msgstr "Port des IRC Dienstes:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:62
+msgid "The chat rooms of sTeam can be accessed using a IRC client."
+msgstr "Auf die Chat Räume von sTeam kann mittels eines IRC Klienten zugegriffen werden."
+
+#. Type: string
+#. Description
+#: ../steam.templates:62
+msgid "The service runs on port 6667 by default and you should only change this, if you are sure another IRC server is running on this computer."
+msgstr "Der IRC Dienst läuft standardmäßig auf Port 6667 und sollte nur verändert werden, wenn sicher ist, dass bereits ein anderer IRC Dienst auf dem Computer läuft."
+
+#. Type: string
+#. Description
+#: ../steam.templates:71
+msgid "Port of the Jabber service:"
+msgstr "Port des Jabber Dienstes:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:71
+msgid "The chat rooms of sTeam can be accessed using a Jabber client."
+msgstr "Auf die Chat Räume von sTeam kann mittels eines Jabber Klienten zugegriffen werden."
+
+#. Type: string
+#. Description
+#: ../steam.templates:71
+msgid "The service runs on port 5222 by default and you should only change this, if you are sure another Jabber server is running on this computer."
+msgstr "Der Jabber Dienst läuft standardmäßig auf Port 5222 und sollte nur verändert werden, wenn sicher ist, dass bereits ein anderer Jabber Dienst auf dem Computer läuft."
+
+#. Type: string
+#. Description
+#: ../steam.templates:80
+msgid "Port of the FTP service:"
+msgstr "Port des FTP Dienstes:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:80
+msgid "sTeam offers access to files using FTP (file transfer protocol). A normal FTP client can be used."
+msgstr "sTeam bietet Zugriff auf Dateien über das FTP Protokoll. Ein üblicher FTP Klient (ncftp, lftp, kbear, nautilus, konqueror, etc) kann benutzt werden."
+
+#. Type: string
+#. Description
+#: ../steam.templates:80
+msgid "The service runs on port 21 by default and you should only change this, if you are sure another FTP server is running on this computer."
+msgstr "Der FTP Dienst läuft standardmäßig auf Port 21 und sollte nur verändert werden, wenn sicher ist, dass bereits ein anderer FTP Dienst auf dem Computer läuft."
+
+#. Type: string
+#. Description
+#: ../steam.templates:90
+msgid "Port of the web service:"
+msgstr "Port des Web Dienstes:"
+
+# .
+#. Type: string
+#. Description
+#: ../steam.templates:90
+msgid "The service may be accessed using a web browser. For this to work you need to install the web package into the server. Please read README.Debian for further information."
+msgstr "sTeam bietet eine Web Oberfläche, welche mit einem normalen Web Browser (z.B.: Konqueror, Mozilla, Firefox, etc) benutzt werden kann. Damit dieser Dienst funktioniert muss vorher ein zusätzliches Web Paket installiert werden. Für weitere Informationen lesen sie bitte die README.Debian."
+
+#. Type: string
+#. Description
+#: ../steam.templates:90
+msgid "The service runs on port 80 by default and you should only change this, if you are sure another web server is running on this computer."
+msgstr "Der Web Dienst läuft standardmäßig auf Port 80 und sollte nur verändert werden, wenn sicher ist, dass bereits ein anderer Web Dienst auf dem Computer läuft."
+
+#. Type: string
+#. Description
+#: ../steam.templates:101
+msgid "Port of the secure web service:"
+msgstr "Port des sicheren Web Dienstes:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:101
+msgid "The service may be accessed securely using a web browser. For this to work you need to install the web package into the server. Please read README.Debian for further  information."
+msgstr "sTeam bietet eine Web Oberfläche über eine sichere Verbindung, welche mit einem normalen Web Browser (z.B.: Konqueror, Mozilla, Firefox, etc) benutzt werden kann. Damit dieser Dienst funktioniert muss vorher ein zusätzliches Web Paket installiert werden. Für weitere Informationen lesen sie bitte die README.Debian."
+
+#. Type: string
+#. Description
+#: ../steam.templates:101
+msgid "The service runs on port 443 by default and you should only change this, if you are sure another HTTPS server is running on this computer."
+msgstr "Der sichere Web Dienst läuft standardmäßig auf Port 443 und sollte nur verändert werden, wenn sicher ist, dass bereits ein anderer sicherer Web Dienst auf dem Computer läuft."
+

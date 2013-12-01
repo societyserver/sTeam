@@ -1,0 +1,20 @@
+#!/bin/sh
+autoconf
+cd sources
+autoconf
+cd libxslt
+autoconf
+cd ..
+cd pike_doc
+autoconf
+cd ..
+cd pike_crypto
+autoconf
+cd ../..
+cd spm
+autoconf
+cd ..
+cd conf
+autoconf 
+cd ../..
+tar -czf steam-$1.tgz steam-$1/ --exclude=CVS --exclude=.cvsignore --exclude=configure.ac --exclude=config.status --exclude=config.log --exclude=debian --exclude=build-stamp --exclude=release_steam --exclude=autom4te.cache --exclude=*.o --exclude=*.so --exclude=*.spm

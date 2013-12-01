@@ -1,0 +1,29 @@
+CC= gcc
+INSTALL=@installprg@
+CFLAGS=-I@PIKE_INCLUDE_PREFIX@
+OBJS= doc.o 
+SOURCES=doc.c
+MODULE_LIBS=@LIBS@
+MODULE_CFLAGS=@CFLAGS@
+MODULE_LDFLAGS=
+LD=@LDSHARED@
+
+all:    $(SOURCES) doc.so
+
+doc.c:
+	$(CC) -o $@ $(OBJS) $(CFLAGS) 
+
+doc.so:     doc.o
+	$(LD) $(MODULE_LDFLAGS) $(MODULE_LIBS) -o doc.so $(OBJS)
+
+install:
+	$(INSTALL) doc.so ../../server/libraries/pike_doc.pmod.so
+
+clean:
+	rm -f *.o *~ doc.so
+
+distclean:
+	rm -f configure config.status config.log Makefile
+
+
+# DO NOT DELETE THIS LINE -- make  depend  depends  on  it.

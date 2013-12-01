@@ -1,0 +1,107 @@
+Template: steam/reconfigure-ports
+Type: select
+_Choices: standard, alternative, manual
+Default: alternative
+_Description: Ports configuration type:
+ sTeam provides access through different protocols using their standard
+ ports. sTeam will run into troubles if a different daemon (http, news, mail, jabber,
+ etc) already uses one of those standard ports.
+ .
+ You can choose to run sTeam either on the standard ports or on totally
+ alternative ports, which prevents problems with other daemons, or you can
+ configure sTeam manually.
+
+Template: steam/mail-port
+Type: string
+Default: 30025
+_Description: Port of the SMTP service:
+ The SMTP service defaults to 25. It is very likely that you already run
+ another SMTP daemon, which conflicts with sTeam. Please only use port 25
+ here if you are sure you don't have any other SMTP service running.
+
+Template: steam/mail-smarthost
+Type: string
+Default: localhost
+_Description: Smarthost used to deliver emails:
+ sTeam is not capable to deliver emails all by itself and needs a smarthost
+ if outgoing emails are allowed.
+
+Template: steam/nntp-port
+Type: string
+Default: 119
+_Description: Port of the NEWS service:
+ sTeam offers internal boards for discussion. They can be accessed using a
+ newsreader (eg.: trn, knode, pan, etc).
+ .
+ The service runs on port 119 by default and you should only change this,
+ if you are sure another NEWS server is running on this computer.
+
+Template: steam/pop3-port
+Type: string
+Default: 110
+_Description: Port of the POP3 service:
+ sTeam offers access to work rooms using POP3. This means users can access
+ work rooms using their email client.
+ .
+ The service runs on port 110 by default and you should only change this,
+ if you are sure another pop3 server is running on this computer.
+
+Template: steam/imap-port
+Type: string
+Default: 143
+_Description: Port of the IMAP service:
+ sTeam offers access to work rooms using IMAP. This means users can access
+ work rooms using their email client.
+ .
+ The service runs on port 143 by default and you should only change this,
+ if you are sure another IMAP server is running on this computer.
+
+Template: steam/irc-port
+Type: string
+Default: 6667
+_Description: Port the IRC service:
+ The chat rooms of sTeam can be accessed using a IRC client.
+ .
+ The service runs on port 6667 by default and you should only change this,
+ if you are sure another IRC server is running on this computer.
+
+Template: steam/jabber-port
+Type: string
+Default: 5222
+_Description: Port of the Jabber service:
+ The chat rooms of sTeam can be accessed using a Jabber client.
+ .
+ The service runs on port 5222 by default and you should only change this,
+ if you are sure another Jabber server is running on this computer.
+
+Template: steam/ftp-port
+Type: string
+Default: 21
+_Description: Port of the FTP service:
+ sTeam offers access to files using FTP (file transfer protocol). A normal
+ FTP client can be used.
+ .
+ The service runs on port 21 by default and you should only change this, if
+ you are sure another FTP server is running on this computer.
+
+Template: steam/http-port
+Type: string
+Default: 80
+_Description: Port of the web service:
+ The service may be accessed using a web browser. For this to work you need
+ to install the web package into the server. Please read README.Debian for
+ further information.
+ .
+ The service runs on port 80 by default and you should only change this, if
+ you are sure another web server is running on this computer.
+
+Template: steam/https-port
+Type: string
+Default: 443
+_Description: Port of the secure web service:
+ The service may be accessed securely using a web browser. For this to work
+ you need to install the web package into the server. Please read
+ README.Debian for further  information.
+ .
+ The service runs on port 443 by default and you should only change this,
+ if you are sure another HTTPS server is running on this computer.

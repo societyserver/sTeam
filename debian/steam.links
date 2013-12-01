@@ -1,0 +1,6 @@
+var/log/steam usr/share/steam/logs
+usr/share/steam/bin/spm usr/share/steam/spm/spm
+usr/lib/steam/server/libraries/xml.so usr/share/steam//server/libraries/xml.so
+usr/lib/steam/server/libraries/xslt.so usr/share/steam//server/libraries/xslt.so
+usr/lib/steam/server/libraries/wiki.so usr/share/steam/server/libraries/wiki.so
+usr/bin/pike7.6 usr/share/steam/steam

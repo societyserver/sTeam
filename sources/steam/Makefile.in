@@ -1,0 +1,29 @@
+CC=@CC@
+INSTALL=@installprg@
+CFLAGS=@CFLAGS@ -I@PIKE_INCLUDE_PREFIX@ -O3
+LIBS=
+LDFLAGS=
+LINK=@CC@
+BINNAME=steam
+
+OBJS=steam.o
+
+all: $(BINNAME)
+
+.SUFFIXES: .c .o
+
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@ 
+
+$(BINNAME): $(OBJS)
+	$(LINK) $(LDFLAGS) $(LIBS) -o $(BINNAME) $(OBJS)
+
+install: $(BINNAME)
+
+
+clean:
+	rm -f *~ $(BINNAME)
+
+distclean: clean
+	rm -rf autom4te.cache
+	rm -f configure config.status config.log Makefile

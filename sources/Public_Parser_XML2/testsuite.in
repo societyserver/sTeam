@@ -1,0 +1,93 @@
+START_MARKER
+
+// verify that we have all of the expected classes and objects
+test_true(objectp(Public.Parser.XML2))
+test_true(programp(Public.Parser.XML2.Node))
+test_true(programp(Public.Parser.XML2.Stylesheet))
+test_true(programp(Public.Parser.XML2.RelaxNG))
+test_true(programp(Public.Parser.XML2.SAX))
+test_true(programp(Public.Parser.XML2.XMLReader))
+test_true(programp(Public.Parser.XML2.Constants))
+
+// verify that we have all of the expected methods in the main module
+test_true(functionp(Public.Parser.XML2.parse_xml))
+test_true(functionp(Public.Parser.XML2.parse_html))
+test_true(functionp(Public.Parser.XML2.parse_xml))
+test_true(functionp(Public.Parser.XML2.parse_relaxng))
+test_true(functionp(Public.Parser.XML2.parse_xml_force))
+test_true(functionp(Public.Parser.XML2.new_node))
+test_true(functionp(Public.Parser.XML2.new_xml))
+test_true(functionp(Public.Parser.XML2.render_xml))
+test_true(functionp(Public.Parser.XML2.render_html))
+test_true(functionp(Public.Parser.XML2.validate))
+test_true(functionp(Public.Parser.XML2.utf8_check))
+test_true(functionp(Public.Parser.XML2.utf8_to_isolat1))
+test_true(functionp(Public.Parser.XML2.utf8_to_html))
+test_true(functionp(Public.Parser.XML2.substituteEntitiesDefault))
+test_true(functionp(Public.Parser.XML2.set_html_parser_options))
+test_true(functionp(Public.Parser.XML2.set_xml_parser_options))
+test_true(functionp(Public.Parser.XML2.set_auto_utf8_convert))
+test_true(functionp(Public.Parser.XML2.select_xpath_nodes))
+test_true(functionp(Public.Parser.XML2.get_encodings))
+test_true(functionp(Public.Parser.XML2.get_encoding_name))
+test_true(functionp(Public.Parser.XML2.get_encoding_alias))
+
+// test new_xml, render_xml and parse_xml...
+test_true(objectp(Public.Parser.XML2.new_xml("1.0", "testsuite")))
+test_true(Public.Parser.XML2.render_xml(Public.Parser.XML2.new_xml("1.0", "testsuite"))=="<?xml version=\"1.0\"?>\n<testsuite/>\n"))
+test_true(objectp(
+Public.Parser.XML2.parse_xml(
+  Public.Parser.XML2.render_xml(
+    Public.Parser.XML2.new_xml("1.0", "testsuite")
+                                 )
+                                  )
+                                    )
+))
+test_true(
+Public.Parser.XML2.render_xml(
+Public.Parser.XML2.parse_xml(
+  Public.Parser.XML2.render_xml(
+    Public.Parser.XML2.new_xml("1.0", "testsuite")
+                                 )
+                                  )
+                                    )
+) == "<?xml version=\"1.0\"?>\n<testsuite/>\n")
+
+// test new_node
+test_true(objectp(Public.Parser.XML2.new_node("testsuite")))
+test_true((string)Public.Parser.XML2.new_node("testsuite")=="<testsuite/>")
+
+// let's test namespaces
+
+// add a namespace to a node
+test_true((string)Public.Parser.XML2.new_node("testsuite")->add_ns("http://foo.com", "foo") == "<testsuite xmlns:foo=\"http://foo.com\"/>")
+
+// set the default namespace of a node
+test_true((string)Public.Parser.XML2.new_node("testsuite")->add_ns("http://foo.com", "foo")->set_ns("http://foo.com")=="<foo:testsuite xmlns:foo=\"http://foo.com\"/>")
+
+// get the default namespace of a node
+test_true(Public.Parser.XML2.new_node("testsuite")->add_ns("http://foo.com", "foo")->set_ns("http://foo.com")->get_ns()=="http://foo.com")
+test_true(Public.Parser.XML2.new_node("testsuite")->add_ns("http://foo.com", "foo")->get_ns()==0)
+
+// get namespaces on a node
+test_true(Public.Parser.XML2.new_node("testsuite")->add_ns("http://foo.com", "foo")->set_ns("http://foo.com")->get_nss()["foo"]=="http://foo.com")
+test_true(Public.Parser.XML2.new_node("testsuite")->get_nss() == 0)
+
+// add an attribute to a node
+test_true(Public.Parser.XML2.new_node("testsuite")->add_ns("http://foo.com", "foo")
+->set_ns("http://foo.com")
+->set_attribute("foo", "bar")
+->get_attributes()["foo"] == "bar")
+
+test_true(Public.Parser.XML2.new_node("testsuite")->add_ns("http://foo.com", "foo")
+->set_ns("http://foo.com")
+->set_attribute("bar", "http://foo.com", "gazonk")
+->get_attributes()["bar"] == "gazonk")
+
+// make sure that a non-ns attribute doesn't show up in a ns search.
+test_true(Public.Parser.XML2.new_node("testsuite")->add_ns("http://foo.com", "foo")
+->set_ns("http://foo.com")
+->set_attribute("bar", "gazonk")
+->get_ns_attributes("http://foo.com")["bar"] == 0)
+
+

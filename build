@@ -1,0 +1,14 @@
+#!/bin/sh
+./bootstrap
+
+for a in sources spm; do
+   cd $a
+   if test -f build; then
+       /bin/sh ./build
+   fi
+   cd ..
+done
+
+./configure $*
+make
+

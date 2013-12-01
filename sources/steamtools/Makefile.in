@@ -1,0 +1,34 @@
+CC=@CC@
+INSTALL=@installprg@
+CFLAGS=@CFLAGS@ -I@PIKE_INCLUDE_PREFIX@ -O3
+MODULE_LIBS=@LIBS@
+MODULE_CFLAGS=@CFLAGS@
+MODULE_LDFLAGS=@LEXLIB@
+LD=@LDSHARED@
+LEX=@LEX@
+
+LIBNAME=steamtools.so
+OBJS=steamtools.o lexer.o
+GENERATED_FILES=*.o lexer.c
+
+all: $(LIBNAME)
+
+.SUFFIXES: .c .o
+
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@ 
+
+lexer.c: lexer.l
+	$(LEX) --reentrant -olexer.c lexer.l
+
+$(LIBNAME): $(OBJS)
+	$(LD) $(MODULE_LDFLAGS) $(MODULE_LIBS) -o $(LIBNAME) $(OBJS)
+
+install: $(LIBNAME)
+	$(INSTALL) $(LIBNAME) ../../server/libraries/$(LIBNAME)
+
+clean:
+	rm -f $(GENERATED_FILES) *~ $(LIBNAME)
+
+distclean: clean
+	rm -f configure config.status config.log Makefile

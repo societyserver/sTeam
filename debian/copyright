@@ -1,0 +1,46 @@
+This package was debianized by Thomas Bopp <astra@upb.de> on
+Wed, 05 Oct 2002 21:02:14 +0100.
+
+The current Debian maintainer is Alain Schröder <alain@debian.org>
+
+It was downloaded from: 
+
+Upstream Authors:  Thomas Bopp, Thorsten Hampel, Ludger Merkens, Martin Baehr,
+                   
+
+  Copyright (C): 2000 - 2006 Thomas Bopp, Thorsten Hampel, Ludger Merkens
+                 2002 - 2004 Martin Baehr
+		 		 2002 - 2004 Christian Schmidt
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+A copy of the GNU General Public License is available as
+/usr/share/common-licenses/GPL in the Debian GNU/Linux distribution or
+on the World Wide Web at the GNU General Public Licence. You can also
+obtain it by writing to the Free Software Foundation, Inc., 51 Franklin
+St, Fifth Floor, Boston, MA 02110-1301, USA. 
+
+
+The file sources/wiki/grammar.l is Copyright 2004, Chris Holman and licensed
+under the GPL, see above.
+
+The files in the directory sources/_XML/ are Copyright 2000-2005,
+The Caudium Group and are licensed under the GPL, see above.
+
+The file server/libraries/LanManHash.pmod is Copyright 1997, Andrew Tridgell
+and is licensed under the GPL, see above.
+
+The first Debian packaging is 2002-2005, Thomas Bopp <astra@upb.de>
+and is licensed under the GPL, see above.
+
+The current Debian packaging is 2005-2006, Alain Schröder <alain@debian.org> 
+and is licensed under the GPL, see above.
+

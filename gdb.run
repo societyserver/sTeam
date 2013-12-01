@@ -1,0 +1,1 @@
+run -I server/include -M server/libraries -P server server/server.pike --gdb

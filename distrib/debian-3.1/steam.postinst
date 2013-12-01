@@ -1,0 +1,173 @@
+#!/bin/sh
+ACTION="$1"
+OVERSION="$2"
+
+PRECONFIG=`tempfile`
+CONFIG=/etc/steam/steam.cfg
+
+dbc_first_version=2.0.1-1
+
+. /usr/share/debconf/confmodule
+. /usr/share/dbconfig-common/dpkg/postinst.mysql
+dbc_go steam $@ # This is done way down
+
+# Get DBCONFIG-COMMON Configuration
+. /etc/dbconfig-common/steam.conf
+
+export PIKE_INCLUDE_PREFIX=/usr/include/pike7.6
+
+# Generate certificate, if none exists
+# TODO: Create a certificate with a non-nonsense hostname
+if [ ! -f /etc/steam/steam.cer -a ! -f /etc/steam/steam.crt ]; then
+    pike /usr/share/steam/tools/create_cert.pike --file=/etc/steam/steam.cer
+fi
+
+if [ ! -e "$CONFIG" ] || [ "$ACTION" = "reconfigure" ] || [ "$DEBCONF_RECONFIGURE" = "1" ]; then
+	if [ -e "$CONFIG" ]; then
+		mv "$CONFIG" "$CONFIG.old"
+	fi
+	
+	db_get steam/mail-smarthost
+	MAILHOST=$RET
+	db_get steam/mail-port
+	SMTPPORT=$RET
+
+	db_get steam/pop3-port
+	POP3PORT=$RET
+	db_get steam/imap-port
+	IMAPPORT=$RET
+	db_get steam/nntp-port
+	NEWSPORT=$RET
+	db_get steam/irc-port
+	IRCPORT=$RET
+	db_get steam/jabber-port
+	JABBPORT=$RET
+	db_get steam/ftp-port
+	FTPPORT=$RET
+	db_get steam/http-port
+	HTTPPORT=$RET
+	db_get steam/https-port
+	HTTPSPORT=$RET
+
+	cat > $CONFIG << EOF
+# sTeam server configuration file.
+#
+# All settings in this file cannot be changed other than through this file.
+# After running the server successfully at least once, you can delete some
+# settings from this file to make them changeable by the web interface, etc.
+# Note: you should *never* remove the settings
+#   database
+#   port, sport
+#   machine, domain, ip
+#   http_port, https_port
+# from this file, because changing them will require the restart of the server
+# anyway, plus you could lock yourself out of the server.
+# If you are running a firewall, then you might want to keep the port settings
+# here in this file to prevent them from being changed.
+
+# Databae configuration in the form mysql://user:password@host:/DB
+# You need to create a database by logging in with your mysql-root
+# and set all privileges to the steam user. This is usually done by
+# the setup script, which also writes the database access string in here
+#
+EOF
+	echo "database=mysql://${dbc_dbuser}:${dbc_dbpass}@${dbc_dbserver}/${dbc_dbname}" >> "$CONFIG"
+	cat >> "$CONFIG" << EOF
+
+# Machine Settings, hostname and machine name
+# 
+machine=(autodetect)
+domain=(autodetect)
+ip=0
+# You can specify ip addresses from which the server will accept services.
+# This might be useful when starting the server on one ip and listening on
+# a different ip, because the services will run on the ip where the server
+# was started on. "trusted_hosts" is a space-separated list of ip addresses:
+#trusted_hosts=127.0.0.1
+
+# Sandbox location (server runtime code):
+sandbox=/var/lib/steam
+
+# HTTP port (for published web sites)
+EOF
+	echo "http_port=$HTTPPORT" >> "$CONFIG"
+	cat >> "$CONFIG" << EOF
+# HTTPS port (for the web interface)
+EOF
+	echo "https_port=$HTTPSPORT" >> "$CONFIG"
+	cat >> "$CONFIG" << EOF
+
+# COAL port configuration. If this ports cannot be bound, then the
+# next subsequent ports will be tried. Note: most services expect
+# these ports to be open on 1900 and 1999, so you might get some
+# problems if you change them.
+#
+port=1900
+# the secure (SSL COAL port)
+sport=1999
+
+
+# ----------------------------------------------------------------------
+# Settings below this line may be deleted or commented out after running
+# the server at least once. This will then enable these settings to be
+# configurable through other the server (e.g. the web interface)
+# ----------------------------------------------------------------------
+
+
+# default container type to create if not explicitly specified (e.g. via ftp or
+# webdav: ("container" or "room")
+default_container_type=container
+
+# Mail Settings
+# Use you mailserver here. If you do not specify a mailserver, mxlookup will
+# be used.
+EOF
+	echo "mail_server=$MAILHOST" >> "$CONFIG"
+	echo "mail_port=25" >> "$CONFIG"
+	cat >> "$CONFIG" << EOF
+
+# Port settings for all kinds of ports.
+# Change your values here in order to run steam on different ports.
+# http_ ports are started on different ports, if the specified ones are
+# not free.
+#
+EOF
+	echo "nntp_port=$NEWSPORT" >> "$CONFIG"
+	echo "pop3_port=$POP3PORT" >> "$CONFIG"
+	echo "smtp_port=$SMTPPORT" >> "$CONFIG"
+	echo "imap_port=$IMAPPORT" >> "$CONFIG"
+	echo "irc_port=$IRCPORT" >> "$CONFIG"
+	echo "jabber_port=$JABBPORT" >> "$CONFIG"
+	echo "ftp_port=$FTPPORT" >> "$CONFIG"
+	cat >> "$CONFIG" << EOF
+
+# Log-levels: {off, error, warning, info, debug} (default: error)
+# Backtrace-Levels: {off, error, warning, info, debug} (default: off)
+http_log_level=error
+http_backtrace_level=off
+security_log_level=error
+security_backtrace_level=off
+events_log_level=error
+events_backtrace_level=off
+smtp_log_level=error
+smtp_backtrace_level=off
+EOF
+
+	chmod 640 "$CONFIG"
+	chown 0:0 "$CONFIG"
+fi
+
+db_stop
+
+# Prior to 1.6.2-2 configfiles were world readable by default
+if dpkg --compare-versions "$OVERSION" lt 1.6.2-2 ; then
+  find /etc/steam -type f -exec chmod 640 "{}" \;
+fi
+
+# dh_installdeb will replace this with shell code automatically
+# generated by other debhelper scripts.
+
+#DEBHELPER#
+
+exit 0
+

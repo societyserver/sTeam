@@ -1,0 +1,207 @@
+#!/usr/lib/steam/steam
+
+/* Copyright (C) 2000-2004  Thomas Bopp, Thorsten Hampel, Ludger Merkens
+ * Copyright (C) 2003-2004  Martin Baehr
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * 
+ * $Id: applauncher,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+ */
+
+constant cvs_version="$Id: applauncher,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
+
+
+#include </usr/lib/steam/server/include/classes.h>
+
+inherit "gtklogin";
+inherit "/usr/lib/steam/config";
+inherit "/usr/lib/steam/server/base/xml_parser";
+
+// #include "/usr/lib/steam/server/include/attributes.h"
+
+#define USER_WORKROOM      614
+#define GROUP_WORKROOM      800
+#define CLASS_EXIT          (1<<7)
+
+static object oInstall;
+
+object find_object(int id)
+{
+    if ( objectp(oInstall) )
+        oInstall->find_object(id);
+    return 0;
+}
+
+object get_xsl(object conn, object xslxml)
+{
+  string xslname=
+    xslxml->get_identifier()[..sizeof(xslxml->get_identifier())-9]+
+    ".xsl";
+
+  object xsl;
+
+  object env=conn->send_cmd(xslxml, "get_environment");
+  array inv=conn->send_cmd(env, "get_inventory_by_class", CLASS_DOCXSL);
+  map(inv, lambda(object obj)
+           {
+             if(obj->get_identifier()==xslname)
+               xsl=obj;
+           });
+  return xsl;
+}
+
+void upload(object conn, object editor, string file, int last_mtime, object obj, object xslobj)
+{
+  int new_mtime=file_stat(file)->mtime;
+  if(new_mtime > last_mtime)
+  {
+    last_mtime=new_mtime;
+    mixed result=conn->send_cmd(obj, "set_content", Stdio.read_file(file));
+    string message=sprintf("%s: upload: %O", file, result);
+    Stdio.append_file("/tmp/applauncher.log", message+"\n");
+    Process.create_process(({ "screen", "-X", "wall", message }));
+    if(xslobj)
+    {
+      result=conn->send_cmd(xslobj, "load_xml_structure");
+      message=sprintf("%s: load xml struct: %O", file, result);
+      Stdio.append_file("/tmp/applauncher.log", message+"\n");
+      Process.create_process(({ "screen", "-X", "wall", message }));
+    }
+  }
+  if(!editor->status())
+    call_out(upload, 1, conn, editor, file, new_mtime, obj, xslobj);
+}
+
+
+array edit(object conn, object obj)
+{
+#if constant(Crypto.Random)
+  string dir="/tmp/"+(MIME.encode_base64(Crypto.Random.random_string(10), 1)-("/"))+System.getpid();
+#else
+  string dir="/tmp/"+(MIME.encode_base64(Crypto.randomness.pike_random()->read(10), 1)-("/"))+System.getpid();
+#endif
+  string filename=obj->get_object_id()+"-"+obj->get_identifier();
+
+  mkdir(dir, 0700);
+  string content=conn->send_cmd(obj, "get_content");
+  //werror("%O\n", content);
+  Stdio.write_file(dir+"/"+filename, content, 0600);
+  
+  //array command=({ "screen", "-X", "screen", "vi", dir+"/"+filename });
+  array command=({ "vim", "--servername", "VIM", "--remote-wait", dir+"/"+filename });
+  object editor=Process.create_process(command,
+                                     ([ "cwd":dir, "env":getenv() ]));
+  return ({ editor, dir+"/"+filename });
+} 
+
+int main(int argc, array argv)
+{
+  if(!sizeof(argv))
+  {
+    write("need a sal file\n");
+    return 0;
+  }
+
+  mapping sal=init_file(argv[1]);
+  werror("%O\n", sal);
+  if(getenv()->DISPLAY)
+    return gtkmain(argv, sal);
+  else
+    return consolemain(argv, sal);
+}
+
+int consolemain(array (string) argv, mapping sal)
+{
+
+  Stdio.Readline readln = Stdio.Readline(Stdio.stdin);
+  write("%s@%s:%s\n", sal->userName, sal->hostname, sal->fileName);
+  readln->set_echo( 0 );
+  string pw=readln->read("enter passwd: ");
+  readln->set_echo( 1 );
+  return main2(sal->userName, pw, sal);
+}
+
+int gtkmain(array (string) argv, mapping sal)
+{
+  GTK.setup_gtk(argv);
+  get_login(sprintf("%s: %s", sal->hostname, sal->fileName), sal->userName, main2, sal);
+  return -1;
+}
+
+int main2(string username, string passwd, mapping sal)
+{
+  object conn=init_steam(username, passwd, sal);
+  if(!conn)
+    return 0;
+
+  object obj = conn->find_object((int)sal->objectID);
+
+  object xslobj;
+  if(obj->get_identifier()[sizeof(obj->get_identifier())-8..]==".xsl.xml")
+    xslobj=get_xsl(conn, obj);
+
+  object editor;
+  string file;
+  [editor, file]=edit(conn, obj);
+  mixed status;
+  //while(!(status=editor->status()))
+
+  if(!editor->status())
+    call_out(upload, 1, conn, editor, file, file_stat(file)->mtime, obj, xslobj);
+
+//  signal(signum("SIGINT"), prompt);
+  return -1;
+}
+
+mapping init_file(string file)
+{
+
+  mapping sal = ([]);
+  foreach(Stdio.read_file(file)/"\n"-({""}), string option)
+  {
+    sal[(option/" = ")[0]]=(option/" = ")[1];
+  }
+  return sal;
+}
+
+object init_steam(string username, string passwd, mapping sal)
+{
+  object conn;
+
+  string server_path = "/usr/lib/steam";
+  string config_path = "/etc/steam/";
+
+  master()->add_include_path(server_path+"/server/include");
+  master()->add_program_path(server_path+"/server/");
+  master()->add_program_path(server_path+"/conf/");
+  master()->add_program_path(server_path+"/server/net/coal/");
+  add_constant("find_object", find_object);
+  read_configs(config_path+"/config.txt");
+
+  conn = ((program)"connection.pike")();
+
+  mixed error=
+    catch
+    { 
+      conn->start(sal->hostname, (int)sal->usedPort, username, passwd); 
+    };
+  if(error)
+  {
+    werror("Login failed: %s\n", error[0]);
+    return 0;
+  }
+  return conn;
+}
+

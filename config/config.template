@@ -1,0 +1,52 @@
+# sTeam configuration file.
+# The value (hbs) means the value was read by the server and
+# can be configured there. Overriding these values means the new configuration
+# is set when restarting the server.
+# 
+
+
+#
+# Databae configuration in the form mysql://user:password@host:/DB
+# You need to create a database by logging in with your mysql-root
+# and set all privileges to the steam user.
+#
+database=mysql://steam:steam@localhost/steam
+
+
+#
+# COAL port configuration. If this ports cannot be bound the
+# next subsequent ports will be tried.
+#
+port=1900
+# the secure (SSL COAL port)
+sport=1999
+
+#
+# Machine Settings, hostname and machine name
+# 
+machine=(autodetect)
+domain=(autodetect)
+ip=0
+
+
+# Mail Settings
+# Use you mailserver here. If you do not specify a mailserver, mxlookup will
+# be used.
+mail_server=smtp.upb.de
+mail_port=25
+
+#
+# Port settings for all kinds of ports.
+# Change your values here in order to run steam on different ports.
+# http_ ports are started on different ports, if the specified ones are
+# not free.
+#
+nntp_port=119
+pop3_port=110
+smtp_port=25
+imap_port=143
+irc_port=6667
+jabber_port=5222
+ftp_port=21
+http_port=80
+https_port=443

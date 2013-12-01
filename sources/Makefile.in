@@ -1,0 +1,41 @@
+all: @SOURCES_DIRS@
+
+force:
+	@:
+
+steam: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+pike_doc: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+pike_crypto: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+libxslt: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+_XML: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+wiki: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+coal: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+steamtools: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+
+install: force
+	for a in @SOURCES_DIRS@; do ( cd $$a && $(MAKE) $(MAKE_FLAGS) install); done
+
+clean: force
+	for a in @SOURCES_DIRS@; do ( cd $$a && $(MAKE) $(MAKE_FLAGS) clean ); done
+
+distclean: clean force
+	for a in @SOURCES_DIRS@; do ( cd $$a && $(MAKE) $(MAKE_FLAGS) distclean ); done
+	#rm -rf steam/Makefile.in steam/Makefile steam/.deps steam/autom4te.cache
+	rm -rf depcomp missing mkinstalldirs
+	rm -rf configure config.status config.log aclocal.m4 autom4te.cache Makefile

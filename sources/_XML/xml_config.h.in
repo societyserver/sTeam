@@ -1,0 +1,43 @@
+/* Standard Pike include files. */
+#include <string.h>
+#include <stdarg.h>
+
+#include "bignum.h"
+#include "array.h"
+#include "builtin_functions.h"
+#include "constants.h"
+#include "interpret.h"
+#include "mapping.h"
+#include "multiset.h"
+#include "module_support.h"
+#include "object.h"
+#include "pike_macros.h"
+#include "pike_types.h"
+#include "program.h"
+#include "stralloc.h"
+#include "svalue.h"
+#include "threads.h"
+#include "version.h"
+#include "operators.h"
+
+#ifndef ARG
+/* Get argument # _n_ */
+#define ARG(_n_) Pike_sp[-((args - _n_) + 1)]
+#endif
+
+#define HAVE_XML2
+
+#include <libxml/xmlmemory.h>
+#include <libxml/debugXML.h>
+#include <libxml/HTMLtree.h>
+#include <libxml/xmlIO.h>
+#include <libxml/DOCBparser.h>
+#include <libxml/xinclude.h>
+#include <libxml/catalog.h>
+#include <libxml/xmlversion.h>
+
+
+void pike_module_init(void);
+void pike_module_exit(void);
+
+

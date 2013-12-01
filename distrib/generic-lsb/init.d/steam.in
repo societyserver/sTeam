@@ -1,0 +1,180 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          @brand@
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Should-Start:      $network $named $time mysql
+# Should-Stop:       mysql
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: open-sTeam server init script
+# Description:       This script controls the open-sTeam server
+### END INIT INFO
+
+# Author: Robert Hinn <exodus@uni-paderborn.de>
+
+# Do NOT "set -e"
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="open-sTeam server"
+NAME=@brand@
+STEAM_HOME=@steamdir@
+DAEMON=$STEAM_HOME/bin/$NAME
+DAEMON_ARGS="--auto-restart"
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+
+# Exit if the program is not installed (return code 5)
+[ -x "$DAEMON" ] || exit 5
+
+if [ -z $JAVA_HOME ] && [ "x@javahome@" != "x" ]; then
+    JAVA_HOME=@javahome@
+    export JAVA_HOME
+fi
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+# Load the VERBOSE setting and other rcS variables
+[ -f /etc/default/rcS ] && . /etc/default/rcS
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
+. /lib/lsb/init-functions
+
+
+# try to detect a java runtime:
+if [ -z $JAVA_HOME ] && [ -e /etc/alternatives/java ]; then
+	# the BACKTICK is just a workaround to allow 'cut' to look for '`':
+	BACKTICK="\`"
+	JAVA_HOME="`LANG=C file -b /etc/alternatives/java | cut -f 2 -d "$BACKTICK" | cut -f 1 -d \' | sed -e 's/\/bin\/java$//'`"
+	# Only export, if this is actually a directory.
+	if [ -d "$JAVA_HOME" ]; then
+		export JAVA_HOME
+	fi
+fi
+
+
+#
+# Function that starts the daemon/service
+#
+do_start(){
+    [ -e "$PIDFILE" ] && return 1 # already running
+    start_daemon -p "$PIDFILE" "$DAEMON" --dir="$STEAM_HOME" loader.pike --pid="$PIDFILE" --quiet "$DAEMON_ARGS" &
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+	[ -e "$PIDFILE" ] && return 0
+        sleep 1
+        log_progress_msg "."
+    done
+    [ -e "$PIDFILE" ] && return 0
+    return 2
+}
+
+
+#
+# Function that stops the daemon/service
+#
+do_stop(){
+    [ -e "$PIDFILE" ] || return 1
+    killproc -p "$PIDFILE" "$DAEMON" -TERM
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+	[ -e "$PIDFILE" ] || return 0
+        sleep 1
+        log_progress_msg "."
+    done
+    [ -e "$PIDFILE" ] || return 0
+    return 2
+}
+
+
+#
+# Function that restarts the daemon/service
+#
+do_restart(){
+    PID_BEFORE_STOP=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+    start_daemon -p "$PIDFILE" "$DAEMON" --dir="$STEAM_HOME" loader.pike --restart --pid="$PIDFILE" --quiet "$DAEMON_ARGS" &
+    # wait for stop:
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+        [ ! -e "$PIDFILE" ] && break
+        TMP_PID=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+        [ "$TMP_PID" != "$PID_BEFORE_STOP" ] && break;
+        sleep 1
+        log_progress_msg "."
+    done
+    PID_AFTER_STOP=0
+    [ -e "$PIDFILE" ] && PID_AFTER_STOP=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+    [ "$PID_BEFORE_STOP" = "$PID_AFTER_STOP" ] && return 1 # could not stop
+    # wait for start:
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+        [ -e "$PIDFILE" ] && break
+        sleep 1
+        echo $ECHO_N "."$ECHO_C
+    done
+    [ -e "$PIDFILE" ] && return 0; # restarted
+    return 2 # could not start
+}
+
+
+case $1 in
+  start)
+    log_daemon_msg "Starting $DESC" "$NAME"
+    do_start
+    case "$?" in
+        0|1) log_end_msg 0 ;;
+        2) log_end_msg 1 ;;
+    esac
+    ;;
+  stop)
+    log_daemon_msg "Stopping $DESC" "$NAME"
+    do_stop
+    case "$?" in
+        0|1) log_end_msg 0 ;;
+        2) log_end_msg 1 ;;
+    esac
+    ;;
+  #reload|force-reload)
+    #
+    # If do_reload() is not implemented then leave this commented out
+    # and leave 'force-reload' as an alias for 'restart'.
+    #
+    #log_daemon_msg "Reloading $DESC" "$NAME"
+    #do_reload
+    #log_end_msg $?
+    #;;
+  restart|force-reload)
+    # If the "reload" option is implemented then remove the
+    # 'force-reload' alias
+    log_daemon_msg "Restarting $DESC" "$NAME"
+    if [ -e "$PIDFILE" ]; then
+        do_restart
+    else
+        do_start
+    fi
+    case "$?" in
+        0) log_end_msg 0 ;;
+        1) log_end_msg 1 ;; # Old process is still running
+        *) log_end_msg 1 ;; # Failed to start
+    esac
+    ;;
+  status)
+    pidofproc -p "$PIDFILE" "$NAME" > /dev/null
+    case "$?" in
+	0)
+	log_action_msg "$NAME is running"
+        exit 0
+	;;
+	*)
+	log_action_msg "$NAME is stopped"
+        exit 3
+	;;
+    esac
+    ;;
+  *)
+    #echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
+        echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload|status}" >&2
+        exit 3
+    ;;
+esac
+
+:

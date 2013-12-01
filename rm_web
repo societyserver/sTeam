@@ -1,0 +1,12 @@
+#/bin/sh
+rm server/modules/sablotron.pike
+rm server/modules/web.pike
+rm server/modules/xml_converter.pike
+rm server/modules/orb_url.pike
+rm -rf server/libraries/lib
+rm -rf server/libraries/include
+rm -rf server/libraries/bin
+rm -rf server/libraries/PiXSL
+rm server/classes/DocXML.pike
+rm server/include/web.h
+

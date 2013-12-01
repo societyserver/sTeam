@@ -1,0 +1,4 @@
+#!/bin/sh
+aclocal && autoconf
+# we currently have no automake files:
+#aclocal && automake --gnu --add-missing && autoconf

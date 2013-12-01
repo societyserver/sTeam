@@ -1,0 +1,1699 @@
+/*
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ * $Id: Node.cmod,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+ */
+
+/*
+ * File licensing and authorship information block.
+ *
+ * Version: MPL 1.1/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Initial Developer of the Original Code is
+ *
+ * Bill Welliver <hww3@riverweb.com>
+ *
+ * Portions created by the Initial Developer are Copyright (C) Bill Welliver
+ * All Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of the LGPL, and not to allow others to use your version
+ * of this file under the terms of the MPL, indicate your decision by
+ * deleting the provisions above and replace them with the notice
+ * and other provisions required by the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL or the LGPL.
+ *
+ * Significant Contributors to this file are:
+ *
+ *
+ */
+
+#define THIS_IS_XML2_NODE 1
+
+#include "xml2.h"
+
+/*! @module Public
+ */
+
+/*! @module Parser
+ */
+
+/*! @module XML2
+ */
+
+/*! @class Node
+ */
+
+PIKECLASS Node
+optflags ID_PRIVATE;
+{
+
+  CVAR NODE_OBJECT_DATA   *object_data;
+
+PIKEFUN string _sprintf(int type, mixed t)
+{
+  char * desc;
+
+  check_node_created();
+  if(MY_NODE->name == NULL)
+  {
+    pop_n_elems(args);
+    push_text("Node(UNKNOWN)");
+    return;    
+  }
+  desc = malloc(strlen(MY_NODE->name) + 15);
+
+  if(desc == NULL)
+    Pike_error("Unable to allocate memory!\n");
+
+  snprintf(desc, strlen(MY_NODE->name)+15, "Node(%d, %s)", 
+    MY_NODE->type, (char *)(MY_NODE->name));
+
+  pop_n_elems(args);
+  
+  push_text(desc);
+}
+
+PIKEFUN void create()
+{
+}
+
+/*! @decl int get_line_no()
+ *! @returns 
+ *!   the line number the node is present on
+ */
+PIKEFUN int get_line_no()
+{
+  check_node_created();
+
+  push_int(MY_NODE->line);
+}
+
+/*! @decl Node set_ns(string ns_uri)
+ *!
+ *! sets the default namespace for a node.
+ *! the namespace must be already added to the node using @[add_ns]
+ */
+PIKEFUN object set_ns(string ns_uri)
+{
+  xmlNsPtr ans;
+
+  f_convert_string_utf8(1);  
+  
+  ns_uri = Pike_sp[-1].u.string;
+  ans = xmlSearchNsByHref(MY_NODE->doc, MY_NODE, (xmlChar *)ns_uri->str);
+  if(ans == NULL)
+  {
+    Pike_error("Namespace %s does not yet exist.\n", ns_uri->str);
+  }
+
+  xmlSetNs(MY_NODE, ans);
+
+  pop_stack();
+
+  push_object(this_object());
+}
+
+/*! @decl Node set_content(string content)
+ *!
+ *! sets the content for a node
+ *!
+ */
+PIKEFUN object set_content(string content)
+{
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  content = Pike_sp[-1].u.string;
+
+  xmlNodeSetContentLen(MY_NODE, (xmlChar *)content->str, content->len);
+  
+  push_object(this_object());
+
+}
+
+/*! @decl Node add_content(string content)
+ *!
+ *! appends the content for a node
+ *!
+ */
+PIKEFUN object add_content(string content)
+{
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  content = Pike_sp[-1].u.string;
+
+  xmlNodeAddContentLen(MY_NODE, (xmlChar *)content->str, content->len);
+  
+  push_object(this_object());
+
+}
+
+/*! @decl string get_text()
+ *!
+ *! gets the contents of a text node, or the contents and children of an 
+ *! element, or the value of an attribute node.
+ */
+PIKEFUN string get_text()
+{
+  xmlChar * val;
+  check_node_created();
+  val = xmlNodeGetContent(MY_NODE);
+
+  if(val == NULL)
+    push_int(0);
+  else
+  {
+    push_text(val);
+    f_convert_utf8_string(1);
+  }
+}
+
+/*! @decl string get_node_path()
+ *!
+ *! returns an XPath/XQuery based path for this Node.
+ */
+PIKEFUN string get_node_path()
+{
+  xmlChar * val;
+  check_node_created();
+  val = xmlGetNodePath(MY_NODE);
+
+  if(val == NULL)
+    push_int(0);
+  else
+  {
+    push_text(val);
+    f_convert_utf8_string(1);
+  }
+}
+
+/*! @decl string get_ns()
+ *!  returns the default name space uri for the element
+ */
+PIKEFUN string get_ns()
+{
+  char * str;
+
+  check_node_created();
+  if(MY_NODE->ns != NULL)
+  {
+    str = xmlStrdup(MY_NODE->ns->href);
+    push_text(str);    
+    f_convert_utf8_string(1);
+  }
+  else push_int(0);
+}
+
+/*! @decl mapping get_nss()
+ *!   gets a list of all known namespaces for this element.
+ *! @returns
+ *!    a mapping of "short" prefixes to namespace uris.
+ */
+PIKEFUN mapping get_nss()
+{
+  xmlNsPtr * list;
+  xmlNsPtr  ns;
+  int num_ns = 0;
+
+  check_node_created();
+  list =  xmlGetNsList(MY_NODE->doc, MY_NODE);
+
+  if(list == NULL)
+  {
+    push_int(0); 
+    return;
+  }   
+
+  for(ns = * list; (ns!=NULL); ns = ns->next)
+  {
+    if(ns->prefix==NULL)
+      push_text("_default");
+    else 
+      push_text(ns->prefix);
+    f_convert_utf8_string(1);
+
+    push_text(ns->href);
+    f_convert_utf8_string(1);
+
+    num_ns++;
+  }
+  f_aggregate_mapping(num_ns*2);
+}
+
+/*! @decl string get_base()
+ *!
+ */
+PIKEFUN string get_base()
+{
+  xmlChar * val;
+  check_node_created();
+  val = xmlNodeGetBase(MY_NODE->doc, MY_NODE);
+
+  if(val == NULL)
+    push_int(0);
+  else
+  {
+    push_text(val);
+    f_convert_utf8_string(1);
+  }
+}
+
+/*! @decl string get_lang()
+ *!
+ */
+PIKEFUN string get_lang()
+{
+  xmlChar * val;
+  check_node_created();
+  val = xmlNodeGetLang(MY_NODE);
+
+  if(val == NULL)
+    push_int(0);
+  else
+  {
+    push_text(val);
+    f_convert_utf8_string(1);
+  }
+}
+
+/*! @decl int get_space_preserve()
+ *!
+ */
+PIKEFUN int get_space_preserve()
+{
+  int i;
+  check_node_created();
+  i = xmlNodeGetSpacePreserve(MY_NODE);
+
+    push_int(i);
+}
+
+
+/*! @decl mapping get_attributes()
+ *!   returns all attributes, irrespective of namespace
+ *! @returns
+ *!   a mapping of attribute name to attribute value.
+ */
+PIKEFUN mapping get_attributes()
+{
+  struct _xmlAttr * attr;
+  int num_attrs = 0;
+
+  check_node_created();
+  /* only element nodes have attributes. */
+  if(MY_NODE->type != XML_ELEMENT_NODE)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    attr = MY_NODE->properties;
+
+    for(attr; attr!=NULL; attr = attr->next)
+    {
+      xmlChar * val = NULL;
+      if(attr==NULL) break;
+
+      val = xmlGetProp(MY_NODE, attr->name);
+
+      if(val == NULL) val = "";
+
+      push_text((char *)(attr->name));
+      f_convert_utf8_string(1);
+    
+      push_text((char *)(val));
+      f_convert_utf8_string(1);
+
+      xmlFree(val);
+
+      num_attrs ++;
+    }
+   
+   f_aggregate_mapping(num_attrs*2);
+
+   }
+    return;
+}
+
+/*! @decl mapping get_no_ns_attributes()
+ *!   returns all attributes not present in a namespace
+ *! @returns
+ *!   a mapping of attribute name to attribute value.
+ */
+PIKEFUN mapping get_no_ns_attributes()
+{
+  struct _xmlAttr * attr;
+  int num_attrs = 0;
+
+  check_node_created();
+  /* only element nodes have attributes. */
+  if(MY_NODE->type != XML_ELEMENT_NODE)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    attr = MY_NODE->properties;
+
+    for(attr; attr!=NULL; attr = attr->next)
+    {
+      xmlChar * val = NULL;
+      if(attr==NULL) break;
+      if(attr->ns == NULL) continue;
+
+      val = xmlGetNoNsProp(MY_NODE, attr->name);
+
+      if(val != NULL) 
+      {
+        push_text((char *)(attr->name));
+        f_convert_utf8_string(1);
+
+        push_text((char *)(val));
+        f_convert_utf8_string(1);
+        num_attrs ++;
+      }
+    }
+   
+   f_aggregate_mapping(num_attrs*2);
+
+   }
+    return;
+}
+
+/*! @decl mapping get_ns_attributes(string ns_uri)
+ *!   given a namespace uri, return all elements for that namespace
+ *!   present in the element.
+ *! @returns
+ *!    a mapping of attribute names to attribute values.
+ */
+PIKEFUN mapping get_ns_attributes(string ns_uri)
+{
+  struct _xmlAttr * attr;
+  int num_attrs = 0;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  ns_uri = Pike_sp[-1].u.string;
+
+  /* only element nodes have attributes. */
+  if(MY_NODE->type != XML_ELEMENT_NODE)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    attr = MY_NODE->properties;
+
+    for(attr; attr!=NULL; attr = attr->next)
+    {
+      xmlChar * val = NULL;
+      xmlNs * ns = NULL;
+      if(attr==NULL) break;
+      ns = attr->ns;
+      if(ns==NULL) 
+      {
+        // no namespace for this attribute.
+        continue;
+      }
+// printf("looking for %s, got %s, comp: %d\n", ns_uri->str, ns->href, strcmp(ns_uri->str, ns->href));
+
+      if(strcmp(ns_uri->str, ns->href)!=0) continue;
+
+      val = xmlGetProp(MY_NODE, attr->name);
+
+      if(val == NULL) val = "";
+
+      push_text((char *)(attr->name));
+      f_convert_utf8_string(1);
+
+      push_text((char *)(val));
+      f_convert_utf8_string(1);
+
+      xmlFree(val);
+      num_attrs ++;
+    }
+   
+   f_aggregate_mapping(num_attrs*2);
+
+   }
+    return;
+}
+
+/*!  @decl array children()
+ *!     get all children of this node
+ *!  @returns
+ *!      an array of all elements with are a direct child of this element.
+ */
+PIKEFUN array children()
+optflags OPT_SIDE_EFFECT
+{
+  struct object * o;
+  xmlNode *cur_node = NULL;
+  int num_children=0;
+  check_node_created();
+
+  if(MY_NODE->children != NULL)
+    cur_node = MY_NODE->children;
+
+  for(cur_node; cur_node; cur_node = cur_node->next) {
+    if (cur_node != NULL) {
+      o = NEW_NODE();
+      OBJ2_NODE(o)->object_data->node = cur_node; 
+      OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+      NEW_NODE_REFS(o);
+      push_object(o);
+      num_children++;
+    }
+  }
+  if(num_children>0)
+    f_aggregate(num_children);
+  else push_int(0);
+}
+
+/*!  @decl Node parent()
+ *!     get the Node which is the parent of this Node.
+ */
+PIKEFUN object parent()
+{
+  struct object * o;
+  check_node_created();
+  if(MY_NODE->parent == NULL)
+  {
+    push_int(0);
+    return;
+  }
+
+  else 
+  {
+    o=NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = MY_NODE->parent;
+    NEW_NODE_REFS(o);
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    push_object(o);
+  }
+}
+
+/*!  @decl Node replace()
+ *!     replace this node with a different node. if the new node was 
+ *!     already inserted into a document, it is first unlinked from
+ *!     its original document.
+ *!  @returns
+ *!     the old node
+ */
+PIKEFUN object replace(object newnode)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  CHECK_NODE_PASSED(newnode);
+
+  check_node_created();
+
+  node = xmlReplaceNode(THIS->object_data->node, OBJ2_NODE(o)->object_data->node);  
+
+  OBJ2_NODE(newnode)->object_data->unlinked = 0;
+
+  o=NEW_NODE();
+  OBJ2_NODE(o)->object_data->node = node; 
+  OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+  OBJ2_NODE(o)->object_data->unlinked = 1;
+  NEW_NODE_REFS(o);
+  pop_stack();
+  push_object(o);
+}
+
+/*!  @decl Node copy(void|int extended)
+ *!
+ *!   copy a node
+ *!
+ *!  @param extended
+ *!    if 1 do a recursive copy (properties, namespaces and children when 
+ *!    applicable) if 2 copy properties and namespaces (when applicable)
+ *!
+ *!  @returns
+ *!    the newly copied node.
+ */
+
+PIKEFUN object copy()
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  node = xmlCopyNode(THIS->object_data->node, 0);
+
+  o=NEW_NODE();
+  OBJ2_NODE(o)->object_data->node = node;
+  OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+  OBJ2_NODE(o)->object_data->unlinked = 1;
+  NEW_NODE_REFS(o);
+  push_object(o);
+}
+
+PIKEFUN object copy(int extended)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  node = xmlCopyNode(THIS->object_data->node, extended); 
+
+  o=NEW_NODE();
+  OBJ2_NODE(o)->object_data->node = node;
+  OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+  OBJ2_NODE(o)->object_data->unlinked = 1;
+  NEW_NODE_REFS(o);
+  push_object(o);
+}
+
+/*!  @decl Node copy_list()
+ *!
+ *!   recursively copy a node list
+ *!
+ *!  @returns
+ *!    the newly copied node.
+ */
+PIKEFUN object copy_list()
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  node = xmlCopyNodeList(THIS->object_data->node); 
+
+  o=NEW_NODE();
+  OBJ2_NODE(o)->object_data->node = node;
+  OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+  OBJ2_NODE(o)->object_data->unlinked = 1;
+  NEW_NODE_REFS(o);
+  push_object(o);
+}
+
+/*!  @decl Node unlink()
+ *!
+ *!  unlink a node from its current context. the node not freed.
+ *!  to unlink and destroy the node, use @[delete].
+ *!
+ *!  @returns
+ *!    the unlinked node.
+ */
+PIKEFUN object unlink()
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  xmlUnlinkNode(THIS->object_data->node); 
+
+  THIS->object_data->unlinked = 1;
+  push_object(this_object());
+}
+
+/*!  @decl void delete()
+ *!
+ *!  unlink a node and remove it (and its children) from memory
+ */
+PIKEFUN void delete()
+{
+  xmlNodePtr node;
+  check_node_created();
+
+  xmlUnlinkNode(THIS->object_data->node); 
+  xmlFreeNode(THIS->object_data->node);
+  printf("Node()->delete(): complete\n");
+
+  THIS->object_data->node = NULL;  
+// we don't pop anything from the stack, 'cause nothing was pushed to us.
+//  pop_stack();
+}
+
+/*!  @decl Node get_root_node()
+ *!     get the Node which is the root of this tree.
+ */
+PIKEFUN object get_root_node()
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+  
+  node = xmlDocGetRootElement(MY_NODE->doc);
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+
+  else 
+  {
+    o=NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node set_root_node()
+ *!     set this Node to be the root of this tree.
+ *!  @returns
+ *!     the old root of the tree, if any existed.
+ */
+PIKEFUN object set_root_node()
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+  
+  node = xmlDocSetRootElement(MY_NODE->doc, MY_NODE);
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+
+  else 
+  {
+    o=NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    NEW_NODE_REFS(o);
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    push_object(o);
+  }
+}
+
+/*!  @decl Node new_cdata_block(string contents)
+ *!     returns an unlinked CDATA block.
+ */
+PIKEFUN object new_cdata_block(string contents)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  contents = Pike_sp[-1].u.string;
+
+  node = xmlNewCDataBlock(MY_NODE->doc, contents->str, contents->len);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->unlinked = 1;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+   NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node new_pi(string name, string contents)
+ *!     returns an unlinked Processing Instruction node.
+ */
+PIKEFUN object new_pi(string name, string contents)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  contents = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+#ifdef HAVE_XMLNEWDOCPI
+  node = xmlNewDocPI(MY_NODE->doc, name->str, contents->str);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    OBJ2_NODE(o)->object_data->unlinked = 1;
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+
+#else
+  Pike_error("new_pi() is not available. please upgrade your libxslt.\n");
+#endif /* HAVE_XMLNEWDOCPI */
+
+}
+
+/*!  @decl Node set_attribute(string name, string value)
+ *!  @decl Node set_attribute(string name, string ns_uri, string value)
+ *!
+ *!  @param ns_uri
+ *!   the namespace uri
+ *!
+ *!  sets a new attribute, overwriting any existing value.
+ *!  if @[value] is zero, the attribute will be removed from the node.
+ */
+PIKEFUN object set_attribute(string name, string ns_uri, string value)
+{
+  struct object * o;
+  xmlAttrPtr attr;
+  xmlNsPtr ans;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  value = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  ns_uri = Pike_sp[-1].u.string;
+
+  stack_swap_n(3);
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  ans = xmlSearchNsByHref(MY_NODE->doc, MY_NODE, (xmlChar *)ns_uri->str);
+  if(ans == NULL)
+  {
+    Pike_error("Namespace with URI %s does not exist.\n", ns_uri->str);
+  }
+
+  attr = xmlNewNsProp(MY_NODE, ans, (xmlChar *)name->str, (xmlChar *)value->str);
+
+  if(attr == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    push_object(this_object());
+  }
+}
+
+/*! @decl object delete_attribute(string name, string|void ns_uri)
+ *!
+ *! @param name
+ *!   the name of the attribute to delete
+ *!
+ *! @param ns_uri
+ *!   the URI of the namespace containing the attribute to be deleted 
+ */
+PIKEFUN object delete_attribute(string name)
+{
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  xmlUnsetProp(MY_NODE, (xmlChar *)name->str);
+
+  push_object(this_object());
+
+}
+PIKEFUN object delete_attribute(string name, string ns_uri)
+{
+  xmlNsPtr ans;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  ns_uri = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  ans = xmlSearchNsByHref(MY_NODE->doc, MY_NODE, (xmlChar *)ns_uri->str);
+  if(ans == NULL)
+  {
+    Pike_error("Namespace %s does not exist.\n", ns_uri->str);
+  }
+
+  xmlUnsetNsProp(MY_NODE, ans, (xmlChar *)name->str);
+
+  push_object(this_object());
+
+}
+
+PIKEFUN object set_attribute(string name, string value)
+{
+  struct object * o;
+  xmlAttrPtr attr;
+  xmlAttrPtr val;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  value = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  xmlUnsetProp(MY_NODE, (xmlChar *)name->str);
+
+  attr = xmlNewProp(MY_NODE, (xmlChar *)name->str, (xmlChar *)value->str);
+
+  if(attr == NULL)
+  {
+    pop_n_elems(2);
+    push_int(0);
+    return;
+  }
+  else
+  {
+    pop_n_elems(2);
+    push_object(this_object());
+  }
+}
+
+/*!  @decl Node new_char_ref(string name)
+ *!     returns an unlinked character reference node.
+ */
+PIKEFUN object new_char_ref(string name)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  if(name->str[0] != '&' || name->str[0] != '#')
+  {
+    Pike_error("Invalid charater reference.\n");
+  }
+
+  node = xmlNewCharRef(MY_NODE->doc, name->str);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    OBJ2_NODE(o)->object_data->unlinked = 1;
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node new_comment(string content)
+ *!     returns an unlinked comment node.
+ */
+PIKEFUN object new_comment(string content)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  content = Pike_sp[-1].u.string;
+
+  node = xmlNewComment(content->str);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    OBJ2_NODE(o)->object_data->unlinked = 1;
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+
+/*!  @decl Node new_doc_comment(string content)
+ *!     returns an unlinked character reference node.
+ */
+PIKEFUN object new_doc_comment(string content)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  content = Pike_sp[-1].u.string;
+
+  node = xmlNewDocComment(MY_NODE->doc, content->str);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    OBJ2_NODE(o)->object_data->unlinked = 1;
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+
+
+/*!  @decl Node new_child(string|void ns, string name, string content)
+ *!     add a new child element, added to end of children for this node.
+ *! 
+ *!   @param ns
+ *!     the prefix of the namespace for the node (optional)
+ *!   @seealso
+ *!     new_text_child
+ */
+PIKEFUN object new_child(string name, string content)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  content = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  node = xmlNewTextChild(MY_NODE, NULL, name->str, content->str);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+PIKEFUN object new_child(string ns, string name, string content)
+{
+  struct object * o;
+  xmlNodePtr node;
+  xmlNsPtr ans;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  content = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  stack_swap_n(3);
+
+  f_convert_string_utf8(1);
+  ns = Pike_sp[-1].u.string;
+
+  ans = xmlSearchNs(MY_NODE->doc, MY_NODE, (xmlChar *)ns->str);
+  if(ans == NULL)
+  {
+    Pike_error("Namespace with prefix %s does not yet exist.\n", ns->str);
+  }
+
+  node = xmlNewTextChild(MY_NODE, ans, name->str, content->str);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node new_text_child(string|void ns, string name, string content)
+ *!     add a new child element, added to end of children for this node.
+ *!     differs from @[new_child] in that XML reserved entities present in
+ *!     content (such as amersand, greater-than and less-than) will be 
+ *!     automatically replaced by their XML escaped entity representations.
+ *!   @param ns
+ *!     the prefix of the namespace for the node (optional)
+ *!   @seealso
+ *!     new_child
+ */
+PIKEFUN object new_text_child(string name, string content)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  content = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  node = xmlNewChild(MY_NODE, NULL, name->str, content->str);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+PIKEFUN object new_text_child(string ns, string name, string content)
+{
+  struct object * o;
+  xmlNodePtr node;
+  xmlNsPtr ans;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  content = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  stack_swap_n(3);
+
+  f_convert_string_utf8(1);
+  ns = Pike_sp[-1].u.string;
+
+  ans = xmlSearchNs(MY_NODE->doc, MY_NODE, (xmlChar *)ns->str);
+  if(ans == NULL)
+  {
+    Pike_error("Namespace with prefix %s does not yet exist.\n", ns->str);
+  }
+
+  node = xmlNewChild(MY_NODE, ans, name->str, content->str);
+  
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*! @decl Node add_ns(string href, string prefix)
+ *!
+ */
+PIKEFUN object add_ns(string href, string prefix)
+{
+  xmlNsPtr ns;
+
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  prefix = Pike_sp[-1].u.string;
+
+  stack_swap_n(2);
+
+  f_convert_string_utf8(1);
+  href = Pike_sp[-1].u.string;
+
+  ns = xmlNewNs(MY_NODE, (xmlChar *) href->str, (xmlChar *) prefix->str);
+
+  if(ns == NULL)
+  {
+    Pike_error("Unable to create new namespace.\n");
+  }
+
+  push_object(this_object());
+}
+
+/*!  @decl Node add_child(Node child)
+ *!     add a node to end of children for this node.
+ */
+PIKEFUN object add_child(object child)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  CHECK_NODE_PASSED(child);
+
+  check_node_created();
+
+  node = xmlAddChild(MY_NODE, OBJ2_NODE(child)->object_data->node);
+  
+  if(node == NULL || OBJ2_NODE(child)->object_data->node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    int refs;
+    OBJ2_NODE(child)->object_data->unlinked = 0;
+
+    /* Now, the previously unlinked node is now linked, so we
+       should add the number of refs from the unlinked node to the 
+       number on the node we added to (but only if the ref is not the same).
+    */
+    if((OBJ2_NODE(child)->object_data->refs) != (THIS->object_data->refs))
+    {
+      refs = (* OBJ2_NODE(child)->object_data->refs) + *(THIS->object_data->refs);
+      OBJ2_NODE(child)->object_data->refs = THIS->object_data->refs;
+      (*THIS->object_data->refs) = refs;
+    }
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->unlinked = 0;
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node add_sibling(Node sibling)
+ *!     add a node to end of siblings for this node.
+ */
+PIKEFUN object add_sibling(object sibling)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  CHECK_NODE_PASSED(sibling);
+  check_node_created();
+
+  node = xmlAddSibling(MY_NODE, OBJ2_NODE(sibling)->object_data->node);
+  
+  if(node == NULL || OBJ2_NODE(sibling)->object_data->node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    OBJ2_NODE(sibling)->object_data->unlinked = 0;
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    OBJ2_NODE(o)->object_data->unlinked = 0;
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node add_next_sibling(Node sibling)
+ *!     add a sibling node after this node.
+ */
+PIKEFUN object add_next_sibling(object sibling)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  CHECK_NODE_PASSED(sibling);
+  check_node_created();
+
+  node = xmlAddNextSibling(MY_NODE, OBJ2_NODE(sibling)->object_data->node);
+  
+  if(node == NULL || OBJ2_NODE(sibling)->object_data->node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    OBJ2_NODE(sibling)->object_data->unlinked = 0;
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    OBJ2_NODE(o)->object_data->unlinked = 0;
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node add_prev_sibling(Node sibling)
+ *!     add a sibling node after this node.
+ */
+PIKEFUN object add_prev_sibling(object sibling)
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  CHECK_NODE_PASSED(sibling);
+  check_node_created();
+
+  node = xmlAddPrevSibling(MY_NODE, OBJ2_NODE(sibling)->object_data->node);
+  
+  if(node == NULL || OBJ2_NODE(sibling)->object_data->node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    OBJ2_NODE(sibling)->object_data->unlinked = 0;
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    OBJ2_NODE(o)->object_data->unlinked = 0;
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node get_last_child()
+ *!     get the Node which is the last child of this Node.
+ */
+PIKEFUN object get_last_child()
+{
+  struct object * o;
+  xmlNodePtr node;
+
+  check_node_created();
+
+  node = xmlGetLastChild(MY_NODE);
+
+  if(node == NULL)
+  {
+    push_int(0);
+    return;
+  }
+  else
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = node; 
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node next()
+ *!  get the next sibling of this Node.
+ *!  @returns
+ *!    the next node which is a sibling of this node.
+ */
+PIKEFUN object next()
+{
+  struct object * o;
+  check_node_created();
+  if(MY_NODE->next == NULL)
+  {
+    push_int(0);
+    return;
+  }
+	
+  else 
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = MY_NODE->next;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*!  @decl Node prev()
+ *!  get the previous sibling of this Node.
+ *!  @returns
+ *!    the previous node which is a sibling of this node.
+ */
+PIKEFUN object prev()
+{
+  struct object * o;
+    check_node_created();
+  if(MY_NODE->prev == NULL)
+  {
+    push_int(0);
+    return;
+  }
+
+  else 
+  {
+    o = NEW_NODE();
+    OBJ2_NODE(o)->object_data->node = MY_NODE->prev;
+    OBJ2_NODE(o)->object_data->parser = THIS->object_data->parser; 
+    NEW_NODE_REFS(o);
+    push_object(o);
+  }
+}
+
+/*! @decl int is_blank()
+ *!
+ *!  is this node empty?
+ */
+PIKEFUN int is_blank()
+{
+  check_node_created();
+
+  RETURN xmlIsBlankNode(MY_NODE);
+}
+
+/*! @decl int is_text()
+ *! 
+ *!  is this a text node?
+ */
+PIKEFUN int is_text()
+{
+  check_node_created();
+
+  RETURN xmlNodeIsText(MY_NODE);
+}
+
+/*!  @decl int get_node_type()
+ *!
+ *!  get the type of node.
+ *!  
+ *!  @returns
+ *!   the integer node type. Node type constants are 
+ *!   defined in @[Public.Parser.XML2.Constants].
+ */
+PIKEFUN int get_node_type()
+{
+  check_node_created();
+
+  push_int((int)(MY_NODE->type));
+}
+
+/*! @decl string get_node_name()
+ *!  gets the name of this node, if it has one.
+ */
+PIKEFUN string get_node_name()
+{
+  check_node_created();
+  if((char *)(MY_NODE->name) != NULL)
+  {
+    push_text((char *)(MY_NODE->name));
+    f_convert_utf8_string(1);
+  }
+  else push_int(0);
+} 
+
+/*! @decl object set_node_name(string name)
+ *!  sets the name of this node.
+ */
+PIKEFUN object set_node_name(string name)
+{
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  name = Pike_sp[-1].u.string;
+
+  xmlNodeSetName(MY_NODE, (xmlChar *)name->str);
+
+  push_object(this_object());
+} 
+
+/*! @decl object set_lang(string language)
+ *!  sets the language of this node.
+ */
+PIKEFUN object set_lang(string language)
+{
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  language = Pike_sp[-1].u.string;
+
+  xmlNodeSetLang(MY_NODE, (xmlChar *)language->str);
+
+  push_object(this_object());
+} 
+
+/*! @decl object set_base(string uri)
+ *!  sets the base URI of this node.
+ */
+PIKEFUN object set_base(string uri)
+{
+  check_node_created();
+
+  f_convert_string_utf8(1);
+  uri = Pike_sp[-1].u.string;
+
+  xmlNodeSetBase(MY_NODE, (xmlChar *)uri->str);
+
+  push_object(this_object());
+} 
+
+/*! @decl string render_xml(int level, int format)
+ *!
+ *! renders the node and all children as xml (which will be encoded as UTF-8 by default). 
+ *!
+ *! @param level
+ *!   the indentation level to use
+ *!
+ *! @param format
+ *!    should the xml be formated for ease of human reading.
+ *!    this setting only takes 	effect if 
+ *!    Public.Parser.XML2.xmlKeepBlanksDefault(0) has been called.
+ */
+PIKEFUN string render_xml(int level, int format)
+{
+  int dumped;
+  xmlBufferPtr buf;
+  char * str;
+
+  check_node_created();
+  buf = xmlBufferCreate();
+  dumped = xmlNodeDump(buf, MY_NODE->doc, MY_NODE, level, format);
+
+  if(dumped>0)
+  {
+    str = (char *)xmlStrdup(buf->content);
+    xmlBufferFree(buf);
+    push_text(str);
+  }
+  
+}
+
+/*! @decl string render_html()
+ *!
+ *! renders the node and all children as html (which will be encoded as UTF-8 by default). 
+ *!
+ */
+PIKEFUN string render_html()
+{
+  int dumped;
+  xmlBufferPtr buf;
+  char * str;
+
+  check_node_created();
+  buf = xmlBufferCreate();
+  dumped = htmlNodeDump(buf, MY_NODE->doc, MY_NODE);
+
+  if(dumped>0)
+  {
+    str = (char *)xmlStrdup(buf->content);
+    xmlBufferFree(buf);
+    push_text(str);
+
+  }
+  
+}
+
+PIKEFUN mixed cast(string type)
+{
+  if(strcmp(type->str, "string") == 0)
+  { 
+    pop_stack();
+    push_int(1);
+    push_int(1);
+    f_Node_render_xml(2);
+    return;
+  }
+  else
+  {
+    pop_stack();
+    Pike_error("Unsupported cast type.\n");
+  }
+}
+
+/*! @decl int is_unlinked()
+ */
+PIKEFUN int is_unlinked()
+{
+  push_int(THIS->object_data->unlinked);
+}
+
+/*!  @decl int is_transient()
+ */
+PIKEFUN int is_transient()
+{
+  push_int(THIS->object_data->unlinked);
+}
+
+/*! @decl int _refs()
+ */
+PIKEFUN int _refs()
+{
+  push_int(*THIS->object_data->refs);
+}
+
+
+int check_node_created()
+{
+  if(THIS->object_data->node != NULL)
+    return 1;
+  Pike_error("Node not initialized.\n");
+}
+
+INIT
+{
+  NODE_OBJECT_DATA * dta;
+
+  dta = 
+	(NODE_OBJECT_DATA*)malloc(sizeof(NODE_OBJECT_DATA));
+    if (!dta)
+        Pike_error("init_node: Out of memory!\n");
+
+    dta->node = NULL;
+    dta->parser = NULL;
+    dta->unlinked = 0;
+    dta->transient = 0;
+    THIS->object_data = dta;
+}
+
+EXIT
+{ 
+  if(THIS != NULL && THIS->object_data != NULL && 
+    (* THIS->object_data->refs)==1 && THIS->object_data->transient == 0)
+  {
+    // if we're not linked to a document, we can free the node.
+    if(THIS->object_data->node != NULL && THIS->object_data->node->doc == NULL)
+    {
+      xmlFreeNode(THIS->object_data->node);
+      THIS->object_data->node = NULL;  
+    }
+    else if(THIS->object_data->node != NULL && THIS->object_data->node->doc != NULL)
+    {
+      xmlFreeDoc(THIS->object_data->node->doc);
+    }
+
+    free(THIS->object_data->refs);
+
+  }
+  else if(THIS->object_data->transient == 0)
+  {
+    (*( THIS->object_data->refs)) --;
+  }
+
+  if(THIS->object_data)
+  {
+    free(THIS->object_data);
+  }
+}
+}
+/*! @endclass
+ */
+
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+
+void pike_init_xml2_node()
+{
+  INIT
+}
+
+void pike_exit_xml2_node()
+{
+  EXIT
+}

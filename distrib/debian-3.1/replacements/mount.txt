@@ -1,0 +1,5 @@
+<mounts>
+<mount position="/">/usr/share/steam/server</mount>
+<mount position="/classes">/usr/share/steam/server/classes</mount>
+<mount position="/home">/home</mount>
+</mounts>

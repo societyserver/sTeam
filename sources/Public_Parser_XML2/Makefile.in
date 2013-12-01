@@ -1,0 +1,29 @@
+# $Id: Makefile.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+@make_variables@
+VPATH=@srcdir@:@srcdir@/../..:../..
+OBJS= LowHTML.o Node.o XML2.o Constants.o SAX.o Stylesheet.o XMLReader.o RelaxNG.o
+MODDIR=Public.pmod/Parser.pmod/
+MODNAME=XML2
+MODULE_PMOD_IN=
+AUTODOC_SRC_IN=XML2.c LowHTML.c Node.c SAX.c Constants.c Stylesheet.c XMLReader.c RelaxNG.c
+
+CFLAGS=@XML2_CFLAGS@
+LDFLAGS=@XML2_LIBS@
+
+MODULE_LDFLAGS=@LDFLAGS@
+
+CONFIG_HEADERS=@CONFIG_HEADERS@
+
+@dynamic_module_makefile@
+@dependencies@
+
+release:
+	cvs rtag -F -D now RELEASE_1_${MIN} pike_modules/Public_Parser_XML2
+	cvs export -d Public_Parser_XML2-1.${MIN} -r RELEASE_1_${MIN} pike_modules/Public_Parser_XML2
+	cd Public_Parser_XML2-1.${MIN} && \
+	pike -x module --autoheader && pike -x module --autoconf && \
+	rm -rf autom4*
+	cp *.c Public_Parser_XML2-1.${MIN}
+	gtar czvf Public_Parser_XML2-1.${MIN}.tar.gz Public_Parser_XML2-1.${MIN}
+	pike upload_module_version.pike Public.Parser.XML2 1.${MIN} "GPL/LGPL/MPL"
+

@@ -1,0 +1,41 @@
+VPATH=@srcdir@:@srcdir@/../..:../..
+CC=@CC@
+MODNAME=_XML
+INSTALL=@installprg@
+OBJS= xml_main.o xml_sax.o
+SOURCES=xml_main.c xml_sax.c
+MODULE_LIBS=@LIBS@ -lxml2
+MODULE_CFLAGS=@CFLAGS@ -I. @XML_CFLAGS@ -I@PIKE_INCLUDE_PREFIX@ -Wno-sign-compare
+MODULE_LDFLAGS=@LDFLAGS@
+EXTRA_CLEAN=xml_config.h xml_config.h.in _XML.so
+LD=@LDSHARED@
+
+# include @makefile_rules@
+
+
+all:    $(SOURCES) xml.so
+
+force:
+	@:
+
+.c.o:
+	$(CC) $(MODULE_CFLAGS) -c -o $@ $<
+
+xml.so:     xml_main.o xml_sax.o
+	$(LD) $(MODULE_LDFLAGS) -lc $(MODULE_LIBS) -o xml.so $(OBJS)
+
+install: xml.so
+	$(INSTALL) xml.so ../../server/libraries/xml.so
+	$(INSTALL) AbstractCallbacks.pike ../../server/libraries/AbstractCallbacks.pike
+
+clean:
+	rm -f *.o *~ xml.so
+
+distclean:
+	rm -rf xml_config.h stamp-h1
+	rm -rf configure config.status config.log autom4te.cache Makefile
+
+extrainstall:
+
+# DO NOT DELETE THIS LINE -- make  depend  depends  on  it.
+

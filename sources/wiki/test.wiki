@@ -1,0 +1,40 @@
+==Server Documentation==
+
+
+This is the sTeam Server Documentation Wiki. Since we are just about to start this documentation there are only a few items available yet:
+
+* Some [[Basics]] about the Server internals.
+* An [[Object]] is the basic entity of the sTeam system.
+* The [[Search]] functionality.
+* And finally documentation about [[Wiki]] itself.
+** second level test
+* [[web:|The Web Interface and Development Documentation]]
+* The [[XMLTools]], some useful methods to generate the XML Source Code using [[XGL]] .
+
+** test
+** jau
+* nee
+
+----
+
+Please request additional Information at developer@steam.upb.de. [We are only updating documentation on demand.[This wiki features some additional functionality like annotations. We are currently working on the notation.]] Apart from that the wiki features an embed function to embed other documents of the same room.
+
+
+
+===Full Content Listing===
+@@PIKE
+string html = "";
+if ( objectp(env) ) {
+  html = "<ul>";
+  array inv = env->get_inventory();
+  foreach(inv, object o ) {
+    if ( !objectp(o) ) continue;
+    if ( !(o->get_object_class() & CLASS_DOCUMENT) )
+         continue;
+    if ( search(o->query_attribute(DOC_MIME_TYPE), "wiki") == -1 ) continue;
+    html += "<li><a href='"+o->get_identifier()+"'>"+o->get_identifier()+"</a></li>";
+  }
+  html += "</ul>";
+}
+return html;
+@@

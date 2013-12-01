@@ -1,0 +1,567 @@
+/*
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ * $Id: Stylesheet.cmod,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+ */
+
+/*
+ * File licensing and authorship information block.
+ *
+ * Version: MPL 1.1/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Initial Developer of the Original Code is
+ *
+ * Bill Welliver <hww3@riverweb.com>
+ *
+ * Portions created by the Initial Developer are Copyright (C) Bill Welliver
+ * All Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of the LGPL, and not to allow others to use your version
+ * of this file under the terms of the MPL, indicate your decision by
+ * deleting the provisions above and replace them with the notice
+ * and other provisions required by the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL or the LGPL.
+ *
+ * Significant Contributors to this file are:
+ *
+ *
+ */
+
+#define THIS_IS_XML2_STYLESHEET 1
+
+#include "xml2.h"
+
+/*! @module Public
+ */
+
+/*! @module Parser
+ */
+
+/*! @module XML2
+ */
+
+/*! @class Stylesheet
+ */
+
+PIKECLASS Stylesheet
+optflags ID_PRIVATE;
+program_flags PROGRAM_USES_PARENT;
+{
+
+  CVAR STYLESHEET_OBJECT_DATA   *object_data;
+  PIKEVAR object node;
+
+  PIKEVAR function docloader
+  optflags ID_STATIC;
+
+  void my_xsltGenericErrorFunc(void * ctx, const char *msg, ...)
+  {
+    va_list args;
+
+    va_start(args,msg);
+    vprintf(msg, args);
+    va_end(args);
+  }
+
+/*! @decl void set_docloader(function f)
+ *!
+ *! sets the xslt loader function. this is local to the stylesheet.
+ *!
+ *! the callout should have the following signature:
+ *!
+ *!  Node f(string uri, int options, int type)
+ *!
+ *!  where:
+ *!    uri is the URI of the document to load
+ *!    options are a set of xmlParserOption
+ *!    the xsltLoadType indicating the kind of loading required
+ */
+PIKEFUN void set_docloader(function f)
+{
+  /* TODO: we probably have a memory leak here... */
+  assign_svalue(&(THIS->docloader), f);
+#ifdef HAVE_XSLTSETLOADERFUNC
+#else
+  Pike_error("set_docloader not available. upgrade your libxslt.\n");
+#endif
+  pop_stack();
+}
+
+/*! @decl void clear_docloader()
+ *!
+ *! clears the stylesheet docloader callout, if one was set.
+ *!
+ */
+PIKEFUN void clear_xslt_docloader()
+{
+
+  /* TODO: we probably have a memory leak here... */
+  push_int(0);
+  assign_svalue(&(THIS->docloader), Pike_sp-1);
+#ifdef HAVE_XSLTSETLOADERFUNC
+#else
+  Pike_error("set_docloader not available. upgrade your libxslt.\n");
+#endif
+}
+
+  
+/* 
+
+   The pike - docloader callback glue
+  
+ */
+xmlDocPtr pike_docloader_conv (const xmlChar * URI, xmlDictPtr dict, 
+                               int options, void * ctxt, int type)
+{
+    struct Node_struct * ns;
+    NODE_OBJECT_DATA * od;
+    struct object * xnode;
+printf("docloader()\n");
+    stack_dup();
+    push_text(URI);
+    push_int(options);
+    push_int(type);
+    apply_svalue(&Pike_sp[0-4], 3);
+
+    if(Pike_sp[0-1].type != T_OBJECT)
+      return NULL;
+
+    CHECK_NODE_PASSED(Pike_sp[0-1].u.object);
+    add_ref(Pike_sp[0-1].u.object);
+    ns = OBJ2_NODE(Pike_sp[0-1].u.object);
+    od = (NODE_OBJECT_DATA *)(ns->object_data);
+
+    pop_stack();
+
+    if(od->node->doc == NULL)
+      return NULL;    
+    else return od->node->doc;
+
+    return NULL;
+}
+
+PIKEFUN string _sprintf(int type, mixed t)
+{
+  char * desc;
+
+  check_stylesheet_created();
+  
+  push_text("Stylesheet()");
+}
+
+PIKEFUN void create()
+{
+}
+
+/*! @decl Node apply(Node xml, mapping|void attributes)
+ *!
+ *! apply the stylesheet object to an xml file.
+ *!
+ *! @param xml
+ *!   a @[Node] object from the parsed XML document to apply.
+ *!   Any node from the XML document may be used.
+ *!
+ *! @param attributes
+ *!   an optional mapping of attributes. If supplied, this parameter
+ *!   will override any set with @[set_attributes()].
+ *!
+ *! @returns
+ *!    a @[Node] object for the transformed document.
+ */
+PIKEFUN object apply(object xml)
+{
+  CHECK_NODE_PASSED(xml);
+
+  low_apply_stylesheet(args, xml, THIS->object_data->atts);
+}
+
+/*! @decl string output_type()
+*/
+PIKEFUN string output_type()
+{
+  if(THIS->object_data->stylesheet == NULL)
+    push_int(0);
+  else 
+  {
+    if(THIS->object_data->stylesheet->method != NULL)
+      push_text(THIS->object_data->stylesheet->method);
+    else
+      push_text("xml");
+  }
+}
+
+/*! @decl string media_type()
+*/
+PIKEFUN string media_type()
+{
+  if(THIS->object_data->stylesheet == NULL)
+    push_int(0);
+  else 
+  {
+    if(THIS->object_data->stylesheet->mediaType != NULL)
+      push_text(THIS->object_data->stylesheet->mediaType);
+    else
+      push_int(0);
+  }
+}
+
+PIKEFUN object apply(object xml, mapping attributes)
+{
+
+  char** vars = NULL;
+  int i = 0;
+
+  CHECK_NODE_PASSED(xml);
+
+  vars = low_set_attributes(attributes);
+
+  low_apply_stylesheet(args, xml, (const char **)vars);
+}
+
+void low_apply_stylesheet(INT32 args, struct object * xml, const char ** atts)
+{
+  int i;
+  xmlDocPtr output;
+  struct Node_struct * ns;
+  NODE_OBJECT_DATA * od;
+  struct object * xnode;
+  int have_func = 0;
+  int x=0;
+  struct external_variable_context loc;
+
+  if(atts!=NULL)
+  for(i =0;; i=i+2)
+  {
+    if((atts[i]) == NULL) break;
+/*    printf("%s: %s\n", (atts[i]), (atts[i+1])); */
+  }  
+
+#ifdef HAVE_XSLTSETLOADERFUNC
+    push_svalue(&THIS->docloader);  
+
+    if(Pike_sp[0-1].type == T_FUNCTION)
+    {
+      have_func = 1;
+      xsltSetLoaderFunc(pike_docloader_conv);
+    }
+    else
+    {
+      pop_stack();
+      xsltSetLoaderFunc(NULL);
+    }
+#endif
+ 
+
+  output = xsltApplyStylesheet(THIS->object_data->stylesheet, 
+                                 OBJ2_NODE(xml)->object_data->node->doc, 
+                                 atts);
+
+  // we pushed the stack, so let's pop it.
+  if(have_func)
+  {
+    pop_stack();
+  }
+
+  if(output == NULL)
+  {
+    pop_n_elems(args);
+    Pike_error("unable to transform document.\n");
+  }
+
+  xnode = NEW_NODE();
+  ns = OBJ2_NODE((xnode));
+  od = (NODE_OBJECT_DATA *)(ns->object_data);
+
+  od->refs = malloc(sizeof(INT32));
+  (* od->refs)=1;
+
+  if(output->children == NULL)
+  {
+    Pike_error("unable to find a node for the document.\n");
+  }
+  od->node = output->children;
+
+  pop_stack();
+  push_object(xnode);
+}
+
+/*! @decl string output(Node xml, int|void encoding)
+ *!
+ *!   render the applied stylesheet Node to a string.
+ *!
+ *! @param xml
+ *!   the transformed xml object
+ *! 
+ *! @param encoding
+ *!   an optional encoding for the string. if not supplied, defaults to 
+ *!   ISO-8859-1 (ISO Latin 1). Valid options are found in 
+ *!   @[Public.XML2.Constants], XML_CHAR_ENCODING*.
+ *!
+ *! @returns
+ *!   the string representation of the transformed XML.
+ */
+PIKEFUN string output(object xml)
+{
+  xmlOutputBufferPtr xmlBuf;
+  xmlCharEncodingHandlerPtr encoder;
+
+  CHECK_NODE_PASSED(xml);
+  encoder = xmlGetCharEncodingHandler((xmlCharEncoding)10);
+ 
+  if(encoder == NULL) 
+    Pike_error("unable to obtain encoder.\n");
+
+  xmlBuf = xmlAllocOutputBuffer(encoder);
+
+  xsltSaveResultTo( xmlBuf, OBJ2_NODE(xml)->object_data->node->doc, 
+                       THIS->object_data->stylesheet);
+
+  pop_n_elems(args);
+
+  push_text(xmlBuf->conv->content);
+
+  xmlOutputBufferClose(xmlBuf);
+}
+
+PIKEFUN string output(object xml, int encoding)
+{
+  xmlOutputBufferPtr xmlBuf;
+  xmlCharEncodingHandlerPtr encoder;
+
+  CHECK_NODE_PASSED(xml);
+  encoder = xmlGetCharEncodingHandler((xmlCharEncoding)encoding);
+
+  if(encoder == NULL)
+    Pike_error("unable to obtain encoder.\n");
+
+  xmlBuf = xmlAllocOutputBuffer(encoder);
+
+  xsltSaveResultTo( xmlBuf, OBJ2_NODE(xml)->object_data->node->doc, 
+                       THIS->object_data->stylesheet);
+
+  pop_n_elems(args);
+
+  push_text_len(xmlBuf->conv->content, xmlBuf->conv->use);
+
+  xmlOutputBufferClose(xmlBuf);
+}
+
+/*! @decl void set_attributes(mapping variables)
+ *!
+ *! set attributes for use by the stylesheet transformation
+ *!
+ *! @note
+ *!  Currently, the input to this function is assumed to be UTF-8 encoded.
+ *!  We should probably do that automagically.
+ */
+PIKEFUN void set_attributes(mapping variables)
+{
+  int i;
+  char** vars = NULL;
+  vars = low_set_attributes(variables);
+  THIS->object_data->atts = (const char **)vars;
+  pop_stack();
+  
+}
+
+char** low_set_attributes(struct mapping * variables)
+{
+
+  int varcount, i;
+  struct keypair * k;
+  INT32 e;
+  xmlChar* value;
+  char ** vars = NULL;
+  const xmlChar* str;
+
+  if ( variables != NULL ) 
+  {
+    struct svalue sind, sval;
+    int tmpint=0;
+
+    varcount = 0;
+
+    if(THIS->object_data->atts != NULL)
+    {
+      free(THIS->object_data->atts);
+      THIS->object_data->atts = NULL;
+    }
+    vars = malloc( sizeof(char *) * 
+                  ( 1 + ((m_sizeof(variables)) * 2 )));
+    MAPPING_LOOP(variables)  
+    {
+      sind = k->ind;
+      sval = k->val;
+      if(!(sind.type == T_STRING && sval.type == T_STRING)) 
+      {
+        continue;
+      }
+      // index
+printf("name %s, value %s\n", sind.u.string->str, sval.u.string->str);
+      str  = (const xmlChar *) sval.u.string->str;
+      if ( xmlStrstr(str, (xmlChar*) "\n") == NULL ) 
+      {
+        if ( xmlStrchr(str, '"') ) 
+        {
+          if (xmlStrchr(str, '\'')) 
+          {
+            Pike_error("Param contains quote and double-quotes.");
+            return;    
+          }
+          value = xmlStrdup((const xmlChar *)"'");
+          value = xmlStrcat(value, str);
+          value = xmlStrcat(value, (const xmlChar *)"'");
+        }
+        else 
+        {
+          value = xmlStrdup((const xmlChar *)"\"");
+          value = xmlStrcat(value, str);
+          value = xmlStrcat(value, (const xmlChar *)"\"");
+        }              
+      }
+      else 
+      {
+        // param contains newlines
+        value = xmlStrdup((const xmlChar *)"\"");
+        value = xmlStrcat(value, (const xmlChar *)"\"");
+      }
+            
+      str = (const xmlChar*) sind.u.string->str;
+
+      // namespaces are bad
+      if ( xmlStrchr(str, ':') ) 
+        vars[tmpint++] = strdup("supressed");
+      else
+        vars[tmpint++] = strdup(str);
+      vars[tmpint++] = value;
+      if ( varcount > MAX_PARAMS )
+        Pike_error("Too many params !");
+      varcount++;
+    }
+    vars[tmpint] = NULL;
+  }
+  else 
+  {
+    vars = malloc(sizeof(char *));
+    vars[0] = NULL;
+  }
+
+  for(i =0;; i=i+2)
+  {
+    if((vars[i]) == NULL) break;
+    printf("%s: %s\n", (vars[i]), (vars[i+1]));
+  }  
+  return vars;
+}
+
+int check_stylesheet_created()
+{
+  if(THIS->object_data->stylesheet != NULL)
+    return 1;
+  Pike_error("Stylesheet not initialized.\n");
+}
+
+INIT
+{
+  STYLESHEET_OBJECT_DATA * dta;
+  xmlGenericErrorFunc my_error;
+
+  dta = 
+	(STYLESHEET_OBJECT_DATA*)malloc(sizeof(STYLESHEET_OBJECT_DATA));
+    if (!dta)
+        Pike_error("init_stylesheet: Out of memory!\n");
+
+    dta->stylesheet = NULL;
+    dta->atts = NULL;
+    THIS->object_data = dta;
+
+    my_error = my_xsltGenericErrorFunc; 
+    xsltSetGenericErrorFunc(NULL, my_error);
+
+}
+
+EXIT
+{ 
+
+  if((* THIS->object_data->refs)==1 && THIS->object_data->stylesheet != NULL)
+  {
+    // we do this to trick xsltFreeStylesheet into not freeing the document.
+    // this should prevent a segfault when two stylesheet objects are created
+    // from the same xml document.
+    THIS->object_data->stylesheet->doc = NULL;
+    xsltFreeStylesheet(THIS->object_data->stylesheet);
+  }
+  else
+  {
+   (*( THIS->object_data->refs)) --;
+  }
+
+  if(THIS->object_data->atts != NULL)
+  {
+    free(THIS->object_data->atts);
+  }
+
+  if(THIS->node != NULL)
+  {
+// FIXME: this is a memory leak!!!
+    free_object(THIS->node);
+  }
+
+   if(THIS->object_data)
+  {
+    free(THIS->object_data);
+  }
+}
+}
+/*! @endclass
+ */
+
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+
+void pike_init_xml2_stylesheet()
+{
+  INIT
+}
+
+void pike_exit_xml2_stylesheet()
+{
+  EXIT
+}

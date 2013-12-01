@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# check command line arguments:
+brand=steam
+for tmp_option in $@
+do
+  # Extract options and values (format: option=value):
+  option=${tmp_option%%=*}
+  value=${tmp_option#*=}
+  [ "$option" == "$tmp_option" ] && value=
+  # Check options:
+  [ "$option" == "--with-brand" ] && brand=$value
+done
+
+./build $*
+chmod u+xr setup
+
+make install
+make check-install-cert
+
+if [ -e /etc/rc.status ]; then  # SuSE
+    echo "Installing SuSE startup file: /etc/init.d/$brand"
+    mkdir -p /etc/init.d
+    cp -f distrib/suse/init.d/steam /etc/init.d/$brand
+    [ -e /usr/sbin/rc$brand ] && rm -f /usr/sbin/rc$brand
+    ln -s /etc/init.d/$brand /usr/sbin/rc$brand
+elif [ -e /etc/rc.d/init.d/functions ]; then  # RedHat/Fedora
+    echo "Installing RedHat/Fedora startup file: /etc/init.d/$brand"
+    mkdir -p /etc/init.d
+    cp -f distrib/redhat/init.d/steam /etc/init.d/$brand
+elif [ -e /lib/lsb/init-functions ]; then # generic LSB (linux standard base)
+    echo "Installing generic LSB startup file: /etc/init.d/$brand"
+    mkdir -p /etc/init.d
+    cp -f distrib/generic-lsb/init.d/steam /etc/init.d/$brand
+else  # generic (non-LSB)
+    echo "Installing generic startup file: /etc/init.d/$brand"
+    mkdir -p /etc/init.d
+    cp -f distrib/generic/init.d/steam /etc/init.d/$brand
+fi
+
+./setup
+
+echo "Installation finished successfully..."

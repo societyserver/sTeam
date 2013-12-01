@@ -1,0 +1,293 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: steam\n"
+"Report-Msgid-Bugs-To: alain@debian.org\n"
+"POT-Creation-Date: 2006-03-01 17:58+0100\n"
+"PO-Revision-Date: 2006-04-05 18:11+0200\n"
+"Last-Translator: Miroslav Kure <kurem@debian.cz>\n"
+"Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: select
+#. Choices
+#: ../steam.templates:3
+msgid "standard, alternative, manual"
+msgstr "standardní, jiný, ruční"
+
+#. Type: select
+#. Description
+#: ../steam.templates:5
+msgid "Ports configuration type:"
+msgstr "Způsob nastavení portů:"
+
+#. Type: select
+#. Description
+#: ../steam.templates:5
+msgid ""
+"sTeam provides access through different protocols using their standard "
+"ports. sTeam will run into troubles if a different daemon (http, news, mail, "
+"jabber, etc) already uses one of those standard ports."
+msgstr ""
+"sTeam poskytuje přístup pomocí různých protokolů, přičemž využívá jejich "
+"standardní síťové porty. Pokud již na daném portu běží jiný daemon dané "
+"služby (http, news, mail, jabber, atd.) a sTeam se pokusí tyto porty využít, "
+"dostanete se do problémů."
+
+#. Type: select
+#. Description
+#: ../steam.templates:5
+msgid ""
+"You can choose to run sTeam either on the standard ports or on totally "
+"alternative ports, which prevents problems with other daemons, or you can "
+"configure sTeam manually."
+msgstr ""
+"Můžete si vybrat, zda má sTeam běžet na standardních portech, úplně jiných "
+"portech (což předejde problémům s ostatními daemony) nebo můžete sTeam "
+"nastavit ručně."
+
+#. Type: string
+#. Description
+#: ../steam.templates:17
+msgid "Port of the SMTP service:"
+msgstr "Port služby SMTP:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:17
+msgid ""
+"The SMTP service defaults to 25. It is very likely that you already run "
+"another SMTP daemon, which conflicts with sTeam. Please only use port 25 "
+"here if you are sure you don't have any other SMTP service running."
+msgstr ""
+"Pro službu SMTP je výchozí port 25. Je velmi pravděpodobné, že již používáte "
+"jiného SMTP daemona, který se sTeamem koliduje. Port 25 použijte prosím "
+"pouze v případě, že jste si absolutně jisti, že na tomto portu již neběží "
+"jiný daemon."
+
+#. Type: string
+#. Description
+#: ../steam.templates:25
+msgid "Smarthost used to deliver emails:"
+msgstr "Chytrý počítač pro doručování pošty:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:25
+msgid ""
+"sTeam is not capable to deliver emails all by itself and needs a smarthost "
+"if outgoing emails are allowed."
+msgstr ""
+"sTeam neumí doručovat poštu sám o sobě, ale využívá pro doručování služeb "
+"chytrého počítače (tzv. smarthost)."
+
+#. Type: string
+#. Description
+#: ../steam.templates:32
+msgid "Port of the NEWS service:"
+msgstr "Port služby NEWS:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:32
+msgid ""
+"sTeam offers internal boards for discussion. They can be accessed using a "
+"newsreader (eg.: trn, knode, pan, etc)."
+msgstr ""
+"sTeam nabízí pro diskusi interní fóra. Přistupovat k nim můžete pomocí "
+"programu pro čtení news příspěvků (např. trn, knode, pan, apod.)."
+
+#. Type: string
+#. Description
+#: ../steam.templates:32
+msgid ""
+"The service runs on port 119 by default and you should only change this, if "
+"you are sure another NEWS server is running on this computer."
+msgstr ""
+"Služba standardně běží na portu 119, což byste měli změnit pouze v případě, "
+"že jste si jisti, že na daném počítači běží jiný news server."
+
+#. Type: string
+#. Description
+#: ../steam.templates:42
+msgid "Port of the POP3 service:"
+msgstr "Port služby POP3:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:42
+msgid ""
+"sTeam offers access to work rooms using POP3. This means users can access "
+"work rooms using their email client."
+msgstr ""
+"sTeam nabízí přístup k pracovním pokojům pomocí protokolu POP3. To znamená, "
+"že uživatelé mohou přistupovat k pracovním pokojům pomocí emailového klienta."
+
+#. Type: string
+#. Description
+#: ../steam.templates:42
+msgid ""
+"The service runs on port 110 by default and you should only change this, if "
+"you are sure another pop3 server is running on this computer."
+msgstr ""
+"Služba standardně běží na portu 110, což byste měli změnit pouze v případě, "
+"že jste si jisti, že na daném počítači běží jiný POP3 server."
+
+#. Type: string
+#. Description
+#: ../steam.templates:52
+msgid "Port of the IMAP service:"
+msgstr "Port služby IMAP:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:52
+msgid ""
+"sTeam offers access to work rooms using IMAP. This means users can access "
+"work rooms using their email client."
+msgstr ""
+"sTeam nabízí přístup k pracovním pokojům pomocí protokolu IMAP. To znamená, "
+"že uživatelé mohou přistupovat k pracovním pokojům pomocí emailového klienta."
+
+#. Type: string
+#. Description
+#: ../steam.templates:52
+msgid ""
+"The service runs on port 143 by default and you should only change this, if "
+"you are sure another IMAP server is running on this computer."
+msgstr ""
+"Služba standardně běží na portu 143, což byste měli změnit pouze v případě, "
+"že jste si jisti, že na daném počítači běží jiný IMAP server."
+
+#. Type: string
+#. Description
+#: ../steam.templates:62
+msgid "Port the IRC service:"
+msgstr "Port služby IRC:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:62
+msgid "The chat rooms of sTeam can be accessed using a IRC client."
+msgstr "K diskusním místnostem sTeamu můžete přistupovat pomocí IRC klienta."
+
+#. Type: string
+#. Description
+#: ../steam.templates:62
+msgid ""
+"The service runs on port 6667 by default and you should only change this, if "
+"you are sure another IRC server is running on this computer."
+msgstr ""
+"Služba standardně běží na portu 6667, což byste měli změnit pouze v případě, "
+"že jste si jisti, že na daném počítači běží jiný IRC server."
+
+#. Type: string
+#. Description
+#: ../steam.templates:71
+msgid "Port of the Jabber service:"
+msgstr "Port služby Jabber:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:71
+msgid "The chat rooms of sTeam can be accessed using a Jabber client."
+msgstr ""
+"K diskusním místnostem sTeamu můžete přistupovat pomocí jabberového klienta."
+
+#. Type: string
+#. Description
+#: ../steam.templates:71
+msgid ""
+"The service runs on port 5222 by default and you should only change this, if "
+"you are sure another Jabber server is running on this computer."
+msgstr ""
+"Služba standardně běží na portu 5222, což byste měli změnit pouze v případě, "
+"že jste si jisti, že na daném počítači běží jiný Jabber server."
+
+#. Type: string
+#. Description
+#: ../steam.templates:80
+msgid "Port of the FTP service:"
+msgstr "Port služby FTP:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:80
+msgid ""
+"sTeam offers access to files using FTP (file transfer protocol). A normal "
+"FTP client can be used."
+msgstr ""
+"sTeam nabízí přístup k souborům pomocí protokolu FTP (protokol pro přenos "
+"souborů). Lze použít libovolný standardní FTP klient."
+
+#. Type: string
+#. Description
+#: ../steam.templates:80
+msgid ""
+"The service runs on port 21 by default and you should only change this, if "
+"you are sure another FTP server is running on this computer."
+msgstr ""
+"Služba standardně běží na portu 21, což byste měli změnit pouze v případě, "
+"že jste si jisti, že na daném počítači běží jiný FTP server."
+
+#. Type: string
+#. Description
+#: ../steam.templates:90
+msgid "Port of the web service:"
+msgstr "Port služby WWW:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:90
+msgid ""
+"The service may be accessed using a web browser. For this to work you need "
+"to install the web package into the server. Please read README.Debian for "
+"further information."
+msgstr ""
+"Ke službě můžete přistupovat pomocí webového prohlížeče. Aby to fungovalo, "
+"musíte na server nainstalovat webový balíček. Více informací naleznete v "
+"souboru README.Debian."
+
+#. Type: string
+#. Description
+#: ../steam.templates:90
+msgid ""
+"The service runs on port 80 by default and you should only change this, if "
+"you are sure another web server is running on this computer."
+msgstr ""
+"Služba standardně běží na portu 80, což byste měli změnit pouze v případě, "
+"že jste si jisti, že na daném počítači běží jiný www server."
+
+#. Type: string
+#. Description
+#: ../steam.templates:101
+msgid "Port of the secure web service:"
+msgstr "Port služby zabezpečeného WWW:"
+
+#. Type: string
+#. Description
+#: ../steam.templates:101
+msgid ""
+"The service may be accessed securely using a web browser. For this to work "
+"you need to install the web package into the server. Please read README."
+"Debian for further  information."
+msgstr ""
+"Ke službě můžete přistupovat zabezpečeně pomocí webového prohlížeče. Aby to "
+"fungovalo, musíte na server nainstalovat webový balíček. Více informací "
+"naleznete v souboru README.Debian."
+
+#. Type: string
+#. Description
+#: ../steam.templates:101
+msgid ""
+"The service runs on port 443 by default and you should only change this, if "
+"you are sure another HTTPS server is running on this computer."
+msgstr ""
+"Služba standardně běží na portu 443, což byste měli změnit pouze v případě, "
+"že jste si jisti, že na daném počítači běží jiný HTTPS server."

@@ -1,0 +1,2 @@
+#!/bin/sh
+exec ./steam loader.pike --pid=/var/run/steam.pid --config-dir=/etc/steam/ --logdir=/var/log/steam --sandbox=/var/lib/steam --pidfile=/var/run/steam.pid $*

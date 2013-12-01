@@ -1,0 +1,493 @@
+steam (2.9.5) unstable; urgency=low
+  * bugfixes and caching for ldap
+  * security cache
+  * security fixes
+
+ -- Dominik Niehus <nicke@uni-paderborn.de>  Wed, 27 Jan 2010 22:57:00 +0100
+
+steam (2.9.4) unstable; urgency=low
+  * bugfixes and improvements for searching (searching module, search service,
+    fulltext service)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 8 May 2008 02:21:03 +0200
+
+steam (2.9.3) unstable; urgency=low
+  * fixed cachesize (cachesize can only be configured through steam.cfg)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 17 Apr 2008 12:12:22 +0200
+
+steam (2.9.2) unstable; urgency=low
+  * added functions for getting paginated arrays, inventory, annotationss or
+    emails (with pagination info)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 15 Apr 2008 16:14:34 +0200
+
+steam (2.9.1) unstable; urgency=low
+  * renamed INSTALL to INSTALL.txt to fix problems with Mac OS X (HSF+ is
+    case-insensitive by default)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 8 Apr 2008 22:04:00 +0200
+
+steam (2.9.0) unstable; urgency=low
+  * new developer version 2.9.0 (based on 2.8.0 / 2.7.34)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 31 Mar 2008 15:39:30 +0200
+
+steam (2.8.0) unstable; urgency=low
+  * open-sTeam 2.8.0 release (based on 2.7.34)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 31 Mar 2008 15:24:37 +0200
+
+steam (2.7.34) unstable; urgency=low
+  * wikis and coal c-serialization are now working on Mac OS X Leopard, too
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 27 Mar 2008 20:26:59 +0100
+
+steam (2.7.33) unstable; urgency=low
+  * the debian package no longer creates a steam.cer certificate if a
+    steam.crt already exists
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 20 Mar 2008 19:59:36 +0100
+
+steam (2.7.32) unstable; urgency=low
+  * fixed an issue where steam.crt and steam.key certificate files would not
+    be used (a new steam.cer certificate would be created instead)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 20 Mar 2008 19:47:17 +0100
+
+steam (2.7.31) unstable; urgency=low
+  * fixed some COAL problem that was introduced with the find_function fix
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 17 Mar 2008 16:38:01 +0100
+
+steam (2.7.30) unstable; urgency=low
+  * fixed get_root_environment() function
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Sun, 16 Mar 2008 18:58:12 +0100
+
+steam (2.7.29) unstable; urgency=low
+  * added a function to containers to allow sorting some of their objects in
+    the inventory
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Sun, 16 Mar 2008 01:31:16 +0100
+
+steam (2.7.28) unstable; urgency=low
+  * users and groups that disappear from a persistence layer can now be
+    correctly deleted if configured accordingly
+  * added uncache_user and uncache_group functions to users and groups module
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Sat, 15 Mar 2008 16:32:25 +0100
+
+steam (2.7.27) unstable; urgency=low
+  * improved handling of multiple group classes when synchronizing groups with
+    LDAP
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 14 Mar 2008 13:26:25 +0100
+
+steam (2.7.26) unstable; urgency=low
+  * improved restart stability for init.d scripts (loader now properly
+    supports "--restart")
+  * services are properly terminated upon shutdown
+  * service user ticket for service connection/reconnection is now valid for
+    long enough to not run into reconnect problems
+  * spm packages can now react upon being uninstalled (e.g. for cleanup)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 13 Mar 2008 22:02:45 +0100
+
+steam (2.7.25) unstable; urgency=low
+  * added support for multiple decorations per object
+  * fixed redirection issue when logging in via http as an admin member after
+    a normal user in the same browser session (fixes STEAM-389)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Wed, 12 Mar 2008 20:07:42 +0100
+
+steam (2.7.24) unstable; urgency=low
+  * fixed != condition in filter_object_array() function in "searching" module
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Wed, 12 Mar 2008 03:12:46 +0100
+
+steam (2.7.23) unstable; urgency=low
+  * added versatile object filtering function to "searching" module
+  * added versatile inventory query function get_inventory_filtered() to
+    containers
+  * added versatile email query function get_emails_filtered() to users and
+    groups
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Wed, 12 Mar 2008 01:47:20 +0100
+
+steam (2.7.22) unstable; urgency=low
+  * added LDAP config option userGroupDNAttr for syncing a user's groups in
+    the user lookup, not only in the group lookup
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 10 Mar 2008 17:35:37 +0100
+
+steam (2.7.21) unstable; urgency=low
+  * fixed versioning and DOC_USER_MODIFIED attribute for set_content()
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Sun, 9 Mar 2008 12:07:51 +0100
+
+steam (2.7.20) unstable; urgency=low
+  * added get_icon_by_name() to icons module
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 7 Mar 2008 12:21:12 +0100
+
+steam (2.7.19) unstable; urgency=low
+  * the icons module can now query default icons from other iconsets
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 4 Mar 2008 12:24:24 +0100
+
+steam (2.7.18) unstable; urgency=low
+  * added get_root_environment() object function
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 22 Feb 2008 22:32:48 +0100
+
+steam (2.7.17) unstable; urgency=low
+  * fixed renaming of users
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 22 Feb 2008 16:32:43 +0100
+
+steam (2.7.16) unstable; urgency=low
+  * fixed some issues when renaming groups or users
+  * fixed an issue where logging out when logged in via the http login page
+    could result in a file download of "logout" would be offered
+  * added set_acquire_from_environment() method to objects so that APIs that
+    cannot serialize functions can switch on access acquiring from an object's
+    environment
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 22 Feb 2008 14:09:05 +0100
+
+steam (2.7.15) unstable; urgency=low
+  * fixed a bug in timelib (which prevented the server from starting)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Wed, 20 Feb 2008 11:19:17 +0100
+
+steam (2.7.14) unstable; urgency=low
+  * server.log output is now prepended with the time of the event
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Wed, 20 Feb 2008 10:51:07 +0100
+
+steam (2.7.13) unstable; urgency=low
+  * assure that the admin group has all permissions on /config upon startup
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 18 Feb 2008 15:04:15 +0100
+
+steam (2.7.12) unstable; urgency=low
+  * added decorations support (beta)
+  * modules now unregister themselves when deleted
+  * keyword_index module now has a valid identifier
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 11 Feb 2008 11:38:06 +0100
+
+steam (2.7.11) unstable; urgency=low
+  * fixed an issue where mails from the webinterface would have a wrong
+    subject ("Message from ...")
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 5 Feb 2008 15:51:34 +0100
+
+steam (2.7.10) unstable; urgency=low
+  * fixed an LDAP authentication issue
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Sun, 3 Feb 2008 10:45:15 +0100
+
+steam (2.7.9) unstable; urgency=low
+  * fixed an authentication issue (now checking tickets before rejecting null
+    passwords)
+  * fixed an issue where the search index update would run on every restart
+  * added content namespace to RSS feeds
+  * threads now try to obtain their own database handles
+  * fixed testsuite
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 1 Feb 2008 16:54:03 +0100
+
+steam (2.7.8) unstable; urgency=low
+  * build-process cleanup (moved all configure stuff to the top-level
+    configure.ac)
+  * adding a top-level group as a member to another group will move the
+    top-level group into it as a sub-group
+  * fixed threading-issues when dropping objects
+  * use -fPIC and -fno-stack-protector compiler options if supported (this
+    fixes some issues on systems that incorporate stack checking in modern GCC
+    versions)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 10 Jan 2008 03:21:56 +0100
+
+steam (2.7.7) unstable; urgency=low
+  * improved stability when loading broken objects from the database
+  * prevent circular dependencies when monitoring events
+  * failed user authentication now returns an access exception
+  * object path fixes
+  * fixes for updating published objects' URLs
+  * fixes for function support in COAL
+  * added excel mimetype
+  * optimizations for query_attribute function
+  * improved fulltext service (documents now update fulltext index when their
+    mimetype changes, added maintainance options for fulltext index)
+  * don't use the C implementation of the COAL protocol on Mac OS X 10.5
+    (because it is currently broken there)
+  * backup script now supports putting the current backup in a "latest"
+    directory and old backups in an "old" directory
+  * updated server_base spm package (corrected mailbox size)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 4 Jan 2008 12:17:18 +0100
+
+steam (2.7.6) unstable; urgency=low
+  * new: kill -3 <steam-pid> prints out all thread backtraces
+  * fix: upload/upgrade of scripts
+  * improved debug output for errors in xml generated scripts
+  * coal serialization for functions
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 22 Nov 2007 18:14:13 +0100
+
+steam (2.7.5) unstable; urgency=low
+  * mails with slashes in the subject are now stored correctly
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Wed, 7 Nov 2007 17:17:52 +0100
+
+steam (2.7.4) unstable; urgency=low
+  * log invalid mail message body in smtp log
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 30 Oct 2007 19:08:11 +0100
+
+steam (2.7.3) unstable; urgency=low
+  * fix: attribute names in the database are now case-sensitive (should have
+    been that way all along)
+  * fixed check for enabling/disabling C-serialization
+  * fixed access rights in forums (STEAM-373)
+  * fixed cached filpaths with links
+  * groups can now only be deleted by users that have write access on the
+    group and all it's sub-groups (recursively)
+  * groups are now deleted completely with workroom, calendar, etc.
+    (recursively)
+  * output sTeam and Pike versions in errors.log upon startup
+  * recover_users function in the user factory now respects sent-mail folders
+    and works more stable
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 30 Oct 2007 16:08:23 +0100
+
+steam (2.7.2) unstable; urgency=low
+  * handle group structures correctly when creating groups from ldap byheir
+    ldap name
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 16 Oct 2007 20:52:20 +0200
+
+steam (2.7.1) unstable; urgency=low
+  * stability fixes for server shutdown
+  * use user or group name from persistence layers when creating objects for
+    them
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 16 Oct 2007 14:20:31 +0200
+
+steam (2.7.0) unstable; urgency=low
+  * new version 2.7.0 based on steam-2.6.15
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 12 Oct 2007 17:31:23 +0200
+
+steam (2.6.15) unstable; urgency=low
+  * re-activated pre-save-queue
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 11 Oct 2007 20:34:23 +0200
+
+steam (2.6.14) unstable; urgency=low
+  * removed pre-save-queue again
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 11 Oct 2007 20:13:38 +0200
+
+steam (2.6.13) unstable; urgency=low
+  * activated pre-save-queue again
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 11 Oct 2007 19:53:00 +0200
+
+steam (2.6.12) unstable; urgency=low
+  * deactivated pre-save-queue code in the database
+  * fixed coal C-serialization for functions
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 11 Oct 2007 19:24:05 +0200
+
+steam (2.6.11) unstable; urgency=low
+  * removed some database locking code again which might have caused server
+    lockups
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 11 Oct 2007 14:47:58 +0200
+
+steam (2.6.10) unstable; urgency=low
+  * some privacy fixes
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 9 Oct 2007 18:20:21 +0200
+
+steam (2.6.9) unstable; urgency=low
+  * improved database locking code when shutting down
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 9 Oct 2007 17:25:10 +0200
+
+steam (2.6.8) unstable; urgency=low
+  * better check for pending database transactions upon shutdown
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 9 Oct 2007 17:05:29 +0200
+
+steam (2.6.7) unstable; urgency=low
+  * removed wildcards in user-lookups in LDAP (search still uses wildcards, of
+    course)
+  * added constants from the include files to the steam-shell
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 8 Oct 2007 12:05:40 +0200
+
+steam (2.6.6) unstable; urgency=low
+  * fixed creation of sent-mail folder on new users (this could sometimes
+    fail)
+  * preventing cycles in group structure when moving groups
+  * setting DOC_ENCODING in emails
+  * utility function to get times of last changes from caches
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 27 Sep 2007 20:43:21 +0200
+
+steam (2.6.5) unstable; urgency=low
+  * renaming groups now updates the identifiers of sub-groups correctly
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 24 Sep 2007 13:28:39 +0200
+
+steam (2.6.4) unstable; urgency=low
+  * fixed COAL serizalization of functions
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Sat, 22 Sep 2007 16:05:20 +0200
+
+steam (2.6.3) unstable; urgency=low
+  * fix: upgrading scripts now works correctly
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 21 Sep 2007 14:00:00 +0100
+
+steam (2.6.2) unstable; urgency=low
+  * fix: the server sometimes wouldn't correctly load web-interface scripts
+    and their instances
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 18 Sep 2007 22:30:00 +0100
+
+steam (2.6.1) unstable; urgency=low
+  * fix: added an update that fixes all groups' parents (this will be
+    automatically done on the next server startup and might take a while,
+    process output can be found in the server.log)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 18 Sep 2007 20:26:00 +0100
+
+steam (2.6.0) unstable; urgency=low
+  * open-sTeam 2.6 release
+  * change to 2.4: sent-mails are now stored on users by default (new users
+    will have a 'sent' folder in their mailbox, existing users will get a
+    'sent' folder in their mailbox on first server startup (this can take
+    a little while and can be checked in the server.log))
+  * change to 2.4: users with zero passwords (value 0) will no longer be
+    authenticated without password (you can activate the old behaviour by
+    setting allow-zero-passwords=true in /etc/steam/modules/auth.cfg)
+  * change to 2.4: coal serialization is now done by a C-module by default
+  * change to 2.4: improved persistence layer handling, the ldap module can
+    now synchronize structured groups
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 18 Sep 2007 12:00:00 +0100
+
+steam (2.5.17) unstable; urgency=low
+  * improvement: users with zero passwords (value 0) will no longer be
+    authenticated without login (there is a backwards compatibility option
+    for that in /etc/steam/modules/auth.cfg)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Tue, 18 Sep 2007 11:40:00 +0100
+
+steam (2.5.16) unstable; urgency=low
+  * fix: when an error occurred when deleting an object, the object could
+    remain in an invalid state.
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 14 Sep 2007 10:40:00 +0100
+
+steam (2.5.15) unstable; urgency=low
+  * fix: group->add_member doesn't move groups (this is more consistent)
+  * fix: group->get_parent only returns a real parent (not a group that the
+    group is just a member of)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 13 Sep 2007 17:00:00 +0100
+
+steam (2.5.13) unstable; urgency=low
+  * fix: coal serialization of functions
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 13 Sep 2007 13:25:00 +0100
+	
+steam (2.5.12) unstable; urgency=low
+  * fix: coal.c improved handling of functions
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 13 Sep 2007 11:32:00 +0100
+
+steam (2.5.11) unstable; urgency=low
+  * fix: coal.so now compiles again (this was a bug in 2.5.10 only)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 30 Aug 2007 10:00:00 +0100
+
+steam (2.5.10) unstable; urgency=low
+  * fix: ldap now removes renamed groups from cache
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 29 Aug 2007 00:16:00 +0100
+
+steam (2.5.9) unstable; urgency=low
+  * fixed WebDAV Problem with resetting locks in no access rooms
+  * disallow creating folders in /home
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Mon, 27 Aug 2007 19:20:00 +0100
+
+steam (2.5.8) unstable; urgency=low
+  * keep _Server in object cache for compatibility
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Sat, 25 Aug 2007 19:20:00 +0100
+
+steam (2.5.7) unstable; urgency=low
+  * improvement: safer handling of invalid language settings when sending
+    sending emails
+  * correct handling of invalid objects via COAL protocol (they are no
+    longer marked as "Server Object")
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 24 Aug 2007 00:26:00 +0100
+
+steam (2.5.6) unstable; urgency=low
+  * fix: handling of charset in LDAP
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri,  3 Aug 2007 19:05:00 +0100
+
+steam (2.5.5-1) unstable; urgency=low
+  * fix: handling of charset in LDAP
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu,  2 Aug 2007 18:22:00 +0100
+
+steam (2.5.4) unstable; urgency=low
+  * fix: handling of structural sub-groups in LDAP
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Wed,  1 Aug 2007 21:00:00 +0100
+
+steam (2.5.3-1) unstable; urgency=low
+  * improvement: optional server config "log_slow_commands_http" for logging
+    http commands that take at least the specified amount of milliseconds to
+    complete (works much like the "log_slow_commands" setting does for the
+    COAL port)
+  * fix: if dont-create-exits is activated in persistence.cfg, an exit to
+    sTeam's workarea will no longer be created for newly created users
+  * fulltext service doesn't die on errors anymore
+  * steam.cfg now understands web_server=(autodetect-ip) (which will try to
+    detect the machine's ip address and assign it to the web_server setting)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri, 28 Jun 2007 00:05:00 +0100
+
+steam (2.5.2-1) unstable; urgency=low
+  * steam binary now understands --dir=... parameter to set the working
+    directory before executing a pike program
+  * loader now understands --stop (stop server), --quiet (no output) and
+    --auto-restart (an alias to the ambiguous --restart)
+  * fixed stop script (typo: == is not valid in shell scripts)
+  * updated init.d script (more LSB conform, and now requests that mysql should
+    be running (if available) during steam startup and shutdown)
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Fri,  8 Jun 2007 13:45:00 +0100
+
+steam (2.5.1) unstable; urgency=low
+  * added support for virtual connections in users
+  * IRC and Jabber now respect virtual connections
+
+ -- Robert Hinn <exodus@uni-paderborn.de>  Thu, 26 Apr 2007 12:00:00 +0100
+
+steam (2.5.0) unstable; urgency=low
+  * Steam 2.5.0 release
+
+ -- Alain Schroeder <alain@debian.org>  Fri,  1 Nov 2006 14:45:00 +0100

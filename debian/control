@@ -1,0 +1,74 @@
+Source: steam
+Section: misc
+Priority: optional
+Maintainer: Alain Schroeder <alain@debian.org>
+Build-Depends: debhelper (>= 5.0), pike7.6-dev (>= 7.6.75), libxslt1-dev (>= 1.0.16), flex, po-debconf, dpatch
+Standards-Version: 3.7.2.0
+
+Package: steam
+Section: misc
+Architecture: all
+Depends: ${pike:name}-core (>= ${pike:ver}-1), ${pike:name}-mysql, ${pike:name}-image, pstotext, html2text, lsb-base (>= 3.0), steam-lib (= ${Source-Version}), ${misc:Depends}
+Pre-Depends: debconf (>= 0.2.17) | debconf-2.0, dbconfig-common (>= 1.8.11)
+Recommends: mysql-server, tetex-bin, tetex-base, tetex-extra, imagemagick
+Description: Environment for cooperative knowledge management
+ sTeam provides a technical platform which allows groups of students, lecturers
+ and any other groups to construct and arrange their individual and cooperative
+ learning and working space.
+ .
+ sTeam consists of an object-oriented server connected to a database and Web,
+ Java and other (ftp, irc, ...) clients. The server is event-driven and manages
+ all user objects as well as the communication between the connected clients. 
+ .
+ Different from most other cooperation tools is the novel possibility of
+ self-organisation and self-administration by the members within the virtual
+ environment.
+ .
+ In the core, the system provides the following self-administrating functions:
+ .
+     * creation of rooms
+     * granting of admission or access authorisations
+     * administration and processing of objects or references to objects and
+       documents located on other servers
+     * carrying objects and passing them on to other users
+     * use of rooms as cooperative media (e.g. Shared Whiteboard)
+ .
+ A more detailed description can be found on the website:
+ http://www.open-steam.org/
+ .
+ sTeam needs a mysql server, but it need not necessarily be installed on the
+ same computer.
+ .
+ This package contains the sTeam server.
+
+Package: steam-lib
+Section: misc
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: Environment for cooperative knowledge management (libs)
+ sTeam provides a technical platform which allows groups of students, lecturers
+ and any other groups to construct and arrange their individual and cooperative
+ learning and working space.
+ .
+ sTeam consists of an object-oriented server connected to a database and Web,
+ Java and other (ftp, irc, ...) clients. The server is event-driven and manages
+ all user objects as well as the communication between the connected clients. 
+ .
+ Different from most other cooperation tools is the novel possibility of
+ self-organisation and self-administration by the members within the virtual
+ environment.
+ .
+ In the core, the system provides the following self-administrating functions:
+ .
+     * creation of rooms
+     * granting of admission or access authorisations
+     * administration and processing of objects or references to objects and
+       documents located on other servers
+     * carrying objects and passing them on to other users
+     * use of rooms as cooperative media (e.g. Shared Whiteboard)
+ .
+ A more detailed description can be found on the website:
+ http://www.open-steam.org/
+ .
+ This package contains the architecture dependent libraries used by the sTeam
+ server.

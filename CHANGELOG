@@ -1,0 +1,321 @@
+2.9.5
+* bugfixes and caching for ldap
+* security cache
+* security fixes
+
+2.9.4
+* bugfixes and improvements for searching (searching module, search service,
+  fulltext service)
+
+2.9.3
+* fixed cachesize (cachesize can only be configured through steam.cfg)
+
+2.9.2
+* added functions for getting paginated arrays, inventory, annotationss or
+  emails (with pagination info)
+
+2.9.1
+* renamed INSTALL to INSTALL.txt to fix problems with Mac OS X (HSF+ is
+  case-insensitive by default)
+
+2.9.0
+* new developer version 2.9.0 (based on 2.8.0 / 2.7.34)
+
+2.8.0
+* open-sTeam 2.8.0 release (based on 2.7.34)
+
+2.7.34
+* wikis and coal c-serialization are now working on Mac OS X Leopard, too
+
+2.7.33
+* the debian package no longer creates a steam.cer certificate if a steam.crt
+  already exists
+
+2.7.32
+* fixed an issue where steam.crt and steam.key certificate files would not be
+  used (a new steam.cer certificate would be created instead)
+
+2.7.31
+* fixed some COAL problem that was introduced with the find_function fix
+
+2.7.30
+* fixed get_root_environment() function
+
+2.7.29
+* added a function to containers to allow sorting some of their objects in the
+  inventory
+
+2.7.28
+* users and groups that disappear from a persistence layer can now be
+  correctly deleted if configured accordingly
+* added uncache_user and uncache_group functions to users and groups module
+
+2.7.27
+* improved handling of multiple group classes when synchronizing groups with
+  LDAP
+
+2.7.26
+* improved restart stability for init.d scripts (loader now properly supports
+  "--restart")
+* services are properly terminated upon shutdown
+* service user ticket for service connection/reconnection is now valid for
+  long enough to not run into reconnect problems
+* spm packages can now react upon being uninstalled (e.g. for cleanup)
+
+2.7.25
+* added support for multiple decorations per object
+* fixed redirection issue when logging in via http as an admin member after a
+  normal user in the same browser session (fixes STEAM-389)
+
+2.7.24
+* fixed != condition in filter_object_array() function in "searching" module
+
+2.7.23
+* added versatile object filtering function to "searching" module
+* added versatile inventory query function get_inventory_filtered() to
+  containers
+* added versatile email query function get_emails_filtered() to users and
+  groups
+
+2.7.22
+* added LDAP config option userGroupDNAttr for syncing a user's groups in the
+  user lookup, not only in the group lookup
+
+2.7.21
+* fixed versioning and DOC_USER_MODIFIED attribute for set_content()
+
+2.7.20
+* added get_icon_by_name() to icons module
+
+2.7.19
+* the icons module can now query default icons from other iconsets
+
+2.7.18
+* added get_root_environment() object function
+
+2.7.17
+* fixed renaming of users
+
+2.7.16
+* fixed some issues when renaming groups or users
+* fixed an issue where logging out when logged in via the http login page
+  could result in a file download of "logout" would be offered
+* added set_acquire_from_environment() method to objects so that APIs that
+  cannot serialize functions can switch on access acquiring from an object's
+  environment
+
+2.7.15
+* fixed a bug in timelib (which prevented the server from starting)
+
+2.7.14
+* server.log output is now prepended with the time of the event
+
+2.7.13
+* assure that the admin group has all permissions on /config upon startup
+
+2.7.12
+* added decorations support (beta)
+* modules now unregister themselves when deleted
+* keyword_index module now has a valid identifier
+
+2.7.11
+* fixed an issue where mails from the webinterface would have a wrong subject
+  ("Message from ...")
+
+2.7.10
+* fixed an LDAP authentication issue
+
+2.7.9
+* fixed an authentication issue (now checking tickets before rejecting null
+  passwords)
+* fixed an issue where the search index update would run on every restart
+* added content namespace to RSS feeds
+* threads now try to obtain their own database handles
+* fixed testsuite
+
+2.7.8
+* build-process cleanup (moved all configure stuff to the top-level
+  configure.ac)
+* adding a top-level group as a member to another group will move the
+  top-level group into it as a sub-group
+* fixed threading-issues when dropping objects
+* use -fPIC and -fno-stack-protector compiler options if supported (this fixes
+  some issues on systems that incorporate stack checking in modern GCC
+  versions)
+
+2.7.7
+* improved stability when loading broken objects from the database
+* prevent circular dependencies when monitoring events
+* failed user authentication now returns an access exception
+* object path fixes
+* fixes for updating published objects' URLs
+* fixes for function support in COAL
+* added excel mimetype
+* optimizations for query_attribute function
+* improved fulltext service (documents now update fulltext index when their
+  mimetype changes, added maintainance options for fulltext index)
+* don't use the C implementation of the COAL protocol on Mac OS X 10.5
+  (because it is currently broken there)
+* backup script now supports putting the current backup in a "latest"
+  directory and old backups in an "old" directory
+* updated server_base spm package (corrected mailbox size)
+
+2.7.6
+* new: kill -3 <steam-pid> prints out all thread backtraces
+* fix: upload/upgrade of scripts
+* improved debug output for errors in xml generated scripts
+* coal serialization for functions
+
+2.7.5
+* mails with slashes in the subject are now stored correctly
+
+2.7.4
+* log invalid mail message body in smtp log
+
+2.7.3
+* fix: attribute names in the database are now case-sensitive (should have
+  been that way all along)
+* fixed check for enabling/disabling C-serialization
+* fixed access rights in forums (STEAM-373)
+* fixed cached filpaths with links
+* groups can now only be deleted by users that have write access on the group
+  and all it's sub-groups (recursively)
+* groups are now deleted completely with workroom, calendar, etc.
+  (recursively)
+* output sTeam and Pike versions in errors.log upon startup
+* recover_users function in the user factory now respects sent-mail folders
+  and works more stable
+
+2.7.2
+* handle group structures correctly when creating groups from ldap byheir ldap
+  name
+
+2.7.1
+* stability fixes for server shutdown
+* use user or group name from persistence layers when creating objects for
+  them
+
+2.7.0
+* new version 2.7.0 based on steam-2.6.15
+
+2.6.15
+* re-activated pre-save-queue
+
+2.6.14
+* removed pre-save-queue again
+
+2.6.13
+* activated pre-save-queue again
+
+2.6.12
+* deactivated pre-save-queue code in the database
+* fixed coal C-serialization for functions
+
+2.6.11
+* removed some database locking code again which might have caused server
+  lockups
+
+2.6.10
+* some privacy fixes
+
+2.6.9
+* improved database locking code when shutting down
+
+2.6.8
+* better check for pending database transactions upon shutdown
+
+2.6.7
+* removed wildcards in user-lookups in LDAP (search still uses wildcards, of
+  course)
+* added constants from the include files to the steam-shell
+
+2.6.6
+* fixed creation of sent-mail folder on new users (this could sometimes fail)
+* preventing cycles in group structure when moving groups
+* setting DOC_ENCODING in emails
+* utility function to get times of last changes from caches
+
+2.6.5
+* renaming groups now updates the identifiers of sub-groups correctly
+
+2.6.4
+* fixed COAL serizalization of functions
+
+2.6.0
+* open-sTeam 2.6 release
+* change to 2.4: sent-mails are now stored on users by default (new users
+  will have a 'sent' folder in their mailbox, existing users will get a
+  'sent' folder in their mailbox on first server startup (this can take
+  a little while and can be checked in the server.log))
+* change to 2.4: users with zero passwords (value 0) will no longer be
+  authenticated without password (you can activate the old behaviour by
+  setting allow-zero-passwords=true in /etc/steam/modules/auth.cfg)
+* change to 2.4: coal serialization is now done by a C-module by default
+* change to 2.4: improved persistence layer handling, the ldap module can
+  now synchronize structured groups
+
+2.5.3
+* improvement: optional server config "log_slow_commands_http" for logging
+  http commands that take at least the specified amount of milliseconds to
+  complete (works much like the "log_slow_commands" setting does for the
+  COAL port)
+* fix: if dont-create-exits is activated in persistence.cfg, an exit to
+  sTeam's workarea will no longer be created for newly created users
+* fulltext service doesn't die on errors anymore
+* steam.cfg now understands web_server=(autodetect-ip) (which will try to
+  detect the machine's ip address and assign it to the web_server setting)
+
+2.5.2
+* steam binary now understands --dir=... parameter to set the working
+  directory before executing a pike program
+* loader now understands --stop (stop server), --quiet (no output) and
+  --auto-restart (an alias to the ambiguous --restart)
+* fixed stop script (typo: == is not valid in shell scripts)
+* updated init.d script (more LSB conform, and now requests that mysql should
+  be running (if available) during steam startup and shutdown)
+
+2.5.1
+  * added support for virtual connections in users
+  * IRC and Jabber now respect virtual connections
+
+2.5.0
+* new database adaptor folder with support of MySQL and postgres
+* cleanup of database code , removed CONVERSION (pre 1.6)
+* optimized saving of objects (optimized save queue in two phase saving)
+* coal.so as COAL cmod implementation supports basic operations (speedup)
+* support for read access of single attributes in User.pike
+* OBJ_PATH enhancements, path for versions and attributes provided by filepath
+* http enhancemenet. Moved last modified and e-tag code in front of other
+  methods (especially before login)
+
+2.3.4
+* internal server config now in attribute "config" in "/config/Server Object"
+* updates can be defined as objects in "/config/updates", recommended: check
+  for existance of update file, otherwise perform update and store log info
+  of update process in update file /config/updates/<name_of_update>.
+  Update methods will be called in server and modules, function:
+    int check_updates () {}
+  If 1 is returned, then the server will restart after performing that update
+  (this might be needed when performing database changes).
+  Useful functions for handling updates:
+    array _Server->get_updates();  // returns all objects in /config/updates
+    object _Server->get_update(string name);  // returns an update object
+    bool _Server->add_update(object update_object);  // adds an update
+* group membership: users are only removed from groups through persistence
+  layer lookup when they come from the same namespaces. This allows local
+  users to be added to groups that are created from ldap info without the
+  local users being removed on group lookup because they don't appear in
+  the members list of the ldap group info.
+* users are deactivated (by setting an invalid password) when they are
+  removed from a namespace (e.g. LDAP)
+* DocLPC http POST enhancement
+* Cache XML DOM-Trees in DocXSL (language import enhancement)
+* fixed critical security issue
+* mail and forwarding fixes
+* caching of users and groups in the persistence manager
+* Created new table for user information and lookup
+* added new columns to ob_class table, initially fill columns, update table when saving objects
+* new attribute OBJ_PATH used in filepath for cached pathes. Updated when objects are moved. Initially stored into ob_data and ob_class table. Path-based searches with ob_class table (column obpath)
+* locking mechanism in content handling (low level). lock_content function in Document.pike. check_lock is called when content is changed or retrieved
+* changed database table doc_data to blob
+* enhanced registration of attributes when loading objects

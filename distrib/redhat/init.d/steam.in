@@ -1,0 +1,146 @@
+#!/bin/bash
+#
+# @brand@      	This shell script takes care of starting and stopping
+#		the open-sTeam server.
+#
+# chkconfig: - 64 36
+# description:	open-sTeam server.
+# processname: steam
+# config: @configdir@/steam.cnf
+# pidfile: /var/run/@brand@.pid
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="open-sTeam server"
+NAME=@brand@
+STEAM_HOME=@steamdir@
+DAEMON=$STEAM_HOME/bin/$NAME
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+
+CONFIGDIR=@configdir@
+LOGDIR=@logdir@
+
+# Exit if the program is not installed (return code 5)
+[ -x "$DAEMON" ] || exit 5
+
+if [ -z $JAVA_HOME ] && [ "x@javahome@" != "x" ]; then
+    JAVA_HOME=@javahome@
+    export JAVA_HOME
+fi
+
+prog=$NAME
+
+
+start(){
+    if [ -e "$PIDFILE" ]; then
+        action $"Starting $NAME: (already started) " /bin/true
+        return 0
+    fi
+    $DAEMON --dir="$STEAM_HOME" loader.pike --auto-restart --pid="$PIDFILE" &> $LOGDIR/init.d_start.log &
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+	[ -e "$PIDFILE" ] && break
+        sleep 1
+    done
+    if [ -e "$PIDFILE" ]; then
+	action $"Starting $NAME: " /bin/true
+	[ -e /var/lock/subsys ] && touch /var/lock/subsys/$NAME
+	return 0
+    else
+	action $"Starting $NAME: " /bin/false
+	return 1
+    fi
+}
+
+
+stop(){
+    if [ ! -e "$PIDFILE" ]; then
+        action $"Stopping $NAME: (already stopped) " /bin/true
+        return 0
+    fi
+    $DAEMON --dir="$STEAM_HOME" loader.pike --stop --pid="$PIDFILE" &> $LOGDIR/init.d_stop.log
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+	[ -e "$PIDFILE" ] || break
+        sleep 1
+    done
+    if [ -e "$PIDFILE" ]; then
+        action $"Stopping $NAME: " /bin/false
+        return 1
+    else
+        action $"Stopping $NAME: " /bin/true
+	[ -e /var/lock/subsys/$NAME ] && rm -f /var/lock/subsys/$NAME
+	return 0
+    fi
+}
+
+
+restart(){
+    PID_BEFORE_STOP=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+    echo "Restarting (see $LOGDIR/init.d_start.log)" > $LOGDIR/init.d_stop.log
+    $DAEMON --dir="$STEAM_HOME" loader.pike --restart --pid="$PIDFILE" &> $LOGDIR/init.d_start.log
+    # wait for stop:
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+        [ ! -e "$PIDFILE" ] && break
+        TMP_PID=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+        [ "$TMP_PID" != "$PID_BEFORE_STOP" ] && break;
+        sleep 1
+    done
+    PID_AFTER_STOP=0
+    [ -e "$PIDFILE" ] && PID_AFTER_STOP=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+    if [ "$PID_BEFORE_STOP" = "$PID_AFTER_STOP" ]; then
+        action $"Restarting $NAME: (failed to stop, will restart later) " /bin/false
+        return 1
+    fi
+    [ -e /var/lock/subsys/$NAME ] && rm -f /var/lock/subsys/$NAME
+    # wait for start:
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+        [ -e "$PIDFILE" ] && break
+        sleep 1
+    done
+    if [ ! -e "$PIDFILE" ]; then
+        action $"Restarting $NAME: (stopped, but failed to start) " /bin/false
+        return 1
+    else
+        action $"Restarting $NAME: " /bin/true
+	[ -e /var/lock/subsys ] && touch /var/lock/subsys/$NAME
+        return 0
+    fi
+}
+
+condrestart(){
+    [ -e /var/lock/subsys/$NAME ] && restart || :
+}
+
+# See how we were called.
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    status $NAME
+    ;;
+  restart)
+    if [ -e "$PIDFILE" ]; then
+      restart
+    else
+      start
+    fi
+    ;;
+  condrestart)
+    condrestart
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|status|condrestart|restart}"
+    exit 3 #unimplemented feature
+esac
+
+exit $?

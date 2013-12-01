@@ -1,0 +1,7 @@
+steam: unusual-interpreter ./usr/share/steam/tools/create_cert.pike #!/usr/bin/pike7.6
+steam: unusual-interpreter ./usr/share/steam/tools/export_users #!/usr/bin/pike7.6
+steam: unusual-interpreter ./usr/share/steam/tools/debug.pike #!/usr/bin/pike7.6
+steam: unusual-interpreter ./usr/share/steam/bin/setup #!/usr/bin/pike7.6
+steam: unusual-interpreter ./usr/share/steam/setup #!/usr/bin/pike7.6
+steam: unusual-interpreter ./usr/share/steam/tools/import_users #!/usr/lib/steam/steam
+steam: unusual-interpreter ./usr/share/steam/bin/spm #!/usr/share/steam/steam

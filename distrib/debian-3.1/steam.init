@@ -1,0 +1,173 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          steam
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      S 0 1 6
+# Short-Description: sTeam server init script
+# Description:       This script controls the open-sTeam server
+### END INIT INFO
+
+# Author: Robert Hinn <exodus@uni-paderborn.de>
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="sTeam server"
+NAME=steam
+DAEMON_DIR=/usr/share/steam
+DAEMON=start
+DAEMON_ARGS="--restart"
+DAEMON_STOP=stop
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+
+
+# Exit if the package is not installed
+[ -x "/$DAEMON_DIR/$DAEMON" ] || exit 0
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+# Load the VERBOSE setting and other rcS variables
+[ -f /etc/default/rcS ] && . /etc/default/rcS
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
+#. /lib/lsb/init-functions
+# (this is not available in Debian Sarge, yet, so we define these functions:)
+log_daemon_msg () {
+    if [ -z "${1:-}" ]; then
+        return 1
+    fi
+
+    if [ -z "${2:-}" ]; then
+        echo -n "$1:"
+        return
+    fi
+    
+    echo -n "$1: $2"
+}
+#
+log_end_msg () {
+    # If no arguments were passed, return
+    [ -z "${1:-}" ] && return 1
+    if [ $1 -eq 0 ]; then
+        echo "."
+    else
+        echo " failed!"
+    fi
+    exit $1
+}
+
+
+# try to detect a java runtime:
+if [ -z $JAVA_HOME ] && [ -e /etc/alternatives/java ]; then
+	# the BACKTICK is just a workaround to allow 'cut' to look for '`':
+	BACKTICK="\`"
+	JAVA_HOME="`LANG=C file -b /etc/alternatives/java | cut -f 2 -d "$BACKTICK" | cut -f 1 -d \' | sed -e 's/\/bin\/java$//'`"
+        # Only export if this is actually a directory:
+        if [ -d "$JAVA_HOME" ]; then
+            export JAVA_HOME
+        fi
+fi
+
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+    [ -f $PIDFILE ] && echo "" && echo "There is already a pid file at $PIDFILE" && return 1
+    cd "$DAEMON_DIR" && "./$DAEMON" "$DAEMON_ARGS" --pid="$PIDFILE" > /dev/null 2>&1 &
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+        [ -f $PIDFILE ] && return 0
+        sleep 1
+    done
+    echo "No pid file was created, there is most probably a problem."
+    return 2
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+    [ -f "$PIDFILE" ] || return 1
+    cd "$DAEMON_DIR" && ./$DAEMON_STOP --pid="$PIDFILE" > /dev/null 2>&1 &
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+        [ -f "$PIDFILE" ] || return 0
+        sleep 1
+    done
+    return 2
+}
+
+#
+# Function that sends a SIGHUP to the daemon/service
+#
+do_reload() {
+	#
+	# If the daemon can reload its configuration without
+	# restarting (for example, when it is sent a SIGHUP),
+	# then implement that here.
+	#
+	#start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $NAME
+	return 0
+}
+
+case "$1" in
+  start)
+	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+	do_start
+	case "$?" in
+		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+	esac
+	;;
+  stop)
+	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+	do_stop
+	case "$?" in
+		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+	esac
+	;;
+  #reload|force-reload)
+	#
+	# If do_reload() is not implemented then leave this commented out
+	# and leave 'force-reload' as an alias for 'restart'.
+	#
+	#log_daemon_msg "Reloading $DESC" "$NAME"
+	#do_reload
+	#log_end_msg $?
+	#;;
+  restart|force-reload)
+	#
+	# If the "reload" option is implemented then remove the
+	# 'force-reload' alias
+	#
+	log_daemon_msg "Restarting $DESC" "$NAME"
+	do_stop
+	case "$?" in
+	  0|1)
+		do_start
+		case "$?" in
+			0) log_end_msg 0 ;;
+			1) log_end_msg 1 ;; # Old process is still running
+			*) log_end_msg 1 ;; # Failed to start
+		esac
+		;;
+	  *)
+	  	# Failed to stop
+		log_end_msg 1
+		;;
+	esac
+	;;
+  *)
+	#echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
+	echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload}" >&2
+	exit 3 #unimplemented feature
+	;;
+esac
+exit 2 #invalid or excess arguments
+:

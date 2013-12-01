@@ -1,0 +1,33 @@
+CC=@CC@
+INSTALL=@installprg@
+CFLAGS=@CFLAGS@ @LIBXSLT_CFLAGS@ -I@PIKE_INCLUDE_PREFIX@ @XML_CFLAGS@ -I@LIBXSL_INCLUDE@ -Wno-sign-compare
+OBJS= xslt.o xml_dom.o
+SOURCES=xslt.c
+MODULE_LIBS=@LIBS@
+MODULE_CFLAGS=@CFLAGS@
+MODULE_LDFLAGS=@LDFLAGS@
+LD=@LDSHARED@
+
+all:    $(SOURCES) libxslt.so
+
+force:
+	@:
+xslt.c:
+	$(CC) -o $@ $(OBJS) $(MODULE_CFLAGS) 
+xml_dom.c:
+	$(CC) -o $@ $(OBJS) $(MODULE_CFLAGS) 
+
+libxslt.so:     xslt.o xml_dom.o
+	$(LD) $(MODULE_LDFLAGS) -lxml2 $(MODULE_LIBS) -lc -o libxslt.so $(OBJS)
+
+install: libxslt.so
+	$(INSTALL) libxslt.so ../../server/libraries/xslt.so
+
+clean:
+	rm -f *.o *~ libxslt.so
+
+distclean:
+	rm -rf configure config.status config.log autom4te.cache Makefile
+
+
+# DO NOT DELETE THIS LINE -- make  depend  depends  on  it.

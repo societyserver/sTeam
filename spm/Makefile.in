@@ -1,0 +1,12 @@
+all:
+
+force:
+	@:
+
+install: force
+
+clean: force
+
+distclean: clean force
+	rm -rf spm
+	rm -rf configure config.status config.log autom4te.cache Makefile

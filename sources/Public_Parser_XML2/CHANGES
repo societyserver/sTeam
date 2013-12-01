@@ -1,0 +1,144 @@
+Version History
+
+Version 1.40
+- XMLReader is actually usable now that we manage memory properly
+- fixes for stack overflow when using SAX to parse large xml documents
+- fix for nsstartelement attribute contents overrunning
+- added "end" attribute to nsstartelement attribute data
+- fix for character callback receiving too much data
+- configure fix for libxmls that don't have xmlTextReaderIsNamespaceDecl 
+  or xmlNewDocPI
+
+Version 1.38
+- added Public.Parser.XML2.silent as a flag to turn off error and warning
+  output (stopgap until we figure out a better system, really)
+- more verification of get_ns_attributes(), seems to be working properly
+- added XMLReader()->set_autoencode(), to toggle auto-encoding of input 
+  data
+
+Version 1.36
+- added Stylesheet()->media_type()
+- added Stylesheet()->output_type()
+- get_ns_attributes() uses the namespace URI, and works properly now
+- CHANGE: set_ns_attributes() is now a 3 argument variant of 
+    set_attributes(), and uses the namespace URI rather than prefix now.
+- CHANGE: set_ns() uses the namespace URI rather than the prefix
+- added Node()->_refs(), Node()->is_unlinked and Node()->is_transient(),
+  mostly useful for debugging purposes, but may have other purposes :)
+
+Version 1.34
+- fixed a bunch of segfaults when passing Node objects to a Stylesheet.
+- XSLT docloader functions are local to the Stylesheet object, rather
+    than global, as they were before.
+- parse_xslt() is back (we don't know where it went).
+- should compile on systems without strlcpy().
+- minor doc fixes
+- beginning of a testsuite to help ensure quality.
+
+Version 1.32
+- Added new_node() for getting a new unlinked XML node
+- select_xpath_nodes() will evaluate relative to the node passed, making 
+    expressions that involve node axes (parent, child, etc) work properly.
+- Fixed a segmentation fault which occasionally occurred while using 
+    get_ns_attributes().
+- Documentation fixes
+
+Version 1.28
+- Checks for some (presumably) late additions to XMLReader
+
+Version 1.26
+- Added validation using DTDs
+
+Version 1.24
+- Added RelaxNG validation (basic)
+
+Version 1.22
+- Node and XMLReader objects automatically encode input to UTF-8 and 
+output from UTF-8 to Pike's internal string representation when wide 
+strings are in use.
+- Added set_auto_utf8_convert() to turn off auto conversion of strings.
+
+Version 1.20
+- Added new functions for Node objects:
+    replace(), unlink(), delete(), copy(), copy_list(), set_base, 
+    set_lang, add_content(), new_text_child() and a namespace aware
+    version of new_child()
+- Some memory optimizations for freeing unlinked nodes upon object
+    destruction.
+- Fixed some documentation
+
+Version 1.18
+- All parsers now accept encoding parameters
+- Methods for querying encoding/decoding methods
+- Better error messages
+
+Version 1.16
+- XMLReader interface complete
+- Added a few more Node methods
+
+Version 1.14
+- Added HTML parser
+- Added XML and HTML parser options
+- Fixed compile problems with some versions of libxml2
+- Added XMLReader interface, missing a lot of methods currently
+- Added Doc loader support for XSLT Stylesheet objects
+
+Version 1.12
+- Added XSLT suppport via libxslt.
+- Split module into components for easier development.
+
+Version 1.9
+- Fixed bug that hid get_node_type()
+- Fixed a bunch of segfault causing bugs
+- clarification: get_ns() gives the namespace that is defined at the node; 
+    get_nss()["_default"] gives the namespace that's not given a prefix.
+
+Version 1.8
+- Added SAX v2 parser
+- SAX parser supports namespaces
+- More documentation
+
+Version 1.3
+
+- Added set_node_name()
+- Added add_ns() and set_ns()
+- Added get_root_node() and set_root_node()
+- Added select_xpath_nodes() to allow selection of nodes based on an XPath 
+    specification
+- Added support for creation of PI nodes
+- Added support for setting and deletion of attributes
+- More documentation
+
+Version 1.2
+
+- Support for creation of certain types of nodes
+- Support for adding children and siblings
+- Support for creating new documents
+- Support for output of document to XML 
+- More documentation
+- More constants
+- Testing clocks this module as 500% faster than Parser.XML.NSTree
+
+Limitations: 
+
+- Incomplete Namespace support
+- No support for adding attributes to nodes. 
+- Not all types of node can be created. 
+- No support for deleting or copying nodes.
+
+
+Version 1.1
+
+Support for getting namespace information from nodes.
+Support for dumping a node to XML.
+Support for more node operations, such as getting language.
+Constants have been shortened and moved into their own class.
+Approximately 30% of methods have documentation now.
+
+Version 1.0 
+
+This is the first release of the Public.Parser.XML2 module.
+There are very rudimentary parsing and tree navigation methods.
+Currently, the tree is static once parsed.
+
+

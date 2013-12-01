@@ -1,0 +1,22 @@
+#!/bin/sh
+pidfile=steam.pid
+cat_func="head -n 1"
+for tmp_option in $@
+do
+        [ "$tmp_option" = "--force" ] && cat_func='cat'
+        # Extract options and values (format: option=value):
+        option=${tmp_option%%=*}
+        value=${tmp_option#*=}
+        [ "$option" = "$tmp_option" ] && value=
+        # Check options:
+        [ "$option" = "--pid" ] && pidfile=$value
+        [ "$option" = "--pidfile" ] && pidfile=$value
+done
+[ -e "$pidfile" ] && kill `$cat_func $pidfile`
+while test -e "$pidfile"
+do
+        sleep 1 # wait for server to finish shutdown
+done
+#[ -e "$pidfile" ] && exit 1 # pidfile is deleted by loader
+#rm -f "$pidfile"
+exit 0

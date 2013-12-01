@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<icons>
+<depends>filepath</depends>
+<depends>security</depends>
+</icons>

@@ -1,0 +1,32 @@
+CC= gcc
+INSTALL=@installprg@
+CFLAGS=-I@PIKE_INCLUDE_PREFIX@
+OBJS= md5.o crypt_md5.o md5_pike.o
+SOURCES=md5.c crypt_md5.c md5_pike.c
+MODULE_LIBS=@LIBS@
+MODULE_CFLAGS=
+MODULE_LDFLAGS=
+LD=@LDSHARED@
+LIBNAE=crypto.so
+
+all:    $(SOURCES) crypto.so
+
+.SUFFIXES: .c .o
+
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@ 
+
+crypto.so:     $(OBJS)
+	$(LD) $(MODULE_LDFLAGS)  $(MODULE_LIBS) -o crypto.so $(OBJS)
+
+install:
+	$(INSTALL) crypto.so ../../server/libraries/crypto.pmod.so
+
+clean:
+	rm -f *.o *~ crypto.so
+
+distclean:
+	rm -f configure config.status config.log Makefile
+
+
+# DO NOT DELETE THIS LINE -- make  depend  depends  on  it.

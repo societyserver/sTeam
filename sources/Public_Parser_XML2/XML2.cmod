@@ -1,0 +1,1128 @@
+/*
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ * $Id: XML2.cmod,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+ */
+
+/*
+ * File licensing and authorship information block.
+ *
+ * Version: MPL 1.1/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Initial Developer of the Original Code is
+ *
+ * Bill Welliver <hww3@riverweb.com>
+ *
+ * Portions created by the Initial Developer are Copyright (C) Bill Welliver
+ * All Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of the LGPL, and not to allow others to use your version
+ * of this file under the terms of the MPL, indicate your decision by
+ * deleting the provisions above and replace them with the notice
+ * and other provisions required by the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL or the LGPL.
+ *
+ * Significant Contributors to this file are:
+ *
+ *
+ */
+
+#include "xml2.h"
+
+/*! @module Public
+ */
+
+/*! @module Parser
+ */
+
+/*! @module XML2
+ */
+
+/*
+  
+    start of Public.Parser.XML2 module functions
+
+*/
+
+static void
+xmlDetectSAX2(xmlParserCtxtPtr ctxt) {
+    if (ctxt == NULL) return;
+#ifdef LIBXML_SAX1_ENABLED 
+    if ((ctxt->sax) &&  (ctxt->sax->initialized == XML_SAX2_MAGIC) &&
+        ((ctxt->sax->startElementNs != NULL) ||
+         (ctxt->sax->endElementNs != NULL))) ctxt->sax2 = 1;
+#else
+    ctxt->sax2 = 1;
+#endif /* LIBXML_SAX1_ENABLED */
+ 
+    ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
+    ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
+    ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
+    if ((ctxt->str_xml==NULL) || (ctxt->str_xmlns==NULL) ||
+                (ctxt->str_xml_ns == NULL)) {
+        xmlErrMemory(ctxt, NULL);
+    }
+}
+
+
+CVAR PARSER_OBJECT_DATA * object_data;
+PIKEVAR int silent;
+
+PIKEFUN void create()
+{
+
+}
+
+/*! @decl array(Node) select_xpath_nodes(string xpath, object node)
+ *!
+ *! selects nodes based on an XPath query and returns the result.
+ */
+PIKEFUN array select_xpath_nodes(string xpath, object node)
+{
+  xmlXPathContextPtr xpathCtx;
+  xmlXPathObjectPtr xpathObj;
+  xmlNodeSetPtr set;
+  xmlNodePtr xn;
+  xmlNsPtr xmlns;
+  struct object * o;
+  int num_nodes = 0;
+
+  CHECK_NODE_PASSED(node);
+
+  if(OBJ2_NODE(node)->object_data->node == NULL)
+  { 
+    pop_n_elems(2);
+    Pike_error("Node not initialized.\n");
+  }
+
+  xpathCtx = xmlXPathNewContext(OBJ2_NODE(node)->object_data->node->doc);
+  if(xpathCtx == NULL)
+  {
+    pop_n_elems(2);
+    Pike_error("Unable to create new XPath context.\n");
+  }
+
+/*
+
+  xmlns = xmlGetNsList(OBJ2_NODE(node)->object_data->node->doc,
+              OBJ2_NODE(node)->object_data->node);
+
+  while(xmlns != NULL)
+  {
+    printf("registering ns %s, %s\n", xmlns->prefix, xmlns->href);
+    xmlXPathRegisterNs(xpathCtx, xmlns->prefix, xmlns->href);
+    xmlns = xmlns->next;
+  }
+
+*/
+  xpathCtx->node = OBJ2_NODE(node)->object_data->node;
+
+  xpathObj = xmlXPathEvalExpression((xmlChar *)xpath->str, xpathCtx);
+  if(xpathObj == NULL) {  
+    pop_n_elems(2);
+    xmlXPathFreeContext(xpathCtx);
+    Pike_error("Unable to evaluate the XPath expression.\n");
+  }
+
+  /* now we should generate an array from the node set. */
+  set = xpathObj->nodesetval;
+
+
+  if(set == NULL)
+  {
+    pop_n_elems(2);
+    push_int(0);
+    xmlXPathFreeContext(xpathCtx);
+    xmlXPathFreeObject(xpathObj);
+    return;
+  }  
+
+  pop_n_elems(2);
+
+  if(set->nodeNr > 0)
+  {
+  xn = set->nodeTab[0];
+    if(xn != NULL && set->nodeNr > 0) do
+    {
+      struct Node_struct * ns;
+      NODE_OBJECT_DATA * od;
+      apply(Pike_fp->current_object, "Node", 0);
+      ns = OBJ2_NODE((Pike_sp[0-1].u.object));
+      od = (NODE_OBJECT_DATA *)(ns->object_data);
+
+      od->node=xn;
+      od->parser = this_object();
+      od->refs = OBJ2_NODE(node)->object_data->refs;
+    
+      (* od->refs)++;
+
+      num_nodes++;
+      xn = set->nodeTab[num_nodes];
+    } 
+    while (((num_nodes +1) <= set->nodeNr) && xn != NULL);
+
+    if(num_nodes>0) {
+      f_aggregate(num_nodes);
+    }
+  }
+  else push_int(0);
+
+  xmlXPathFreeContext(xpathCtx);
+  xmlXPathFreeObject(xpathObj);
+
+  return;
+}
+
+/*! @decl void set_xml_parser_options(int options)
+ *!
+ *! sets parser options. 
+ *! 
+ *! @param options
+ *!   a bitwise or of @[Public.Parser.XML2.Constants] options 
+ *!   where valid options start with PARSE_. 
+ */
+PIKEFUN void set_xml_parser_options(int options)
+{
+  THIS->object_data->xml_parser_options = options;
+  pop_stack();
+}
+
+/*! @decl void set_auto_utf8_convert(int flag)
+ *!
+ *! sets whether the parser should automatically convert input to the parser to and from UTF-8.
+ *! libxml2 requires input (aside from data to be parsed, which may be encoded differently) to be
+ *! UTF-8 encoded. This module will automatically convert all string input to and from UTF-8. Calling
+ *! this function with an argument of zero (0) will turn this feature off. In this case, you will be
+ *! responsible for ensuring that any input is properly encoded (if necessary).
+ *! 
+ *! @param flag
+ *!   a boolean value: 0 disables auto conversion, 1 enables.
+ */
+PIKEFUN void set_auto_utf8_convert(int flag)
+{
+  THIS->object_data->auto_encode = flag;
+  pop_stack();
+}
+
+void f_convert_string_utf8(INT32 args)
+{
+  if(  OBJ2_(THIS_NODE->object_data->parser)->object_data->auto_encode !=0)
+  {
+    f_string_to_utf8(args);
+  }
+}
+
+void f_convert_utf8_string(INT32 args)
+{
+  if(  OBJ2_(THIS_NODE->object_data->parser)->object_data->auto_encode !=0)
+  {
+    f_utf8_to_string(args);
+  }
+}
+
+void f_rconvert_string_utf8(INT32 args)
+{
+  if(THIS_XMLREADER->object_data->autoencode !=0)
+  {
+    f_string_to_utf8(args);
+  }
+}
+
+void f_rconvert_utf8_string(INT32 args)
+{
+  if(  OBJ2_(THIS_XMLREADER->object_data->parser)->object_data->auto_encode !=0)
+  {
+    f_utf8_to_string(args);
+  }
+}
+
+/*! @decl void set_html_parser_options(int options)
+ *!
+ *! sets parser options. 
+ *! 
+ *! @param options
+ *!   a bitwise or of @[Public.Parser.XML2.Constants] options 
+ *!   where valid options start with PARSE_. 
+ */
+PIKEFUN void set_html_parser_options(int options)
+{
+  THIS->object_data->html_parser_options = options;
+  pop_stack();
+}
+
+/*! @decl int substituteEntitiesDefault(int def)
+ */
+PIKEFUN int substituteEntitiesDefault(int def)
+{
+  def = def ? 1 : 0;
+
+  pop_n_elems(args);
+
+  xmlSubstituteEntitiesDefault(def);
+
+  push_int(def);
+}
+
+/* @decl int keepBlanksDefault(int def)
+ */
+PIKEFUN int keepBlanksDefault(int def)
+{
+  def = def ? 1 : 0;
+
+  pop_n_elems(args);
+
+  push_int(xmlKeepBlanksDefault(def));
+}
+
+/*!  @decl string utf8_to_html(string str)
+ *!
+ */
+PIKEFUN string utf8_to_html(string str)
+{
+  char *html = NULL;
+  int outlen, inlen;
+
+  outlen = str->len << 1;
+  html = (char*)malloc(outlen + 1);
+  if (!html)
+    Pike_error("Out of memory");
+
+  inlen = str->len;
+  if ( UTF8ToHtml(html, &outlen, str->str, &inlen) < 0 ) {
+    free(html);
+    Pike_error("Cannot convert to html!");
+  }
+  html[outlen] = '\0';
+  pop_n_elems(args);
+  push_text(html);
+  free(html);
+}
+
+
+/*!  @decl string utf8_to_isolat1(string str)
+ *!
+ */
+PIKEFUN string utf8_to_isolat1(string str)
+{
+  char *html = NULL;
+  int outlen, inlen;
+
+  outlen = str->len << 1;
+  html = (char*)malloc(outlen + 1);
+  if (!html)
+    Pike_error("Out of memory");
+
+  inlen = str->len;
+  if ( UTF8Toisolat1(html, &outlen, str->str, &inlen) < 0 ) {
+    free(html);
+    Pike_error("Cannot convert to isolat1!");
+  }
+  html[outlen] = '\0';
+  pop_n_elems(args);
+  push_text(html);
+  free(html);
+}
+
+/*! @decl int utf8_check(string str)
+ *!
+ */
+PIKEFUN int utf8_check(string str)
+{
+  int result;
+
+  result = xmlCheckUTF8(str->str);
+  pop_n_elems(args);
+  push_int(result);
+}
+
+/*! @decl array(int) get_encodings()
+ *!
+ *! gets the list of available character encoders.
+ *!
+ *! @returns
+ *!  an array of available encoder identifiers.
+ *!
+ */
+PIKEFUN array get_encodings()
+{
+   int num = 0;
+   int cur = 0;
+   int upper_limit = 25;
+   xmlCharEncodingHandlerPtr encoder;
+
+   for (cur = 0; cur < upper_limit; cur++)
+   {
+     encoder = xmlGetCharEncodingHandler((xmlCharEncoding)cur);
+     if(encoder != NULL)
+     {
+       push_int(cur);
+       num++;
+       xmlFree(encoder);
+     }
+   }
+   f_aggregate(num);
+   return;  
+}
+
+/*!  @decl string get_encoding_name(int e)
+ *!
+ */
+PIKEFUN string get_encoding_name(int e)
+{
+  const char * enc = NULL;
+
+  enc = xmlGetCharEncodingName(e);
+
+  if(enc != NULL)
+    push_text(enc);
+
+  else 
+     push_int(0);
+}
+
+/*!  @decl string get_encoding_alias(string e)
+ *!
+ */
+PIKEFUN string get_encoding_alias(string e)
+{
+  const char * enc = NULL;
+
+  enc = xmlGetEncodingAlias(e->str);
+
+  if(enc != NULL)
+    push_text(enc);
+  else 
+     push_int(0);
+}
+
+/*! @decl string render_xml(Node n)
+ *!   Renders a node tree as an XML string. The entire document tree will 
+ *!  be rendered. To render a portion of a tree, use @[Node.render_xml].
+ *!
+ *!   @param n
+ *!     a Node object for a given XML document.
+ *!
+ */
+PIKEFUN string render_xml(object n)
+{
+  int dumped;
+  xmlChar * buf;
+  char * str;
+  int bufsize;
+
+  CHECK_NODE_PASSED(n);
+
+//  check_node_created();
+  if(OBJ2_NODE(n)->object_data->node == NULL)
+  { 
+    Pike_error("Node not initialized.\n");
+  }
+
+  xmlDocDumpFormatMemory(OBJ2_NODE(n)->object_data->node->doc, &buf, &bufsize, 1);
+
+  if(buf!=NULL)
+  {
+    str = (char *)xmlStrdup(buf);
+    xmlFree(buf);
+    push_text(str);
+  }  
+  else
+  {
+    push_int(0);
+  }
+}
+
+/*! @decl string render_html(Node n)
+ *!   Renders a node tree as an HTML string. The entire document tree will 
+ *!  be rendered. To render a portion of a tree, use @[Node.render_html].
+ *!
+ *!   @param n
+ *!     a Node object for a given HTML document.
+ *!
+ */
+PIKEFUN string render_html(object n)
+{
+  int dumped;
+  xmlChar * buf;
+  char * str;
+  int bufsize;
+
+  CHECK_NODE_PASSED(n);
+
+//  check_node_created();
+  if(OBJ2_NODE(n)->object_data->node == NULL)
+  { 
+    Pike_error("Node not initialized.\n");
+  }
+
+  htmlDocDumpMemory(OBJ2_NODE(n)->object_data->node->doc, &buf, &bufsize, 1);
+
+  if(buf!=NULL)
+  {
+    str = (char *)xmlStrdup(buf);
+    xmlFree(buf);
+    push_text(str);
+  }  
+  else
+  {
+    push_int(0);
+  }
+}
+
+
+void my_relaxng_generic_error(void * userData, const char * error)
+{
+  push_text(error);
+  f_werror(1);
+}
+
+void my_structured_error(void * userData, xmlErrorPtr error)
+{
+  char err[255];
+
+  if(THIS->silent == 0)
+  {
+    snprintf(err, sizeof(err), "Public.Parser.XML error: %d, message: %s", 
+             error->level, error->message);
+    push_text(err);
+
+    f_werror(1);
+  }
+
+}
+
+/*! @decl Node parse_xml_force(string xml)
+ *!   Parse an string containing XML, even if it is not Well Formed.
+ *!  @param xml
+ *!   String containing XML data to parse.
+ *!
+ *!  @returns
+ *!    a @[Node] object containing the root of the tree.
+ */
+PIKEFUN object parse_xml_force(string xml)
+{
+  xmlDocPtr doc;
+  xmlNodePtr node;
+  struct Node_struct * ns;
+  NODE_OBJECT_DATA * od;
+
+  doc = xmlRecoverMemory(xml->str, xml->len);
+
+  if(doc == NULL)
+  {
+    pop_n_elems(2);
+    Pike_error("Unable to parse XML.\n");
+  }  
+
+  node = xmlDocGetRootElement(doc);
+  if(node == NULL)
+  {
+    pop_n_elems(2);
+    xmlFreeDoc(doc);
+    Pike_error("Unable to find Root Node.\n");
+  }
+
+  // ok, we have a parsed file. now let's turn it into a real live pike object.
+
+  pop_n_elems(2);
+
+  apply(Pike_fp->current_object, "Node", 0);
+  
+  ns = OBJ2_NODE((Pike_sp[0-1].u.object));
+  od = (NODE_OBJECT_DATA *)(ns->object_data);
+
+  od->parser = this_object();
+  od->refs = malloc(sizeof(INT32));
+  (* od->refs)=1;
+  od->node = node;
+}
+
+xmlParserInputPtr my_entity_loader(const char * URL, const char * ID,
+   xmlParserCtxtPtr context)
+{
+  printf("request for entity %s\n", URL);
+  return NULL; 
+}
+
+/*! @decl Node parse_xml(string xml, string|void name, string|void encoding)
+ *!   Parse an string containing XML.
+ *!  @param xml
+ *!   String containing XML data to parse.
+ *!  @param name
+ *!   String containing name/URI of file.
+ *!
+ *!  @returns
+ *!    a @[Node] object containing the root of the tree.
+ */
+PIKEFUN object parse_xml(string xml, string name, string encoding)
+{
+  xmlDocPtr doc;
+
+  entity_loader = my_entity_loader;
+
+  //  xmlSetExternalEntityLoader(entity_loader);
+
+  doc = xmlReadMemory(xml->str, xml->len, name->str, 
+                      (const char *)encoding->str, 
+                      THIS->object_data->xml_parser_options);
+
+  handle_parsed_tree(doc, args);
+}
+
+xmlEntityPtr my_xml_getent(void * ctx, const xmlChar * name)
+{
+    xmlEntityPtr ent;
+    
+    if(strcmp(name, "boo") != 0)
+    {
+      printf("somebody else's entity: %s!\n", name);
+      return xmlSAX2GetEntity(ctx, name);
+     }
+    ent = xmlMalloc(sizeof(xmlEntity)); 
+    if(ent == NULL) printf("unable to allocate entity storage.\n");
+        
+    memset(ent, 0, sizeof(xmlEntity));
+      
+    ent->type = XML_ENTITY_DECL;
+    ent->etype = XML_INTERNAL_GENERAL_ENTITY;
+    ent->name = xmlStrdup(name);   
+    ent->content = xmlStrdup(name);
+        
+    return ent;
+
+}
+
+PIKEFUN object parse_xml_sax(string xml, string name, string encoding)
+{
+  xmlDocPtr doc;
+  xmlSAXHandler * sax;
+  xmlParserCtxtPtr ctxt;
+
+  ctxt = xmlCreateMemoryParserCtxt(xml->str, xml->len);
+
+  if(ctxt == NULL) Pike_error("unable to allocate context.\n");
+
+  sax = xmlMalloc(sizeof(xmlSAXHandler));
+  xmlSAXVersion(sax, 2);
+  sax->getEntity = my_xml_getent;  
+
+  if(ctxt->sax != NULL)
+    xmlFree(ctxt->sax);
+
+  ctxt->sax = sax;
+
+  xmlDetectSAX2(ctxt);
+  ctxt->recovery = 0;
+//  ctxt->replaceEntities = 0;
+
+  xmlParseDocument(ctxt);
+  //  entity_loader = my_entity_loader;
+  //  xmlSetExternalEntityLoader(entity_loader);
+
+  doc = ctxt->myDoc;
+
+   if (sax != NULL)
+        ctxt->sax = NULL;
+    xmlFreeParserCtxt(ctxt);
+
+  handle_parsed_tree(doc, args);
+}
+
+void handle_parsed_tree(xmlDocPtr doc, INT32 args)
+{
+  xmlNodePtr node;
+  struct Node_struct * ns;
+  NODE_OBJECT_DATA * od;
+  char * err_ctx = "parse_xml";
+
+  if(doc == NULL)
+  {
+    pop_n_elems(args);
+    Pike_error("Unable to parse XML.\n");
+  }  
+
+  node = xmlDocGetRootElement(doc);
+  if(node == NULL)
+  {
+    pop_n_elems(args);
+    xmlFreeDoc(doc);
+    Pike_error("Unable to find Root Node.\n");
+  }
+
+  // ok, we have a parsed file. now let's turn it into a real live pike object.
+
+  pop_n_elems(args);
+
+  apply(Pike_fp->current_object, "Node", 0);
+  
+  ns = OBJ2_NODE((Pike_sp[0-1].u.object));
+  od = (NODE_OBJECT_DATA *)(ns->object_data);
+
+  od->refs = malloc(sizeof(INT32));
+  (* od->refs)=1;
+  od->node = node;
+  od->parser = this_object();
+}
+
+PIKEFUN object parse_xml(string xml, string name)
+{
+  xmlDocPtr doc;
+
+  entity_loader = my_entity_loader;
+
+  //  xmlSetExternalEntityLoader(entity_loader);
+
+  doc = xmlReadMemory(xml->str, xml->len, name->str, 
+                      NULL, 
+                      THIS->object_data->xml_parser_options);
+
+  handle_parsed_tree(doc, args);
+  
+}
+
+PIKEFUN object parse_xml(string xml)
+{
+  push_text("noname.xml");
+  f_parse_xml(2);
+}
+
+/*! @decl Node parse_html(string html, string|void name, string|void encoding)
+ *!   Parse an string containing HTML.
+ *!  @param html
+ *!   String containing HTML data to parse.
+ *!  @param name
+ *!   String containing name/URI of file.
+ *!
+ *!  @returns
+ *!    a @[Node] object containing the root of the tree.
+ */
+PIKEFUN object parse_html(string html, string name, string encoding)
+{
+  xmlDocPtr doc;
+
+  entity_loader = my_entity_loader;
+
+  //  xmlSetExternalEntityLoader(entity_loader);
+
+  doc = htmlReadMemory(html->str, html->len, name->str, 
+                      (const char *)encoding->str, 
+                      THIS->object_data->html_parser_options);
+
+  handle_parsed_tree(doc, args);
+}
+
+PIKEFUN object parse_html(string html, string name)
+{
+  xmlDocPtr doc;
+
+  entity_loader = my_entity_loader;
+
+  //  xmlSetExternalEntityLoader(entity_loader);
+
+  doc = htmlReadMemory(html->str, html->len, name->str, 
+                      NULL, 
+                      THIS->object_data->html_parser_options);
+
+  handle_parsed_tree(doc, args);
+  
+}
+
+PIKEFUN object parse_html(string html)
+{
+  push_text("noname.html");
+  f_parse_html(2);
+}
+
+/*! @decl int validate(Node doc)
+ *!
+ *! validates a document against its internal and external DTDs.
+ *!
+ */
+PIKEFUN int validate(object doc)
+{
+  int r;
+  xmlValidCtxtPtr valid;
+  CHECK_NODE_PASSED(doc);
+
+  if(OBJ2_NODE(doc)->object_data->node->doc==NULL)
+  {
+    pop_stack();
+    Pike_error("whoa, horsie! we don't have an xml document!\n");
+  }
+
+  valid = xmlNewValidCtxt();
+  if(valid == NULL)
+  {
+    pop_stack();
+    Pike_error("unable to allocate a validation context\n");
+  }
+
+  r = xmlValidateDocument(valid, OBJ2_NODE(doc)->object_data->node->doc);
+
+  xmlFreeValidCtxt(valid);
+
+  pop_stack();
+
+  push_int(r);
+}
+
+/*! @decl Node new_xml(string version, string root_name)
+ *!   Create a new XML document with a root node.
+ *!
+ *!  @param version
+ *!     the version of XML to create
+ *!  @param root_name
+ *!      the name of the root node
+ *!  @returns
+ *!    a @[Node] object containing the root of the tree.
+ */
+PIKEFUN object new_xml(string version, string root_name)
+{
+  xmlDocPtr doc;
+  xmlNodePtr node;
+  struct Node_struct * ns;
+  NODE_OBJECT_DATA * od;
+
+  // TODO: we need to encode this value!
+  doc = xmlNewDoc(version->str);
+
+  if(doc == NULL)
+  {
+    Pike_error("Unable to create new XML document.\n");
+  }  
+
+  // TODO: we need to encode this value!
+  node = xmlNewNode(NULL, (xmlChar *)root_name->str);
+  xmlDocSetRootElement(doc, node);
+  if(node == NULL)
+  {
+    xmlFreeDoc(doc);
+    Pike_error("Unable to find Root Node.\n");
+  }
+
+  // ok, we have a parsed file. now let's turn it into a real live pike object.
+
+  pop_stack();
+
+  apply(Pike_fp->current_object, "Node", 0);
+  
+  ns = OBJ2_NODE((Pike_sp[0-1].u.object));
+  od = (NODE_OBJECT_DATA *)(ns->object_data);
+
+  od->refs = malloc(sizeof(INT32));
+  (* od->refs)=1;
+  od->node = node;
+  od->parser = this_object();
+}
+
+/*! @decl Node new_node(string name)
+ *!   Create a new unlinked XML node.
+ *!
+ *!  @param name
+ *!      the node name
+ *!  @returns
+ *!    a new @[Node] object.
+ */
+PIKEFUN object new_node(string name)
+{
+  xmlNodePtr node;
+  struct Node_struct * ns;
+  NODE_OBJECT_DATA * od;
+
+  // TODO: we need to encode this value!
+  node = xmlNewNode(NULL, (xmlChar *)name->str);
+
+  if(node == NULL)
+  {
+    Pike_error("Unable to create new node.\n");
+  }  
+
+  pop_stack();
+
+  apply(Pike_fp->current_object, "Node", 0);
+  
+  ns = OBJ2_NODE((Pike_sp[0-1].u.object));
+  od = (NODE_OBJECT_DATA *)(ns->object_data);
+
+  od->refs = malloc(sizeof(INT32));
+  (* od->refs)=1;
+  od->unlinked = 1;
+  od->node = node;
+  od->parser = this_object();
+}
+
+/*! @decl Node parse_relaxng(string relaxng, string|void name)
+/*! @decl Node parse_relaxng(Node relaxng)
+ *!   Parse a string containing an RelaxNG schema.
+ *!
+ *!  @param name
+ *!   String containing name/URI of file.
+ *!
+ *!  @returns
+ *!    a @[RelaxNG] object containing the parsed schema.
+ */
+PIKEFUN object parse_relaxng(string relaxng)
+{
+  push_text("noname.rlx");
+  f_parse_relaxng(2);
+}
+
+PIKEFUN object parse_relaxng(object relaxng)
+{
+  CHECK_NODE_PASSED(relaxng);
+
+  handle_parse_relaxng(args);
+
+}
+
+PIKEFUN object parse_relaxng(string relaxng, string name)
+{
+  // first, we must parse the xml file. conveniently, we have a function
+  // that does that already!
+  f_parse_xml(2);
+
+  handle_parse_relaxng(args);
+}
+
+void handle_parse_relaxng(INT32 args)
+{
+  struct object * node_obj = NULL;
+  xmlDocPtr doc = NULL;
+  xmlRelaxNGParserCtxtPtr parser;
+  xmlRelaxNGPtr relax;
+  struct RelaxNG_struct * rn;
+  RELAXNG_OBJECT_DATA * od;
+
+  // we're going to hang on to the node object.
+  node_obj = Pike_sp[0-1].u.object;
+  add_ref(node_obj);
+
+  doc = OBJ2_NODE(node_obj)->object_data->node->doc;
+
+  if(doc==NULL)
+  {
+    pop_stack();
+    Pike_error("whoa, horsie! we don't have an xml document!\n");
+  }
+
+  parser = xmlRelaxNGNewDocParserCtxt(doc);
+  if(parser == NULL)
+  {
+    pop_stack();
+    Pike_error("Unable to create relaxng parser context.\n");
+  }  
+  
+  relaxng_error_handler = (xmlRelaxNGValidityErrorFunc)my_relaxng_generic_error;
+  relaxng_warning_handler = (xmlRelaxNGValidityWarningFunc)my_relaxng_generic_error;
+
+  xmlRelaxNGSetParserErrors(parser, relaxng_error_handler, 
+                            relaxng_warning_handler, NULL);
+
+  relax = xmlRelaxNGParse(parser);
+
+  if(relax == NULL)
+  {
+    pop_stack();
+    Pike_error("Unable to parse the relaxng data.\n");
+  }  
+
+
+  // ok, we have a parsed schema. now let's turn it into a real live pike object.
+
+  pop_stack();
+
+  apply(Pike_fp->current_object, "RelaxNG", 0);
+  
+  rn = OBJ2_RELAXNG((Pike_sp[0-1].u.object));
+  od = (RELAXNG_OBJECT_DATA *)(rn->object_data);
+  od->parser = this_object();
+
+  od->refs = malloc(sizeof(INT32));
+  (* od->refs)=1;
+
+  /* TODO: not sure if this is a leak, but we need it to prevent the 
+     xmlNode from being freed a second time at the pike Node's destruction  
+     (the Stylesheet will free that itself. Note that this is a tricky 
+     subject... since the two are linked, perhaps we should call 
+     Node.destroy() when the Stylesheet is destroyed... */
+  *(OBJ2_NODE(node_obj)->object_data->refs)++;
+  od->context = parser;
+  od->valid = relax;
+  rn->node = node_obj;
+}
+
+/*! @decl Node parse_xslt(string xslt, string|void name)
+/*! @decl Node parse_xslt(Node xslt)
+ *!   Parse a string containing an XSLT stylesheet.
+ *!
+ *!  @param name
+ *!   String containing name/URI of file.
+ *!
+ *!  @returns
+ *!    a @[Stylesheet] object containing the parsed stylesheet.
+ */
+PIKEFUN object parse_xslt(string xslt)
+{
+  push_text("noname.xsl");
+  f_parse_xslt(2);
+}
+
+PIKEFUN object parse_xslt(object xslt)
+{
+  CHECK_NODE_PASSED(xslt);
+
+  handle_parse_stylesheet(args);
+}
+
+PIKEFUN object parse_xslt(string xslt, string name)
+{
+  // first, we must parse the xml file. conveniently, we have a function
+  // that does that already!
+  f_parse_xml(2);
+
+  handle_parse_stylesheet(args);
+}
+
+void handle_parse_stylesheet(INT32 args)
+{
+  struct object * node_obj = NULL;
+  xsltStylesheetPtr sty = NULL;
+  xmlDocPtr doc = NULL;
+  struct Stylesheet_struct * ss;
+  STYLESHEET_OBJECT_DATA * od;
+
+  // we're going to hang on to the node object.
+  node_obj = Pike_sp[0-1].u.object;
+  add_ref(node_obj);
+
+  doc = OBJ2_NODE(node_obj)->object_data->node->doc;
+
+  if(doc==NULL)
+  {
+    pop_stack();
+    Pike_error("whoa, horsie! we don't have an xml document!\n");
+  }
+
+  sty = xsltParseStylesheetDoc(doc);
+
+  if(sty == NULL)
+  {
+    pop_stack();
+    Pike_error("Unable to parse stylesheet node.\n");
+  }  
+
+  // ok, we have a parsed sheet. now let's turn it into a real live pike object.
+
+  pop_stack();
+
+  apply(Pike_fp->current_object, "Stylesheet", 0);
+  
+  ss = OBJ2_STYLESHEET((Pike_sp[0-1].u.object));
+  od = (STYLESHEET_OBJECT_DATA *)(ss->object_data);
+  od->parser = this_object();
+
+  od->refs = malloc(sizeof(INT32));
+  (* od->refs)=1;
+  add_ref(node_obj);
+//  (*(OBJ2_NODE(node_obj)->object_data->refs))++;
+  od->stylesheet = sty;
+  ss->node = node_obj;
+}
+
+EXTRA
+{
+  struct pike_string * ps;
+  char * err_ctx = "parse_xml";
+
+  add_string_constant("__version", "1.38", 0);
+  add_string_constant("__author", "Bill Welliver <bill@welliver.org>", 0);
+
+  structured_handler = my_structured_error;
+  xmlSetStructuredErrorFunc((void *)err_ctx, structured_handler);
+
+  pike_init_xml2_constants();
+  pike_init_xml2_html();
+  pike_init_xml2_node();
+  pike_init_xml2_sax();
+  pike_init_xml2_stylesheet();
+  pike_init_xml2_xmlreader();
+  pike_init_xml2_relaxng();
+
+}
+
+INIT
+{
+  PARSER_OBJECT_DATA * dta;
+
+  dta = (PARSER_OBJECT_DATA*)malloc(sizeof(PARSER_OBJECT_DATA));
+  if(dta == NULL)
+  {
+    Pike_error("xml2_init: unable to allocate memory.\n");
+  }
+
+  dta->xml_parser_options = 0;
+  dta->html_parser_options = 0;
+  dta->auto_encode = 1;
+  if(THIS!=NULL && THIS->object_data != NULL && THIS->object_data != NULL && dta != NULL)
+    THIS->object_data = dta;
+ 
+  LIBXML_TEST_VERSION
+}
+
+EXIT
+{
+
+  pike_exit_xml2_relaxng();
+  pike_exit_xml2_xmlreader();
+  pike_exit_xml2_stylesheet();
+  pike_exit_xml2_sax();
+  pike_exit_xml2_node();
+  pike_exit_xml2_html();
+  pike_exit_xml2_constants();
+  
+#ifdef HAVE_XSLT
+xsltCleanupGlobals();
+#endif /* HAVE_XSLT */
+
+  xmlCleanupParser();
+}
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
+

@@ -1,0 +1,165 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          @brand@
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Should-Start:      $network $named $time mysql
+# Should-Stop:       mysql
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: open-sTeam server init script
+# Description:       This script controls the open-sTeam server
+### END INIT INFO
+
+# Author: Robert Hinn <exodus@uni-paderborn.de>
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="open-sTeam server"
+NAME=@brand@
+STEAM_HOME=@steamdir@
+DAEMON=$STEAM_HOME/bin/$NAME
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+
+CONFIGDIR=@configdir@
+LOGDIR=@logdir@
+
+# Exit if the program is not installed (return code 5)
+[ -x "$DAEMON" ] || exit 5
+
+if [ -z $JAVA_HOME ] && [ "x@javahome@" != "x" ]; then
+    JAVA_HOME=@javahome@
+    export JAVA_HOME
+fi
+
+#set -e
+
+
+# echo without newline works differently on SysV and BSD:
+if [ "`echo -n`" = "-n" ]; then
+    ECHO_N=""
+    ECHO_C="\c"
+else
+    ECHO_N="-n"
+    ECHO_C=""
+fi
+# now use something like this if you want echo without a newline:
+#   echo $ECHO_N "text"$ECHO_C
+
+
+do_start(){
+    echo $ECHO_N "Starting $DESC: $NAME"$ECHO_C
+    if [ -e "$PIDFILE" ]; then
+        echo " already started."
+        return 0
+    fi
+    $DAEMON --dir="$STEAM_HOME" loader.pike --auto-restart --pid="$PIDFILE" &> $LOGDIR/init.d_start.log &
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+	[ -e "$PIDFILE" ] && break
+        sleep 1
+        echo $ECHO_N "."$ECHO_C
+    done
+    if [ -e "$PIDFILE" ]; then
+	echo " started."
+	[ -e /var/lock/subsys ] && touch /var/lock/subsys/$NAME
+	return 0
+    else
+	echo " failed."
+	return 1
+    fi
+}
+
+
+do_stop(){
+    echo $ECHO_N "Stopping $DESC: $NAME"$ECHO_C
+    if [ ! -e "$PIDFILE" ]; then
+        echo " already stopped."
+        return 0
+    fi
+    $DAEMON --dir="$STEAM_HOME" loader.pike --stop --pid="$PIDFILE" &> $LOGDIR/init.d_stop.log
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+	[ -e "$PIDFILE" ] || break
+        sleep 1
+        echo $ECHO_N "."$ECHO_C
+    done
+    if [ -e "$PIDFILE" ]; then
+        echo " failed."
+        return 1
+    else
+	echo " stopped."
+	[ -e /var/lock/subsys/$NAME ] && rm -f /var/lock/subsys/$NAME
+	return 0
+    fi
+}
+
+
+do_restart(){
+    echo $ECHO_N "Restarting $DESC: $NAME"$ECHO_C
+    PID_BEFORE_STOP=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+    echo "Restarting (see $LOGDIR/init.d_start.log)" > $LOGDIR/init.d_stop.log
+    $DAEMON --dir="$STEAM_HOME" loader.pike --restart --pid="$PIDFILE" &> $LOGDIR/init.d_start.log
+    # wait for stop:
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+        [ ! -e "$PIDFILE" ] && break
+        TMP_PID=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+        [ "$TMP_PID" != "$PID_BEFORE_STOP" ] && break;
+        sleep 1
+        echo $ECHO_N "."$ECHO_C
+    done
+    PID_AFTER_STOP=0
+    [ -e "$PIDFILE" ] && PID_AFTER_STOP=`cat "$PIDFILE" | head -n 2 | tail -n 1 | sed -e 's/\([0-9]*\).*/\1/1'`
+    if [ "$PID_BEFORE_STOP" = "$PID_AFTER_STOP" ]; then
+        echo " failed to stop, will restart later."
+        return 1
+    fi
+    [ -e /var/lock/subsys/$NAME ] && rm -f /var/lock/subsys/$NAME
+    # wait for start:
+    for x in 1 2 3 4 5 6 7 8 9 10; do
+        [ -e "$PIDFILE" ] && break
+        sleep 1
+        echo $ECHO_N "."$ECHO_C
+    done
+    if [ ! -e "$PIDFILE" ]; then
+        echo " stopped, but failed to start."
+        return 1
+    else
+        echo " restarted."
+	[ -e /var/lock/subsys ] && touch /var/lock/subsys/$NAME
+        return 0
+    fi
+}
+
+
+case "$1" in
+  start)
+    do_start
+    ;;
+  stop)
+    do_stop
+    ;;
+  restart|force-reload|condrestart)
+    if [ -e "$PIDFILE" ]; then
+        do_restart
+    else
+        do_start
+    fi
+    ;;
+
+  status)
+    if [ -e "$PIDFILE" ]; then
+	echo "$DESC: $NAME is running."
+        exit 0
+    else
+	echo "$DESC: $NAME is stopped."
+	exit 3
+    fi
+    ;;
+
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|status|force-reload|condrestart|restart|status}"
+    exit 3 #unimplemented feature
+    ;;
+esac
+
+exit $?

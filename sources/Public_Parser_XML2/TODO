@@ -1,0 +1,19 @@
+handle element definition properly; we need to do something with 
+xmlElementContentPtr...
+
+handle character encoding for inputs that aren't 8 bits wide (only SAX 
+still needs to be done).
+
+we need something similar to HTML.Parser...
+
+we need to support html mode parsing in SAX
+
+Node resulting from XMLReader.expand() does not get destroyed after 
+next read(). This could cause real problems.
+
+docloader function should be stylesheet local, not global to the whole module.
+not sure what I was thinking...
+
+add a variant of Stylesheet->apply() that allows passing of attributes. This 
+will save us from having to mutex the set_attributes/apply process when using 
+a shared stylesheet object across multiple concurrent requests.

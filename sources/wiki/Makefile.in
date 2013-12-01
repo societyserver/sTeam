@@ -1,0 +1,43 @@
+# makefile for wiki2html
+
+CC=@CC@
+CFLAGS=@CFLAGS@ -I@PIKE_INCLUDE_PREFIX@ -O3
+LD=@LDSHARED@
+INSTALL=@installprg@
+MODULE_LDFLAGS=@WIKI_LDFLAGS@ @LEXLIB@
+LEX=@LEX@
+LIBNAME=wiki.so
+
+OBJS=lexer.o debug.o error.o output.o stringutils.o transforms.o wiki.o
+
+GENERATED_FILES=*.o lexer.c 
+
+all: $(LIBNAME)
+
+.SUFFIXES: .c .o
+
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+
+lexer.c: lexer.l
+	$(LEX) -olexer.c lexer.l 
+
+$(LIBNAME): $(OBJS)
+	$(LD) $(MODULE_LDFLAGS) -o $(LIBNAME) $(OBJS)
+
+install: $(LIBNAME)
+	$(INSTALL) $(LIBNAME) ../../server/libraries/$(LIBNAME)
+
+
+clean:
+	rm -rf $(GENERATED_FILES)
+	rm -f $(LIBNAME) ../../server/libraries/$(LIBNAME)
+
+distclean: clean
+	rm -rf configure config.status config.log autom4te.cache Makefile
+
+spotless: clean
+	rm -f $(LIBNAME) ../../server/libraries/$(LIBNAME)
+
+# Recompile from scratch
+new: spotless all

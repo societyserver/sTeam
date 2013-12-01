@@ -1,0 +1,29 @@
+CC=@CC@
+INSTALL=@installprg@
+CFLAGS=@CFLAGS@ -I@PIKE_INCLUDE_PREFIX@
+MODULE_LIBS=@LIBS@
+MODULE_CFLAGS=@CFLAGS@
+MODULE_LDFLAGS=
+LD=@LDSHARED@
+
+LIBNAME=coal.so
+OBJS=coal.o
+
+all: $(LIBNAME)
+
+.SUFFIXES: .c .o
+
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@ 
+
+$(LIBNAME): $(OBJS)
+	$(LD) $(MODULE_LDFLAGS)  $(MODULE_LIBS) -o $(LIBNAME) $(OBJS)
+
+install: $(LIBNAME)
+	$(INSTALL) $(LIBNAME) ../../server/libraries/$(LIBNAME)
+
+clean:
+	rm -f *.o *~ $(LIBNAME) ../../server/libraries/$(LIBNAME)
+
+distclean: clean
+	rm -rf configure config.status config.log autom4te.cache Makefile

@@ -1,0 +1,62 @@
+sTEAM-server Install Mini-HowTo
+
+Before you start with the intallation you should have the following
+packages installed:
+
+1. Pike >= 7.8     (pike.ida.liu.se)
+2. mysql           (www.mysql.com)
+3. libxml2         (xmlsoft.org/)
+4. libxslt         (xmlsoft.org/XSLT)
+5. autoconf >= 2.52 (others from 2.5x may work)
+
+build sTeam by running the 'build' script.
+
+Now make sure your User is member of the systems 'mysql' group. 
+Afterwards you can start the installation procedure by starting the
+install ('./install') file in this directory which will ask a couple
+of questions. Depending on your answers a new database and two files
+are automatically created: 'config.txt' and 'mount.txt'.
+You can change those two files manually if everything went wrong.
+It is also possible to run ./configure manually. If configure throws
+some error there is probably one of the required packages missing.
+Of course its also possible that configure cannot locate it - in that
+case please let us know about the problem.
+
+To install the server you just have to run ./install and everything
+should go automatically. Optionally you can call that script with the
+--prefix parameter. Apart from that its also possible to run
+configure and make install in order to set up the steam server.
+If anything goes wrong you can start the setup script manually. For example
+if the mysqld was not running you can run the ./setup in the install
+directory to configure the server.
+
+
+Now the server should be started with the start-Script in the install
+directory. The logfile will automatically redirected to
+'logs/server.log'.
+
+Troubleshooting:
+Should the following error message be in the logfile:
+server/database.pike:43:Failed to index module 'Sql' with 'sql' (module
+doesn't exist?) ......
+
+then the File mount.txt needs to be extended by another directory
+'/usr' (if the pike binary is in /usr/something):
+<mount position="/usr">/usr</mount>
+
+If this doesnt help you pike binary might not feature the mysql
+support. You can check your pike features by 'pike --features'. 
+
+
+Upon successfull installation the logfile should look like this:
+
+Setting defaults... 0seconds
+Setting up ports !
+Server started on
+
+Webinterface:
+If you want to do anything with this coreserver you probably want
+to install the webinterface. Check the Readme file of that package
+for installation help. Apart from that sTeam is shipped with some package
+manager. You can use the tool spm in the installation directory (sub
+directory spm). Just call ./spm -i web.spm.gz for example.

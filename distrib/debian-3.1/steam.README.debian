@@ -1,0 +1,21 @@
+Debconf did not work
+--------------------
+In the case the automatic configuration via debconf did not work, you can use
+/usr/share/doc/steam/examples/steam.cfg as an example for /etc/steam/steam.cfg
+and configure it by hand. The explanations are quite straight forward.
+
+Webinterface
+------------
+The steam server offers a web interface, but it is not installed by default.
+You need to load it from the internet after the installation of the server.
+If the server is running you can run the package manager to install the
+default webinterface using:
+
+        cd /usr/share/steam/spm/
+        ./spm -l               -- to get a list of all available webinterface 
+                                  versions available on www.open-steam.org
+        ./spm -i <name>        -- install the webinterface identified by <name>
+
+or, if you downloaded a webinterface manually use:
+
+	cd /usr/share/steam/spm/ ; ./spm -i <downloaded webinterface package>

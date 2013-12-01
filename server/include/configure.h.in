@@ -1,0 +1,15 @@
+#ifndef CONFIGURE_H
+#define CONFIGURE_H
+
+#define CONFIG_DIR "@configdir@"
+#define LOG_DIR "@logdir@"
+
+#define BRAND_NAME "@brand@"
+#define STEAM_DIR "@steamdir@"
+
+#define PREFIX_DIR "@prefix@"
+#define INSTALL_DIR "@installdir@"
+
+#define JAVA_HOME "@javahome@"
+
+#endif

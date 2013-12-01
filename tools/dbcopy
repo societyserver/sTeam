@@ -1,0 +1,53 @@
+#!../steam
+
+void main(int argc, array argv)
+{
+  string db = "mysql://steam:steam@localhost/steam";
+  if ( sizeof(argv) != 4 ) {
+    werror("Usage is dbcopy mysql-handle from-oid to-oid\n");
+    return;
+  }
+  db = argv[1];
+  werror("Database is %O\n", db);
+  object handle = Sql.Sql(db);
+  werror("Copying " + argv[2] + " to " + argv[3]+"\n");
+  copy_object((int)argv[2], (int)argv[3], handle);
+
+}
+
+static void copy_object(int fromid, int toid, Sql.Sql handle)
+{
+  mixed row, res, err;
+	
+  werror("Inserting Class ... ");
+  mapping cresult = handle->query("select * from ob_class where ob_id="+fromid)[0];
+  handle->query("delete from ob_class where ob_id=" + toid);
+  handle->query("insert into ob_class values('" + toid + "'," + handle->quote(cresult->ob_class)+")");
+  werror(" done\n");
+
+
+  handle->big_query("delete from ob_data where ob_id='"+ toid+"'");
+  res = handle->big_query("select ob_id, ob_ident, ob_attr, ob_data from ob_data where ob_id='"+fromid+"'");
+  
+
+  if ( !res ) {
+    werror("no result !");
+    return;
+  }
+  while ( row = res->fetch_row() ) {
+    if ( arrayp(row) ) {
+      werror("COPY: %O\n", row);
+      string q = sprintf("insert into ob_data values (%d, '%s', '%s', '%s')",
+                         toid, row[1], row[2], handle->quote(row[3]));
+      string c = sprintf("delete from ob_data where ob_id='%d' and ob_ident='%s' \
+			  and ob_attr='%s'", (int)toid, row[1], row[2]);
+      err = catch {
+        handle->query(c);
+        handle->query(q);
+      };
+      if ( err != 0 ) {
+	werror("Error: %O\n", err);
+      }
+    }
+  }
+}

@@ -1,0 +1,169 @@
+#!/usr/bin/make -f
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+export INSTALL_DIR=debian/steam
+export INSTALL_LIBDIR=debian/steam-lib
+export PREFIX=/usr
+export REAL_DIR=/share/steam
+export REAL_LIBDIR=/lib/steam
+
+# This is the debhelper compatibility version to use.
+export DH_COMPAT=4
+ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
+       CFLAGS += -g
+endif
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+        INSTALL_PROGRAM += -s
+endif
+
+PIKE=pike7.6
+PIKEBIN=/usr/bin/$(PIKE)
+
+PIKE_VERSION=$(shell $(PIKEBIN) -e 'string v; int rel;sscanf(version(), "Pike v%s release %d", v, rel); write(v+"."+rel);')
+export PIKE_INCLUDE_PREFIX=/usr/include/pike/$(PIKE_VERSION)
+
+patch: patch-stamp
+patch-stamp:
+	dpatch apply-all
+	touch patch-stamp
+
+unpatch:
+	dpatch deapply-all
+	rm -rf patch-stamp debian/patched
+
+configure: autoconf
+autoconf:
+	aclocal && automake --gnu --add-missing && autoconf
+
+build: patch build-stamp
+build-stamp:
+	dh_testdir
+
+	# Add here commands to compile the package.
+	chmod a+x configure
+	./configure --prefix=$(PREFIX) --with-realdir=$(REAL_DIR) --with-pike=/usr/bin/$(PIKE) --with-config=/etc/steam --with-installdir=$(CURDIR)/$(INSTALL_DIR) --with-steamdir=/usr/share/steam
+	make
+
+	# steam will be installed there
+	$(MAKE)
+	touch build-stamp
+
+clean-cvs: clean
+	-find -name CVS -type d -exec rm -rf {} \;
+	-rm -rf $(INSTALL_DIR) $(INSTALL_LIBDIR) Makefile configure setup version 
+	-rm -rf server/libraries/AbstractCallbacks.pike sources/aclocal.m4 sources/autom4te.cache sources/configure sources/libxslt/autom4te.cache sources/libxslt/configure sources/libxslt/Makefile sources/Makefile sources/wiki/autom4te.cache sources/wiki/configure sources/wiki/Makefile sources/_XML/autom4te.cache sources/_XML/configure sources/_XML/Makefile spm/aclocal.m4 spm/autom4te.cache spm/.in spm/spm server/libraries/*.so sources/wiki/wiki.so
+
+clean: clean-patched unpatch
+clean-patched: 
+	dh_testdir
+	dh_testroot
+	-rm -f build-stamp
+	# Add here commands to clean up after the build process.
+	# The original Makefile deletes configure files, which should be
+	# included in debian diffs. So clean manually
+	#-$(MAKE) clean
+	-for a in sources; do ( if test -f $$a/Makefile; then cd $$a && $(MAKE) $(MAKE_FLAGS) clean; fi ); done
+
+	-rm -rf server/libraries/AbstractCallbacks.pike sources/aclocal.m4 sources/autom4te.cache sources/libxslt/autom4te.cache sources/wiki/autom4te.cache sources/_XML/autom4te.cache spm/aclocal.m4 spm/autom4te.cache spm/.in server/libraries/*.so sources/wiki/wiki.so sources/libxslt/Makefile  sources/Makefile sources/wiki/Makefile sources/_XML/Makefile __tmp.tar
+
+	-find -name config.log -type f -exec rm -f {} \;
+	-find -name config.status -type f -exec rm -f {} \;
+	dh_clean
+
+install: build 
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# Add here commands to install the package into debian/steam.
+	mkdir -p $(INSTALL_DIR)/var/lib/steam
+	mkdir -p $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)
+	mkdir -p $(INSTALL_LIBDIR)/$(PREFIX)/$(REAL_LIBDIR)/server/libraries/
+
+	$(MAKE) install DESTDIR=$(CURDIR)/$(INSTALL_DIR)
+
+	# make a relative symlink
+	rm $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/steam
+	ln -s -f ../../bin/$(PIKE) $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/steam
+
+	# lintian overrides
+	install -m 755 -d $(INSTALL_DIR)/usr/share/lintian/overrides
+	install -m 644 debian/steam.lintian.overrides $(INSTALL_DIR)/usr/share/lintian/overrides/steam
+
+	# Fix Permissions
+	find $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR) -type f -name '*.pike' -o -name '*.h' -o -name '*.pmod' | xargs chmod 644 
+	find $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR) -type d | xargs chmod 755
+
+	cp debian/replacements/configure.h $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/server/include
+	#cp debian/replacements/install $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)
+	cp debian/replacements/jail $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/bin
+	chmod u+rx $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/start
+	chmod u+rx $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/stop
+	chmod u+rx $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/bin/jail
+
+	mkdir -p $(INSTALL_DIR)/usr/share/doc/steam/examples
+	cp config/steam.cfg $(INSTALL_DIR)/usr/share/doc/steam/examples
+
+	# Last tweaks to the configuration directory
+	rm $(INSTALL_DIR)/etc/steam/steam.cfg
+	cp debian/replacements/mount.txt $(INSTALL_DIR)/etc/steam
+
+	chmod 644 config.pike version
+	cp config.pike version setup $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)
+	chmod 755 $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/tools/debug.pike
+
+	# Move libraries to the seperated steam-lib
+	mv $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/server/libraries/xslt.so \
+		$(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/server/libraries/xml.so \
+		$(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/server/libraries/wiki.so \
+		$(INSTALL_LIBDIR)/$(PREFIX)/$(REAL_LIBDIR)/server/libraries/
+
+	# Create links to libraries which are in steam-lib on /usr/lib
+	ln -s -f ../../../../lib/steam/server/libraries/xml.so $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/server/libraries/
+	ln -s -f ../../../../lib/steam/server/libraries/xslt.so $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/server/libraries/
+	ln -s -f ../../../../lib/steam/server/libraries/wiki.so $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/server/libraries/
+
+	# Link to spm for backward compatibility
+	ln -s -f ../bin/spm $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/spm/
+
+	# Create directory for chroot
+	mkdir -p $(INSTALL_DIR)/var/lib/steam
+
+	# Create log directory and a link to it
+	mkdir -p $(INSTALL_DIR)/var/log/steam
+	rm -rf $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/logs
+	ln -s -f /var/log/steam $(INSTALL_DIR)/$(PREFIX)/$(REAL_DIR)/logs
+
+	# Make cert tool executable
+	chmod 755 $(INSTALL_DIR)/usr/share/steam/tools/create_cert.pike
+
+	# Prepare dbconfig-common files - these are dummy files to make sure the database is being created.
+	mkdir -p $(INSTALL_DIR)/usr/share/dbconfig-common/data/steam/install/
+	echo "status;" >> $(INSTALL_DIR)/usr/share/dbconfig-common/data/steam/install/mysql
+
+ # Build architecture-independent files here.
+ binary-indep: build install
+ # We have nothing to do by default.
+
+ # Build architecture-dependent files here.
+ binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installdebconf
+	dh_installdocs
+	dh_installinit -u "defaults 99"
+	dh_installdebconf
+	dh_installchangelogs
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol -- -Vpike:ver=$(PIKE_VERSION) -Vpike:name=$(PIKE)
+	dh_md5sums
+	dh_builddeb
+
+ binary: binary-indep binary-arch
+ .PHONY: build clean binary-indep binary-arch binary install
