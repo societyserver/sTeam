@@ -542,6 +542,7 @@ mapping handle_PUT(object obj, mapping vars)
 {
     // original handle_PUT only deals with uploading files via webdav
     // PUT requests for scripts are done in handle_POST
+    // FIXME: this should check for webdav requests
     mapping result;
     if ( obj->get_object_class() & CLASS_SCRIPT ) 
     {
@@ -642,6 +643,29 @@ mapping handle_MKDIR(object obj, mapping vars)
 }
 
 mapping handle_DELETE(object obj, mapping vars)
+{
+    // original handle_DELETE only deals with deleting steam objects directly
+    // presumably via webdav
+    // DELETE requests for scripts are done in handle_POST
+    // FIXME: this should check for webdav requests
+    mapping result;
+    if ( obj->get_object_class() & CLASS_SCRIPT ) 
+    {
+        result = handle_POST(obj, vars);
+        if ( !mappingp(result) )
+          return result;
+    }
+    else if ( vars->type == "execute" &&
+              obj->get_object_class() & CLASS_DOCLPC ) 
+    {
+        result = handle_POST(obj, vars);
+    }
+    else return handle_webdav_DELETE(obj, vars);
+
+    return result;
+}
+
+mapping handle_webdav_DELETE(object obj, mapping vars)
 {
   if ( !objectp(obj) )
     return response_notfound(__request->not_query, vars);
