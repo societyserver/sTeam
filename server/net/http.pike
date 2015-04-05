@@ -1244,7 +1244,11 @@ string|int|mapping show_object(object obj, mapping vars)
 
     HTTP_DEBUG("show_object("+obj->describe()+")");
 
-    if ( obj == _ROOTROOM && !_ADMIN->is_member(user) ) {
+    if ( obj == _ROOTROOM && !_ADMIN->is_member(user) && 
+        !(user == _GUEST && (_ROOTROOM->query_attribute("html:index") ||
+                             _ROOTROOM->get_object_byname("index.xml") ))) 
+                             // make compatible with old webinterface
+    {
       mapping result = ([
          "data": redirect("/home/"+user->get_user_name()+"/", 0),
          "extra_heads": ([ "Pragma":"No-Cache", 
@@ -1254,8 +1258,6 @@ string|int|mapping show_object(object obj, mapping vars)
       return result;
     }
     
-    _SECURITY->check_access(obj, user, SANCTION_READ,ROLE_READ_ALL, false);
-
     mapping client_map = get_client_map(vars);
     if ( user != _GUEST ) {
       if ( !stringp(user->query_attribute(USER_LANGUAGE)) )
@@ -1282,12 +1284,17 @@ string|int|mapping show_object(object obj, mapping vars)
 	      }
 	    }
 	}
-	object indexfile = obj->get_object_byname("index.html");
+	object indexfile = obj->get_object_byname(obj->query_attribute("html:index"))
+                           ||obj->get_object_byname("index.html")
+                           ||obj->get_object_byname("index.xml");
+                           // old webinterface by default loads /index.xml
 	if ( objectp(indexfile) ) {
 	    vars->type = "content";
 	    return handle_GET(indexfile, vars);
 	}
     }
+
+    _SECURITY->check_access(obj, user, SANCTION_READ,ROLE_READ_ALL, false);
 
     if ( obj->get_object_class() & CLASS_ROOM && !user->contains(obj, true) ) 
     {
