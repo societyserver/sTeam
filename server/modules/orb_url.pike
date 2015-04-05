@@ -306,7 +306,7 @@ object resolve_vhost(string host)
 
 object lookup_vhost(string host)
 {
-    object usergroup = GROUP("Admin")->query_attribute("virtual_hosts")[host];
+    object usergroup = (GROUP("Admin")->query_attribute("virtual_hosts")||([]))[host];
     if (objectp(usergroup))
         return usergroup;
 }
