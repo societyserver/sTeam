@@ -735,7 +735,7 @@ mapping read_body(object req, int len)
 	return ([ ]);
     
     content_type = lower_case(content_type);
-    if (req->request_type != "PUT"  && search(content_type, "multipart/form-data") >= 0 )
+    if (search(content_type, "multipart/form-data") >= 0 )
 	return parse_multipart_form_data(req, __body);
     else 
       return ([ "__body": __body, ]);
@@ -800,9 +800,16 @@ static mapping call_command(string cmd, object obj, mapping vars)
     HTTP_DEBUG("HTTP: " + __request->not_query + " (%O)", get_ip());
 
     function call = this_object()["handle_"+cmd];
+    vars->__internal->request_method = cmd;
+
     if ( functionp(call) ) {
-        vars->__internal->request_method = cmd;
 	result = call(obj, vars);
+    }
+    else if ( obj->get_object_class() & CLASS_SCRIPT ) 
+    {
+        result = handle_POST(obj, vars);
+        if ( !mappingp(result) )
+          return result;
     }
     else {
 	result->error = 501;
@@ -992,10 +999,20 @@ mapping run_request(object req)
     m->__internal = ([ 
       "request_headers": req->request_headers, 
       "client": ({ "Mozilla", }), 
-      "full_query": req->full_query
+      "full_query": req->full_query,
+      "raw": req->raw
     ]);
     m->referer = referer;
     m->interface = (__admin_port ? "admin" : "public" );
+    if (req->request_headers["content-type"])
+    {
+        //object mime = MIME.Message("Content-Type: "+req->request_headers["content-type"]);
+        object mime = MIME.Message(req->raw);
+        m->__internal->type = mime->type;
+        m->__internal->subtype = mime->subtype;
+        m->__internal->mime_type = mime->type+"/"+mime->subtype;
+        m->__internal->charset = mime->charset;
+    }
 
     float tt = gauge {
       err = catch ( result = call_command(req->request_type, obj, m) );
