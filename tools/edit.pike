@@ -23,7 +23,7 @@
 constant cvs_version="$Id: edit.pike.in,v 1.0 2010/09/15 14:19:52 martin Exp $";
 
 inherit "/usr/local/lib/steam/tools/applauncher.pike";
-
+//inherit "/usr/local/lib/steam/server/modules/groups.pike";
 void ping(string host, string port, string user, string|void pw)
 {
   call_out(ping, 60, host, port, user, pw);
@@ -41,18 +41,64 @@ mapping conn_options = ([]);
 
 int main(int argc, array(string) argv)
 {
+ 
+  array(object) gp;
+ 
+//  program pGroup = (program)"/classes/Group.pike";
   mapping options=init(argv);
   object _Server=conn->SteamObj(0);
   object file;
+  string mystr;
+//  gp=_Server->get_module("groups")->lookup("helloworld");
+  object user_obj = _Server->get_module("users")->lookup(options->user); 
+  gp = user_obj->get_groups();
+
+/* WORKING AND GIVING GROUP OBJECTS AND NAMES */
+  int i = 1; 
+  write("Listing all groups : \n\n");
+  foreach(gp, object obj) {
+	write("Group "+i+" : "+obj->get_group_name()+".\n");
+        i=i+1;
+	}
+
+  int len = sizeof(gp);
+//	 groups_pgm = ((program)"/usr/local/lib/steam/server/modules/groups.pike")();
+//   gp= _Server->get_module("groups")->lookup(1);
+/*   gp=_Server->get_module("filepath:tree")->path_to_object("/home/WikiGroups"); 
+//   write(gp->get_group_name());
+ */
+//  mystr = gp->get_group_name();
+//  write(mystr);
+// array(string) gps = ({ "Admin" , "coder" , "help" , "PrivGroups" , "WikiGroups" , "sTeam" });
   if ((string)(int)options->file == options->file)
     file = conn->find_object(options->file);
   else if (options->file[0] == '/')
     file = _Server->get_module("filepath:tree")->path_to_object(options->file);
   else // FIXME: try to find out how to use relative paths
-    file = _Server->get_module("filepath:tree")->path_to_object(options->file);
+  {
+   string a = options->file;
+   int tmp_len = 0;
+   while(!file && tmp_len!=(len+1)){
+//	options->file="/home/PrivGroups/"+options->file;
+    write("Checking in "+(string)a+"\n");
+    file = _Server->get_module("filepath:tree")->path_to_object(a);
+    string gp_name = gp[tmp_len]->get_group_name();
+//    write(gp_name[.. 10]);
+    if(gp_name[.. 10] == "WikiGroups.")
+    {
+	gp_name=gp_name[11 ..];
+        a = "/wiki/"+gp_name+"/"+options->file;
+    }
+    else
+    {
+   	 a="/home/"+gp_name+"/"+options->file;
+    }
+    tmp_len=tmp_len+1;
+   }
+  }
   if (file->get_class() == "Link")
       file = file->get_link_object();
-  return applaunch(file, exit);
+  return applaunch(file);
 }
 
 mapping init(array argv)
@@ -84,12 +130,13 @@ mapping init(array argv)
 
   master()->add_include_path(server_path+"/server/include");
   master()->add_program_path(server_path+"/server/");
+  master()->add_program_path(server_path+"/server/modules/groups.pike");
   master()->add_program_path(server_path+"/conf/");
   master()->add_program_path(server_path+"/spm/");
   master()->add_program_path(server_path+"/server/net/coal/");
 
   conn = ((program)"client_base.pike")();
-
+//  groups_pgm = ((program)"groups.pike")();
   int start_time = time();
 
   werror("Connecting to sTeam server...\n");
@@ -117,6 +164,7 @@ mapping init(array argv)
   {
     pw = Input.read_password( sprintf("Password for %s@%s", options->user,
            options->host), "steam" );
+//    pw ="steam"; 
     //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
   }
   while((err = catch(conn->login(options->user, pw, 1))) && --tries);
