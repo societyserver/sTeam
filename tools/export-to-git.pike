@@ -96,7 +96,7 @@ void git_add(mapping doc, string to)
     };
     if (err)
     {
-        Stdio.write_file(to+doc->path, content);
+        Stdio.write_file(to+doc->path[1 ..], content);
         actual = doc->path;
     }
     Process.create_process(({ "git", "add", to+actual }), ([ "cwd": to ]))->wait();
@@ -165,9 +165,18 @@ void dir_check(string def, string dir)
    }
 }
  
+void git_create_branch(string to)
+{
+    string cur_time = replace(ctime(time(0))[4 ..]-"\n",([":":"-" , " ":"-"]));
+    Process.create_process(({ "git", "checkout", "--orphan", cur_time }), ([ "cwd": to ]))->wait();
+    Process.create_process(({ "git", "rm", "-rf", "."}),([ "cwd": to]))->wait();
+    dir_check("",to);
+}
+    
 void export_to_git(object from, string to, void|array(object) exclude)
 {
     git_init(to);
+    git_create_branch(to);
     dir_check(to,options->src);
     git_object(from, to);
     sort(history->time, history);
