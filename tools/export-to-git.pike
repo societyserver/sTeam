@@ -69,7 +69,6 @@ void git_object(object obj, string to)
                werror("timeshift! %d -> %d\n", timestamp, version->obj->query_attribute("DOC_LAST_MODIFIED"));
             }
          }
-         //git_add(this_history[0]);
          history += this_history;
     }
     if (obj->get_object_class() & CLASS_CONTAINER && obj->query_attribute("OBJ_PATH") != "/home")
@@ -85,35 +84,32 @@ void git_object(object obj, string to)
  
 void git_add(mapping doc, string to)
 {
-//    write("string : "+to+"\n");
     string content = doc->obj->get_content();
     if (!content)
         return;
     string actual;
+    //Checks whether there is a / at the end of to, if yes first one writes otherwise second one writes
     object err = catch
     {
         Stdio.write_file(to+doc->name, content);
-        actual = doc->name;
+        actual = doc->name[1 ..];
     };
     if (err)
     {
         Stdio.write_file(to+doc->path, content);
         actual = doc->path;
     }
-    write("File to git add : "+to+actual+"\n");
-    Process.create_process(({ "git", "add", to+actual }), ([ "cwd":"." ]))->wait();
+    Process.create_process(({ "git", "add", to+actual }), ([ "cwd": to ]))->wait();
 }
  
 string git_commit(string message, string to, string author, int time)
 {
     Stdio.File output = Stdio.File();
-//      write("Inside git_commit\n");
-    int errno = Process.create_process(({ "git", "commit", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":"." , "stdout":output->pipe() ]))->wait();
+    int errno = Process.create_process(({ "git", "commit", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
     output->read();
     if (!errno)
     {
-//      write("No error in git_commit\n");
-        Process.create_process(({ "git", "rev-parse", "HEAD" }), ([ "cwd": ".", "stdout":output->pipe() ]))->wait();
+        Process.create_process(({ "git", "rev-parse", "HEAD" }), ([ "cwd": to, "stdout":output->pipe() ]))->wait();
         write("Commit hash :  "+output->read()+"\n");
         return output->read()-"\n";
     }
@@ -125,7 +121,10 @@ void git_init(string dir)
 {
     dir_check("",dir);
     if (Process.create_process(({ "git", "status" }), ([ "cwd":dir ]))->wait())
+    {
         Process.create_process(({ "git", "init" }), ([ "cwd":dir ]))->wait();
+        write("Git Initialized\n\n");
+    }
 }
  
 int main(int argc, array(string) argv)
@@ -139,7 +138,7 @@ int main(int argc, array(string) argv)
     options->src = argv[-2];
     options->dest = argv[-1];
     _Server=conn->SteamObj(0);
-    export_to_git(OBJ(options->src), options->dest+"/root", ({ OBJ("/home") }));
+    export_to_git(OBJ(options->src), options->dest+"/root/", ({ OBJ("/home") }));
 }
  
 int count=0;
@@ -148,14 +147,12 @@ void dir_check(string def, string dir)
    count=count+1;  
    if(count==2)
    {
-//      write("Second time\n");
         array(string) new = dir/"/";   
         foreach(new[1..] , string x)
         {
                
                 if (!Stdio.is_dir(def+"/"+x))
                 {
-                        write("Creating : "+def+"/"+x+"\n");
                         mkdir(def+"/"+x);
                 }
                 def = def+"/"+x;
@@ -163,8 +160,6 @@ void dir_check(string def, string dir)
    }
    else
    {
-//      write("First time\n");
-//      write("Directory : "+dir+"\n");
         if (!Stdio.is_dir(dir))
                 mkdir(dir);
    }
@@ -175,17 +170,9 @@ void export_to_git(object from, string to, void|array(object) exclude)
     git_init(to);
     dir_check(to,options->src);
     git_object(from, to);
-    //git_commit("initial state");
     sort(history->time, history);
     foreach(history;; mapping doc)
     {  
-//      write("INSIDE FOR\n");
-        mapping git_version = doc->obj->query_attribute("git-version");
-        if (!mappingp(git_version))
-            git_version = ([]);
-        if (options->restart || !git_version[to+"/"+options->src])
-        {
-//          write("GOING TO GIT_ADD\n");
             git_add(doc, to);
             string message = sprintf("%s - %d - %d", doc->obj->get_identifier(), doc->obj->get_object_id(), doc->version);
             write("Commit message : "+message+"\n");
@@ -194,10 +181,6 @@ void export_to_git(object from, string to, void|array(object) exclude)
             if (author)
                 author_name = author->get_user_name();
             string author_field = sprintf("%s <%s@%s>", author_name, author_name, _Server->get_server_name());
-            string hash = (string)git_commit(message, to+options->src, author_field, doc->time);
-//          write("Commit hash : "+hash+"\n");
-            git_version[to+options->src] = hash;
-            doc->obj->set_attribute("git-version", git_version);
-        }
+            string hash = (string)git_commit(message, to, author_field, doc->time);
     }
 }
