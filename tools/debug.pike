@@ -25,6 +25,9 @@ constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $
 inherit "/usr/local/lib/steam/tools/applauncher.pike";
 
 Stdio.Readline readln;
+mapping options;
+int flag=1,c=1;
+string pw,str;
 
 class Handler
 {
@@ -33,6 +36,7 @@ class Handler
 
   void create(mapping _constants)
   {
+    readln = Stdio.Readline();
     object p = ((program)"tab_completion.pmod")();
     readln = p->readln;
     write=predef::write;
@@ -42,64 +46,52 @@ class Handler
     constants = p->constants;  //For running those commands
     readln->get_input_controller()->bind("\t",p->handle_completions);
   }
+
+  void add_constants(mapping a)
+  {
+      constants = constants + a;
+  }
 }
+
+object _Server,users;
+mapping all;
+Stdio.Readline.History readline_history;
 
 void ping()
 {
-  call_out(ping, 60);
-  conn->send_command(14, 0); 
+  call_out(ping, 10);
+  mixed a = conn->send_command(14, 0);
+  if(a=="sTeam connection lost.")
+  {
+      flag = 0;
+      readln->set_prompt("~ ");
+      conn = ((program)"client_base.pike")();
+      conn->close();
+      if(conn->connect_server(options->host, options->port))
+      {
+          remove_call_out(ping);
+          ping();
+          if(str=conn->login(options->user, pw, 1))
+          {
+          _Server=conn->SteamObj(0);
+          users=_Server->get_module("users");
+          handler->add_constants(assign(conn,_Server,users));
+          flag=1;
+          readln->set_prompt("> ");
+          }
+      }
+  }
 }
 
 object handler, conn;
 
 int main(int argc, array(string) argv)
 {
-  mapping options=init(argv);
-  object _Server=conn->SteamObj(0);
-  //write("%O\n", options);
-  //Tools.Hilfe.StdinHilfe();
-
-  object users=_Server->get_module("users");
-
-  handler = Handler(([
-    "_Server"     : _Server,
-    "get_module"  : _Server->get_module,
-    "get_factory" : _Server->get_factory,
-    "conn"        : conn,
-    "find_object" : conn->find_object,
-    "users"       : users,
-    "groups"      : _Server->get_module("groups"),
-    "me"          : users->lookup(options->user),
-    "edit"        : applaunch,
-    "create"      : create_object,
-
-    // from database.h :
-    "_SECURITY" : _Server->get_module("security"),
-    "_FILEPATH" : _Server->get_module("filepath:tree"),
-    "_TYPES" : _Server->get_module("types"),
-    "_LOG" : _Server->get_module("log"),
-    "OBJ" : _Server->get_module("filepath:tree")->path_to_object,
-    "MODULE_USERS" : _Server->get_module("users"),
-    "MODULE_GROUPS" : _Server->get_module("groups"),
-    "MODULE_OBJECTS" : _Server->get_module("objects"),
-    "MODULE_SMTP" : _Server->get_module("smtp"),
-    "MODULE_URL" : _Server->get_module("url"),
-    "MODULE_ICONS" : _Server->get_module("icons"),
-    "SECURITY_CACHE" : _Server->get_module("Security:cache"),
-    "MODULE_SERVICE" : _Server->get_module("ServiceManager"),
-    "MOD" : _Server->get_module,
-    "USER" : _Server->get_module("users")->lookup,
-    "GROUP" : _Server->get_module("groups")->lookup,
-    "_ROOTROOM" : _Server->get_module("filepath:tree")->path_to_object("/"),
-    "_STEAMUSER" : _Server->get_module("users")->lookup("steam"),
-    "_ROOT" : _Server->get_module("users")->lookup("root"),
-    "_GUEST" : _Server->get_module("users")->lookup("guest"),
-    "_ADMIN" : _Server->get_module("users")->lookup("admin"),
-    "_WORLDUSER" : _Server->get_module("users")->lookup("everyone"),
-    "_AUTHORS" : _Server->get_module("users")->lookup("authors"),
-    "_REVIEWER" : _Server->get_module("users")->lookup("reviewer"),
-    "_BUILDER" : _Server->get_module("users")->lookup("builder"),
-    "_CODER" : _Server->get_module("users")->lookup("coder"),
+  options=init(argv);
+  _Server=conn->SteamObj(0);
+  users=_Server->get_module("users");
+  all = assign(conn,_Server,users);
+  all = all + (([
     "PSTAT_FAIL_DELETED" : -3,
     "PSTAT_FAIL_UNSERIALIZE" : -2,
     "PSTAT_FAIL_COMPILE" : -1,
@@ -488,25 +480,34 @@ int main(int argc, array(string) argv)
 
     ]));
 
+  handler = Handler(all);
   array history=(Stdio.read_file(options->historyfile)||"")/"\n";
   if(history[-1]!="")
     history+=({""});
 
-  Stdio.Readline.History readline_history=Stdio.Readline.History(512, history);
+  readline_history=Stdio.Readline.History(512, history);
 
   readln->enable_history(readline_history);
 
   handler->add_input_line("start backend");
 
   string command;
-  while(command=readln->read(
-           sprintf("%s", (handler->state->finishedp()?"> ":">> "))))
+  while((command=readln->read(
+           sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
   {
     if(sizeof(command))
     {
       Stdio.write_file(options->historyfile, readln->get_history()->encode());
       handler->add_input_line(command);
+//      array hist = handler->history->status()/"\n";
+//      if(hist)
+//        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
+//          handler->write("came in here\n");
+//          flag=0;
+//        }
+      continue;
     }
+//    else { continue; }
   }
   handler->add_input_line("exit");
 }
@@ -565,7 +566,6 @@ mapping init(array argv)
     return options;
 
   mixed err;
-  string pw;
   int tries=3;
   //readln->set_echo( 0 );
   do
@@ -583,6 +583,50 @@ mapping init(array argv)
     exit(1);
   } 
   return options;
+}
+
+mapping assign(object conn, object _Server, object users)
+{
+	return ([
+    "_Server"     : _Server,
+    "get_module"  : _Server->get_module,
+    "get_factory" : _Server->get_factory,
+    "conn"        : conn,
+    "find_object" : conn->find_object,
+    "users"       : users,
+    "groups"      : _Server->get_module("groups"),
+    "me"          : users->lookup(options->user),
+    "edit"        : applaunch,
+    "create"      : create_object,
+
+    // from database.h :
+    "_SECURITY" : _Server->get_module("security"),
+    "_FILEPATH" : _Server->get_module("filepath:tree"),
+    "_TYPES" : _Server->get_module("types"),
+    "_LOG" : _Server->get_module("log"),
+    "OBJ" : _Server->get_module("filepath:tree")->path_to_object,
+    "MODULE_USERS" : _Server->get_module("users"),
+    "MODULE_GROUPS" : _Server->get_module("groups"),
+    "MODULE_OBJECTS" : _Server->get_module("objects"),
+    "MODULE_SMTP" : _Server->get_module("smtp"),
+    "MODULE_URL" : _Server->get_module("url"),
+    "MODULE_ICONS" : _Server->get_module("icons"),
+    "SECURITY_CACHE" : _Server->get_module("Security:cache"),
+    "MODULE_SERVICE" : _Server->get_module("ServiceManager"),
+    "MOD" : _Server->get_module,
+    "USER" : _Server->get_module("users")->lookup,
+    "GROUP" : _Server->get_module("groups")->lookup,
+    "_ROOTROOM" : _Server->get_module("filepath:tree")->path_to_object("/"),
+    "_STEAMUSER" : _Server->get_module("users")->lookup("steam"),
+    "_ROOT" : _Server->get_module("users")->lookup("root"),
+    "_GUEST" : _Server->get_module("users")->lookup("guest"),
+    "_ADMIN" : _Server->get_module("users")->lookup("admin"),
+    "_WORLDUSER" : _Server->get_module("users")->lookup("everyone"),
+    "_AUTHORS" : _Server->get_module("users")->lookup("authors"),
+    "_REVIEWER" : _Server->get_module("users")->lookup("reviewer"),
+    "_BUILDER" : _Server->get_module("users")->lookup("builder"),
+    "_CODER" : _Server->get_module("users")->lookup("coder"),
+    ]);
 }
 
 // create new sTeam objects
@@ -635,3 +679,15 @@ mixed create_object(string|void objectclass, string|void name, void|string desc,
   return created;
 }
 
+string getstring(int i)
+{
+  write("came in here\n");
+  if(i==1&&flag==1)
+      return "> ";
+  else if(i==1&&(flag==0))
+      return "~ ";
+  else if(i==2&&flag==1)
+      return ">> ";
+  else if(i==2&&(flag==0))
+      return "~~ ";
+}

@@ -41,9 +41,13 @@ private static int            iWaitTID;
 private static mixed          miResult;
 private static int           miCommand;
 
+int            flag=1;
 static Thread.Mutex    cmd_mutex =     Thread.Mutex();
+static Thread.Mutex    newmut =     Thread.Mutex();
 static Thread.Condition cmd_cond = Thread.Condition();
 static Thread.Queue      resultQueue = Thread.Queue();
+static Thread.MutexKey newmutkey;
+static Thread.Condition    th = Thread.Condition();
 static object                                cmd_lock;
 
 string connected_server;
@@ -351,6 +355,7 @@ void handle_error(mixed err)
  */
 mixed send_command(int cmd, array(mixed) args, int|void no_wait)
 {
+    newmutkey = newmut->lock(1);
     if ( !no_wait ) iWaitTID = iTID;
     aEvents  = ({ });
     
@@ -360,13 +365,28 @@ mixed send_command(int cmd, array(mixed) args, int|void no_wait)
     send_message(nmsg);
     if ( no_wait ) return 0;
     
-    mixed result = resultQueue->read();
+    mixed result=0;
+    Thread.Thread(check_thread); 
+    result = resultQueue->read();
+    th->signal();
+    newmutkey = 0;
     if ( miCommand == COAL_ERROR ) {
 	handle_error(result);
     }
     return result;
 }
 
+void check_thread()
+{
+    int start_time = time();
+    th->wait(cmd_mutex->lock(), 10);
+    if((time()-start_time) >=10){
+      resultQueue->write("sTeam connection lost.");
+      flag=0;
+    }
+    else
+        flag=1;
+}
 /**
  *
  *  
