@@ -27,6 +27,7 @@ int main(int argc, array(string) argv)
 
 void import_from_git(string from, string to)
 {
+    int a=0;
     write("inside import-from-git function\n");
     int i;
     if(check_steam_path(to)&&check_from_path(from))
@@ -35,7 +36,12 @@ void import_from_git(string from, string to)
        int num_versions = get_num_versions(from);
        write("inside main : num_versions : "+(string)num_versions+"\n");
        array steam_history = get_steam_versions(OBJ(to));
-       int a = handle_normal(from, to, 1, steam_history, num_versions);
+
+       if(options->append)
+        a = handle_append(from, to, steam_history, num_versions);
+       else
+        a = handle_normal(from, to, 1, steam_history, num_versions);
+
         if(a)
         {
           write("Succesfully imported\n");
@@ -217,6 +223,25 @@ string git_version_content(string path, string ver, int total)
     string result = output->read();
     write("version "+ver+" content is "+result+"\n"); 
     return result;
+}
+int handle_append(string from, string to, array steam_history, int num_git_versions)
+{
+    write("inside handle append\n");
+    string scontent = steam_history[strlen(steam_history)-1]->obj->get_content();
+    string gcontent = git_version_content(from,(string)1,num_git_versions);
+    write("scontent : "+scontent+"\n");
+    write("gcontent : "+gcontent+"\n");
+    if(scontent==gcontent)
+    {
+     int i=0;
+     for(i=2;i<=num_git_versions;i++)
+     {
+      string content = git_version_content(from,(string)i, num_git_versions);
+      OBJ(to)->set_content(content);
+     }
+     return 1;
+    }
+    return 0;
 }
 
 int handle_normal(string from, string to, int num, array steam_history, int num_git_versions)
