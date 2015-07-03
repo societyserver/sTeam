@@ -16,6 +16,7 @@ int main(int argc, array(string) argv)
     ({"update",Getopt.NO_ARG,({"-U","--update"})}),
     ({"restart",Getopt.NO_ARG,({"-R","--restart"})}),
     ({"force",Getopt.NO_ARG,({"-F","--force"})}),
+    ({"bestoption",Getopt.NO_ARG,({"-B","--bestoption"})}),
     ({"append",Getopt.NO_ARG,({"-A","--append"})})));
     options += mkmapping(opt[*][0], opt[*][1]);
     options->src = argv[-2];    //~/tmp/hello
@@ -37,8 +38,17 @@ void import_from_git(string from, string to)
        write("inside main : num_versions : "+(string)num_versions+"\n");
        array steam_history = get_steam_versions(OBJ(to));
 
+      if(options->bestoption)
+      {
+          string best = show_bestoption(from, to, steam_history, num_versions);
+          write("Best option : "+best+"\n");
+      }
+      else
+      {
        if(options->append)
         a = handle_append(from, to, steam_history, num_versions);
+       else if(options->force)
+        a = handle_force(from, to, num_versions);
        else
         a = handle_normal(from, to, 1, steam_history, num_versions);
 
@@ -50,6 +60,7 @@ void import_from_git(string from, string to)
         {
           write("import failed\n");
         }
+      }
     }
 }
 
@@ -224,6 +235,7 @@ string git_version_content(string path, string ver, int total)
     write("version "+ver+" content is "+result+"\n"); 
     return result;
 }
+
 int handle_append(string from, string to, array steam_history, int num_git_versions)
 {
     write("inside handle append\n");
@@ -242,6 +254,18 @@ int handle_append(string from, string to, array steam_history, int num_git_versi
      return 1;
     }
     return 0;
+}
+
+
+int handle_force(string from, string to, int num_git_versions)
+{
+    int i=0;
+    for(i=1;i<=num_git_versions;i++)
+    {
+     string content = git_version_content(from,(string)(i), num_git_versions);
+     OBJ(to)->set_content(content);
+    }
+    return 1;
 }
 
 int handle_normal(string from, string to, int num, array steam_history, int num_git_versions)
@@ -275,4 +299,31 @@ int handle_normal(string from, string to, int num, array steam_history, int num_
     write("Exiting from script. Commits and versions dont match\n");
     return 0;
   }
+}
+
+string show_bestoption(string from, string to, array steam_history, int num_git_versions)
+{
+  //CHECKING FOR NORMAL
+  int i=0,flag=0;
+  string scontent,gcontent;
+  for(i=1;i<=strlen(steam_history);i++)
+  {
+    scontent = steam_history[i-1]->obj->get_content();
+    gcontent = git_version_content(from,(string)i,num_git_versions);
+    if(scontent!=gcontent)
+    {
+        flag=1;
+        break;
+    }
+  }
+  if(flag==0)
+      return "normal";
+
+  //CHECKING FOR APPEND
+  scontent = steam_history[strlen(steam_history)-1]->obj->get_content();
+  gcontent = git_version_content(from,(string)1,num_git_versions);
+  if(scontent==gcontent)
+      return "append(-A)";
+  else  //OTHERWISE FORCE OPTION
+      return "force(-F)";
 }
