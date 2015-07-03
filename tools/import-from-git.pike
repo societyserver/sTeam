@@ -15,6 +15,7 @@ int main(int argc, array(string) argv)
     array opt = Getopt.find_all_options(argv,aggregate(
     ({"update",Getopt.NO_ARG,({"-U","--update"})}),
     ({"restart",Getopt.NO_ARG,({"-R","--restart"})}),
+    ({"force",Getopt.NO_ARG,({"-F","--force"})}),
     ({"append",Getopt.NO_ARG,({"-A","--append"})})));
     options += mkmapping(opt[*][0], opt[*][1]);
     options->src = argv[-2];    //~/tmp/hello
@@ -33,13 +34,39 @@ void import_from_git(string from, string to)
        write("steam path and from path are correct\n");
        int num_versions = get_num_versions(from);
        write("inside main : num_versions : "+(string)num_versions+"\n");
-       for(i=(num_versions); i>=1; i--)
-       {
-        string content = git_version_content(from,(string)i);
-        OBJ(to)->set_content(content);
-       }
+       array steam_history = get_steam_versions(OBJ(to));
+       int a = handle_normal(from, to, 1, steam_history, num_versions);
+        if(a)
+        {
+          write("Succesfully imported\n");
+        }
+        else
+        {
+          write("import failed\n");
+        }
     }
 }
+
+
+
+array get_steam_versions(object obj)
+{
+  mapping versions = obj->query_attribute("DOC_VERSIONS");
+  if (!sizeof(versions))
+  {
+    versions = ([ 1:obj ]);
+  }
+  array this_history = ({});
+  foreach(versions; int nr; object version)
+  {
+    this_history += ({ ([ "obj":version, "version":nr, "time":version->query_attribute("DOC_LAST_MODIFIED"), "path":obj->query_attribute("OBJ_PATH") ]) });
+  }
+  sort(this_history->version, this_history);
+  if(strlen(versions)>1)
+      this_history += ({ ([ "obj":obj, "version":this_history[-1]->version+1, "time":obj->query_attribute("DOC_LAST_MODIFIED"), "path":obj->query_attribute("OBJ_PATH") ]) });
+  return this_history;
+}
+
 
 int check_from_path(string path)
 {
@@ -48,6 +75,7 @@ int check_from_path(string path)
 
   string dir,filename;
 
+  write("Came inside check_from_path\n");
   if(Stdio.exist(path))
   {
     write("from path exists\n");
@@ -93,7 +121,7 @@ int check_steam_path(string path)
   {
     write("Checking path : "+cur_path+"\n");
     cont=_Server->get_module("filepath:tree")->path_to_object(cur_path,true);
-    if(cont)
+    if(cont||(cur_path==""))  //cur_path check for root-room
     {
         write("Got correct path as : "+cur_path+"\n");
         test_parts=(cur_path/"/")-({""});
@@ -102,11 +130,21 @@ int check_steam_path(string path)
             num_objects_create = strlen(parts)-strlen(test_parts);
             res=create_object(cur_path, parts, num_objects_create);
         }
-        return res;
+        write("returning the object from check_steam_path\n");
+        return 1;
     }
+    else
+    {
+        if((strlen(parts)==1)&&(parts[0]!="home"))
+        {
+          res = create_object("/", parts, 1);
+          return 1;
+        }
     write("subtracting "+parts[j]+"\n");
     cur_path = cur_path-("/"+parts[j]);
+    }
   }
+  write("returning 0 from check_steam_path\n");
   return 0;
 }
 
@@ -164,8 +202,12 @@ int get_num_versions(string path)
   return (int)result;
 }
 
-string git_version_content(string path, string ver)
+string git_version_content(string path, string ver, int total)
 {
+    write("ver passed is : "+ver+"\n");
+    write("total passed is : "+total+"\n");
+    ver=(string)(total-((int)ver-1)-1);
+    write("ver is now : "+ver+"\n");
     if(path[-1]==47)
        path=path[ .. (strlen(path)-2)];
     string dir = dirname(path);
@@ -175,4 +217,37 @@ string git_version_content(string path, string ver)
     string result = output->read();
     write("version "+ver+" content is "+result+"\n"); 
     return result;
+}
+
+int handle_normal(string from, string to, int num, array steam_history, int num_git_versions)
+{
+  string scontent = steam_history[num-1]->obj->get_content();
+  write("STEAM HISTORY IS : %O\n and number is %d",steam_history,num-1);
+  string gcontent = git_version_content(from,(string)(num),num_git_versions);
+
+
+  if((num>strlen(steam_history))||((num==1)&&!scontent))   //after successful history, add it to steam. (second condition for object in sTeam with no versions).
+  {
+    int i=0;
+    for(i=num;i<=num_git_versions;i++)
+    {
+     string content = git_version_content(from,(string)(i), num_git_versions);
+     OBJ(to)->set_content(content);
+    }
+    return 1;
+  }
+  write("Comparing\n");
+  write("scontent : "+scontent+"\n");
+  write("gcontent : "+gcontent+"\n");
+  if(scontent==gcontent)
+  {
+    write("Equal\n");
+    return handle_normal(from, to, num+1, steam_history, num_git_versions);
+  }
+  else
+  {
+    write("Not Equal\n");
+    write("Exiting from script. Commits and versions dont match\n");
+    return 0;
+  }
 }
