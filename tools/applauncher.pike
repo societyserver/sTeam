@@ -20,12 +20,17 @@
 
 constant cvs_version="$Id: applauncher.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
+object newfileobj;
+string content;
+int i=1;
+
 void upload(object editor, string file, int last_mtime, object obj, object xslobj, function|void exit_callback)
 {
   int exit_status = editor->status();
   object new_stat = file_stat(file);
   int new_mtime;
   string newcontent;
+  string oldcontent = obj->get_content();  //currently changing 
 
   if (!new_stat)
     send_message(sprintf("%s is gone!", file));
@@ -38,7 +43,7 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
       send_message(sprintf("failed to read %s", file));
   }
 
-  if (stringp(newcontent) && newcontent != obj->get_content())
+  if (stringp(newcontent) && newcontent != content && oldcontent!="sTeam connection lost.")
   {
     last_mtime=new_mtime;
     mixed result=obj->set_content(newcontent);
@@ -51,13 +56,26 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
       send_message(message);
     }
   }
+  if(oldcontent=="sTeam connection lost.")
+  {
+      if(newfileobj)
+        obj = newfileobj;
+  }
 
   if (exit_status != 2)
     call_out(upload, 1, editor, file, new_mtime, obj, xslobj, exit_callback);
   else if (exit_callback)
+  {
     exit_callback(editor->wait());
+    exit(1);  
+  }
 }
 
+
+void update(object obj)
+{
+  newfileobj = obj;
+}
 
 array edit(object obj)
 {
@@ -69,7 +87,7 @@ array edit(object obj)
   string filename=obj->get_object_id()+"-"+obj->get_identifier();
 
   mkdir(dir, 0700);
-  string content=obj->get_content();
+  content=obj->get_content();  //made content global, this is content when vim starts and remains same. oldcontent keeps changing in upload function.
   //werror("%O\n", content);
   Stdio.write_file(dir+"/"+filename, content||"", 0600);
   

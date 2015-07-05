@@ -22,15 +22,27 @@
 
 constant cvs_version="$Id: edit.pike.in,v 1.0 2010/09/15 14:19:52 martin Exp $";
 
-inherit "/usr/local/lib/steam/tools/applauncher.pike";
+inherit "/usr/local/lib/sTeam/tools/applauncher.pike";
 //inherit "/usr/local/lib/steam/server/modules/groups.pike";
 void ping(string host, string port, string user, string|void pw)
 {
-  call_out(ping, 60, host, port, user, pw);
+  call_out(ping, 10, host, port, user, pw);
   if (conn->is_closed())
   {
+      conn = ((program)"client_base.pike")();
+      conn->close();
       if (conn->connect_server(host, port) && user != "guest")
+      {
+        if(conn->send_command(14,0)!="sTeam connection lost.")
+        {
           conn->login(user, pw, 1);
+          _Server=conn->SteamObj(0);
+          user_obj = _Server->get_module("users")->lookup(options->user);
+          gp = user_obj->get_groups();
+	        get_file_object();
+          update(file);
+        }
+      }
   }
   else
       conn->send_command(14, 0); 
@@ -38,19 +50,18 @@ void ping(string host, string port, string user, string|void pw)
 
 object conn;
 mapping conn_options = ([]);
+object _Server,user_obj,file;
+array(object) gp;
 
 int main(int argc, array(string) argv)
 {
  
-  array(object) gp;
  
 //  program pGroup = (program)"/classes/Group.pike";
   mapping options=init(argv);
-  object _Server=conn->SteamObj(0);
-  object file;
-  string mystr;
 //  gp=_Server->get_module("groups")->lookup("helloworld");
-  object user_obj = _Server->get_module("users")->lookup(options->user); 
+  _Server=conn->SteamObj(0);
+  user_obj = _Server->get_module("users")->lookup(options->user); 
   gp = user_obj->get_groups();
 
 /* WORKING AND GIVING GROUP OBJECTS AND NAMES */
@@ -61,7 +72,6 @@ int main(int argc, array(string) argv)
         i=i+1;
 	}
 
-  int len = sizeof(gp);
 //	 groups_pgm = ((program)"/usr/local/lib/steam/server/modules/groups.pike")();
 //   gp= _Server->get_module("groups")->lookup(1);
 /*   gp=_Server->get_module("filepath:tree")->path_to_object("/home/WikiGroups"); 
@@ -70,6 +80,15 @@ int main(int argc, array(string) argv)
 //  mystr = gp->get_group_name();
 //  write(mystr);
 // array(string) gps = ({ "Admin" , "coder" , "help" , "PrivGroups" , "WikiGroups" , "sTeam" });
+  get_file_object();
+  return applaunch(file,demo);
+}
+
+void demo(){}
+
+void get_file_object()
+{
+  int len = sizeof(gp);
   if ((string)(int)options->file == options->file)
     file = conn->find_object(options->file);
   else if (options->file[0] == '/')
@@ -78,12 +97,12 @@ int main(int argc, array(string) argv)
   {
    string a = options->file;
    int tmp_len = 0;
-   while(!file && tmp_len!=(len+1)){
-//	options->file="/home/PrivGroups/"+options->file;
+   while(!file && tmp_len!=(len+2)){
     write("Checking in "+(string)a+"\n");
     file = _Server->get_module("filepath:tree")->path_to_object(a);
+  if(tmp_len<len)
+  {
     string gp_name = gp[tmp_len]->get_group_name();
-//    write(gp_name[.. 10]);
     if(gp_name[.. 10] == "WikiGroups.")
     {
 	gp_name=gp_name[11 ..];
@@ -93,17 +112,17 @@ int main(int argc, array(string) argv)
     {
    	 a="/home/"+gp_name+"/"+options->file;
     }
+  }
     tmp_len=tmp_len+1;
    }
   }
   if (file->get_class() == "Link")
       file = file->get_link_object();
-  return applaunch(file);
 }
 
+  mapping options = ([ ]);
 mapping init(array argv)
 {
-  mapping options = ([ ]);
 
   array opt=Getopt.find_all_options(argv,aggregate(
     ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
