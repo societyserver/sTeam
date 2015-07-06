@@ -32,6 +32,12 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
   string newcontent;
   string oldcontent = obj->get_content();  //currently changing 
 
+  if(content!=oldcontent&&(i==1))
+  {
+    i=0;
+    send_message("file changed on server.");
+    Stdio.write_file(file, oldcontent||"", 0600);
+  }
   if (!new_stat)
     send_message(sprintf("%s is gone!", file));
 
