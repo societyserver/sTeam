@@ -355,7 +355,7 @@ void handle_error(mixed err)
  */
 mixed send_command(int cmd, array(mixed) args, int|void no_wait)
 {
-    newmutkey = newmut->lock(1);
+//    newmutkey = newmut->lock(1);
     if ( !no_wait ) iWaitTID = iTID;
     aEvents  = ({ });
     
@@ -369,7 +369,7 @@ mixed send_command(int cmd, array(mixed) args, int|void no_wait)
     Thread.Thread(check_thread); 
     result = resultQueue->read();
     th->signal();
-    newmutkey = 0;
+//    newmutkey = 0;
     if ( miCommand == COAL_ERROR ) {
 	handle_error(result);
     }
