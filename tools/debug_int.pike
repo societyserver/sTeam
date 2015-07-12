@@ -23,6 +23,7 @@
 constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
 inherit "/usr/local/lib/steam/tools/applauncher.pike";
+#define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
 Stdio.Readline readln;
 mapping options;
@@ -89,7 +90,7 @@ void ping()
 }
 
 object handler, conn;
-
+mapping myarray;
 int main(int argc, array(string) argv)
 {
   options=init(argv);
@@ -111,13 +112,47 @@ int main(int argc, array(string) argv)
   handler->add_input_line("start backend");
 
   string command;
+  myarray = ([ "list"        : list,
+    "goto"        : goto_room,
+    "title"       : set_title,
+    "room"        : desc_room,
+    "look"        : look,
+    "take"        : take,
+    "gothrough"   : gothrough,
+    "create"      : create_ob,
+    ]);
+  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
+  array(string) command_arr;
   while((command=readln->read(
            sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
   {
     if(sizeof(command))
     {
       Stdio.write_file(options->historyfile, readln->get_history()->encode());
-      handler->add_input_line(command);
+      command = String.trim_whites(command);
+      if(a->match(command))
+          command_arr = array_sscanf(command,"%s [\"|']%s[\"|']");
+      else
+          command_arr = command/" ";
+      if(myarray[command_arr[0]])
+      {
+        int num = sizeof(command_arr);
+        mixed result = catch {
+        if(num==2)
+          myarray[command_arr[0]](command_arr[1]);
+        else if(num==3)
+          myarray[command_arr[0]](command_arr[1],command_arr[2]);
+        else if(num==1)
+          myarray[command_arr[0]]();
+        };
+
+        if(result!=0)
+        {
+          write("Wrong command.\n");
+        }
+      }
+      else
+        handler->add_input_line(command);
 //      array hist = handler->history->status()/"\n";
 //      if(hist)
 //        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
@@ -275,11 +310,11 @@ mixed create_object(string|void objectclass, string|void name, void|string desc,
 
   switch(objectclass)
   {
-    case "exit":
+    case "Exit":
       if(!data->exit_from)
         return "exit_from missing";
       break;
-    case "link":
+    case "Link":
       if(!data->link_to)
         return "link_to missing";
       break;
@@ -320,6 +355,12 @@ string getstring(int i)
 
 int list(string what)
 {
+  if(what==""||what==0)
+  {
+    write("Wrong usage\n");
+    return 0;
+  }
+  int flag=0;
   string toappend="";
   array(string) display = get_list(what);
   string a="";
@@ -331,9 +372,13 @@ int list(string what)
   {
     a=a+(str+"    ");
     if(str=="Invalid command")
+    {
+      flag=1;
       write(str+"\n");
+    }
   }
-  write(toappend+a+"\n");
+  if(flag==0)
+    write(toappend+a+"\n\n");
   return 0;
 }
 
@@ -381,7 +426,7 @@ int goto_room(string where)
 {
   string roomname="";
   object pathobj;
-  //FIXME : APPEND PATH AND GO TO ROOMS AVAILABLE INSIDE CURRENT ROOM.
+
   if(where=="rucksack")
   {
       pathobj=users->lookup(options->user);
@@ -390,14 +435,27 @@ int goto_room(string where)
   }
   else
   {
-    pathobj = _Server->get_module("filepath:tree")->path_to_object(where);
+    pathobj = OBJ(where);
+    if(!pathobj)    //Relative room checking
+    {
+      if(path[-1]==47)    //check last "/"
+      {
+        pathobj = OBJ(path+where);
+        where=path+where;
+      }
+      else
+      {
+        pathobj = OBJ(path+"/"+where);
+        where=path+"/"+where;
+      }
+    }
     roomname = pathobj->query_attribute("OBJ_NAME");
     string factory = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
     if(pathobj&&((factory=="Room.factory")||(factory=="User.factory")))
       path = where;
     else if(pathobj)
     {
-      write("Please specify path to room. Not a "+factory+"\n");
+      write("Please specify path to room. Not a "+((factory/".")[0])+"\n");
       return 0;
     }
     else
@@ -432,8 +490,13 @@ int desc_room()
   return 0;
 }
 
-int look()
+int look(string|void str)
 {
+  if(str)
+  {
+    write("Just type in 'look' to look around you\n");
+    return 0;
+  }
   desc_room();
   list("gates");
   list("files");
@@ -485,4 +548,39 @@ int gothrough(string gatename)
     else
       write(gatename+" is not reachable from current room\n");
     return 0;
+}
+
+int delete(string file_cont_name)
+{
+  string fullpath="";
+  if(path[-1]==47)    //check last "/"
+      fullpath = path+file_cont_name;
+  else
+      fullpath = path+"/"+file_cont_name;
+  if(OBJ(fullpath))
+    return 0;
+  return 0;
+}
+
+int create_ob(string type,string name)
+{
+  string desc = readln->read("How would you describe it?\n");
+  mapping data = ([]);
+  type = String.capitalize(type);
+  if(type=="Exit")
+  {
+    object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
+    object exit_from = OBJ(path);
+    data = ([ "exit_from":exit_from, "exit_to":exit_to ]);
+  }
+  else if(type=="Link")
+  {
+    object link_to = OBJ(readln->read("Where does the link lead?\n"));
+    data = ([ "link_to":link_to ]);
+  }
+  object myobj = create_object(type,name,desc,data);
+  if(type=="Room")
+    myobj->move(OBJ(path));
+
+  return 0;
 }
