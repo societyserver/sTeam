@@ -1,8 +1,94 @@
 inherit Tools.Hilfe.Evaluator;
 inherit Tools.Hilfe;
 
+  mapping myvars = ([ ]);
+  object server_fp;
+  object mainhandler;
   Stdio.Readline readln = Stdio.Readline(Stdio.stdin);
   mapping(string:mixed) constants = constants;  //fetching Evaluator constants
+
+mapping base_objects(Evaluator e)
+{
+  return all_constants() + e->constants + e->variables + myvars;
+}
+
+void set_server_filepath(object o)
+{
+  server_fp = o;
+}
+
+array(object|array(string)) resolv(Evaluator e, array completable,
+                                   void|object base, void|string type)
+{
+  if (e->variables->DEBUG_COMPLETIONS)
+    e->safe_write("resolv(%O, %O, %O)\n", completable, base, type);
+  if (!sizeof(completable))
+    return ({ base, completable, type });
+  if (stringp(completable[0]) &&
+      completable[0] == array_sscanf(completable[0], "%[ \t\r\n]")[0])
+    return ({ base, completable[1..], type });
+  if (typeof_token(completable[0]) == "argumentgroup" && type != "autodoc")
+    return resolv(e, completable, master()->show_doc(base), "autodoc");
+  int flag2 = 0;
+  if(!base && completable[0]==".")
+  {
+    if (sizeof(completable) == 1)
+      return ({ 0, completable, "module" });
+    else
+    {
+      catch
+      {
+        // quick and dirty attempt to load a local module
+         base=compile_string(sprintf("object o=.%s;", completable[1]), 0)()->o;
+      };
+      if (!base)
+        return ({ 0, completable, type });
+      if (objectp(base))
+        return resolv(e, completable[2..], base, "module");
+      return resolv(e, completable[2..], base);
+    }
+  }
+  if (!base && sizeof(completable) > 1)
+  {
+    if (completable[0] == "master" && sizeof(completable) >=2
+        && typeof_token(completable[1]) == "argumentgroup")
+    {
+      return resolv(e, completable[2..], master(), "object");
+    }
+    if (base=base_objects(e)[completable[0]])
+    {
+      return resolv(e, completable[1..], base, "object");
+    }
+    if (sizeof(completable) > 1)
+        && (base=master()->root_module[completable[0]]))
+      return resolv(e, completable[1..], base, "module");
+    return ({ 0, completable, type });
+  }
+
+  if (sizeof(completable) > 1)
+  {
+    object newbase;
+    if (reference[completable[0]] && sizeof(completable) > 1)
+      return resolv(e, completable[1..], base);
+    if (type == "autodoc")
+    {
+      if (typeof_token(completable[0]) == "symbol"
+          && (newbase = base->findObject(completable[0])))
+        return resolv(e, completable[1..], newbase, type);
+      else if (sizeof(completable) > 2
+            && typeof_token(completable[0]) == "argumentgroup"
+            && typeof_token(completable[1]) == "reference")
+        return resolv(e, completable[2..], base, type);
+      else
+        return ({ base, completable, type });
+    }
+    if (!functionp(base) && (newbase=base[completable[0]]) )
+      return resolv(e, completable[1..], newbase, type);
+  }
+  return ({ base, completable, type });
+}
+
+
   array get_resolvable(array tokens, void|int debug)
   {
     
@@ -42,6 +128,11 @@ inherit Tools.Hilfe;
   }
 
 
+  void set(mapping vars)
+  {
+    myvars = vars;
+  }
+
   void load_hilferc() {
     if(string home=getenv("HOME")||getenv("USERPROFILE"))
       if(string s=Stdio.read_file(home+"/.hilferc"))
@@ -65,6 +156,7 @@ inherit Tools.Hilfe;
   }
 
 
+string input;
   void handle_completions(string key)
   {
 //    write("KEY IS : "+key);
@@ -73,7 +165,7 @@ inherit Tools.Hilfe;
     master()->set_inhibit_compile_errors(handler);
 
     array tokens;
-    string input = readln->gettext()[..readln->getcursorpos()-1];
+    input = readln->gettext()[..readln->getcursorpos()-1];
   //  write("INPUT IS "+input);
     array|string completions;
 
@@ -83,13 +175,81 @@ inherit Tools.Hilfe;
     };
 //    write("Tokens are : %O",tokens);
 
+    int flag = 0;
     if(error)
     {
       if (objectp(error) && error->is_unterminated_string_error)
       {
+        // THE set_attribute and get_attribute tab completion is here
+
         error = catch
         {
-          completions = get_file_completions((input/"\"")[-1]);
+          array toks=({ });
+          mixed error5 = catch{
+            toks = tokenize(input+"\")");
+          };
+          if(error5==0)
+          {
+            int b = 0;
+            b=search(toks,"set_attribute");
+            if(b!=(sizeof(toks)-2)) //second last token is set_attribute, last token is the string inside with double quotes.
+             b=search(toks,"query_attribute");
+            if(b==(sizeof(toks)-2))  //because if set/query_attribute is at the end it will be second last token, which is -2
+            {
+             if(b!=-1)  //not needed
+              {
+                if((myvars[toks[b-2]]))   //usually it is like x->y->z->set_attribute(""), so z will be our const/var which is -2 from loc.
+                {
+                  completions = indices(base_objects(this)[toks[b-2]]->get_attributes());
+                  string rest = toks[b+1][1]-"\"";
+                  if(rest!="")
+                  {
+                    array(string) temp = ({ });
+                    int i = 0;
+                    int l = sizeof(rest);
+                    foreach(completions, string str)
+                    {
+                     if(str[0 .. (l-1)]==rest)
+                     {
+                       temp = temp + ({str});
+                       i++;
+                     }
+                    }
+                    if(sizeof(temp)==1)
+                      completions = (string)(temp[0]-rest);
+                    else
+                      completions = temp;
+                   }
+                   flag = 1;
+                }
+              }
+            }
+          }
+          if(flag==0)
+          {
+            mixed outer_error = catch{
+              array tokens3 = ({ });
+              mixed error = catch{
+                        tokens3 = tokenize(input+"\")");
+              };
+              if(error==0)
+              {
+                int a = 0;
+                if((a=search(tokens3,"OBJ"))!=-1)
+                {
+                  int b = a+1;
+                  if(arrayp(tokens3[b]))
+                  {
+                    completions = show_path_completions(tokens3[a+1][1]);
+                  }
+                  else
+                    throw("no toks[a+1]\n");
+                }
+              }
+            };
+            if(outer_error)
+              completions = get_file_completions((input/"\"")[-1]);
+          }
         };
       }
 
@@ -177,6 +337,61 @@ inherit Tools.Hilfe;
       }
     }
   }
+
+mixed show_path_completions(string cur_path)
+{
+  cur_path = cur_path - "\"";   //trimming "s in suppose "/"-> /
+  o->write("cur path is "+cur_path+"\n");
+  mixed demo = ({ });
+  if(cur_path=="")
+  {
+      demo = "/";
+  }
+  else
+  {
+    string rest="";
+    array parts = ({});
+    parts = cur_path/"/";
+    if(sizeof(parts)!=2)
+    {
+      cur_path = parts[0 .. sizeof(parts)-2]*"/";
+      rest = parts[-1];
+    }
+    else
+    {
+      cur_path="/";
+      rest = parts[1];
+    }
+    object a;
+    mixed error2 = catch{
+      a = server_fp->path_to_object(cur_path);
+    };
+    array objs = ({ });
+    mixed error= catch{
+      string x_s="";
+      objs=a->get_inventory();
+      foreach(objs, object x)
+      {
+        if(cur_path!="/")
+          x_s = x->query_attribute("OBJ_PATH") - cur_path - "/";
+        else
+          x_s = x->query_attribute("OBJ_PATH") - "/";
+        mixed error3 = catch{
+          if(x_s[0 .. sizeof(rest)-1]==rest)
+            demo = demo + ({ x_s });
+        };
+      }
+      if(sizeof(demo)==1)
+      {
+        demo = demo[0]-(rest);
+        o->write("demo[0] is "+demo);
+        if(demo=="")
+          demo = "/";
+      }
+    };
+  }
+  return demo;
+}
 
 mapping reftypes = ([ "module":".",
                      "object":"->",

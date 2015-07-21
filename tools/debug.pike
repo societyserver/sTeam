@@ -34,10 +34,11 @@ class Handler
   inherit Tools.Hilfe.Evaluator;
   inherit Tools.Hilfe;
 
+  object p;
   void create(mapping _constants)
   {
     readln = Stdio.Readline();
-    object p = ((program)"tab_completion.pmod")();
+    p = ((program)"tab_completion.pmod")();
     readln = p->readln;
     write=predef::write;
     ::create();
@@ -492,6 +493,7 @@ int main(int argc, array(string) argv)
   handler->add_input_line("start backend");
 
   string command;
+  handler->p->set_server_filepath(_Server->get_module("filepath:tree")); //sending the filepath module to tab completion for query/set attribute.
   while((command=readln->read(
            sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
   {
@@ -499,6 +501,7 @@ int main(int argc, array(string) argv)
     {
       Stdio.write_file(options->historyfile, readln->get_history()->encode());
       handler->add_input_line(command);
+      handler->p->set(handler->variables);
 //      array hist = handler->history->status()/"\n";
 //      if(hist)
 //        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
@@ -649,11 +652,11 @@ mixed create_object(string|void objectclass, string|void name, void|string desc,
 
   switch(objectclass)
   {
-    case "exit":
+    case "Exit":
       if(!data->exit_from)
         return "exit_from missing";
       break;
-    case "link":
+    case "Link":
       if(!data->link_to)
         return "link_to missing";
       break;
