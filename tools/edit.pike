@@ -27,7 +27,8 @@ inherit "/usr/local/lib/sTeam/tools/applauncher.pike";
 void ping(string host, string port, string user, string|void pw)
 {
   call_out(ping, 10, host, port, user, pw);
-  if (conn->is_closed())
+  mixed a = conn->send_command(14, 0);
+  if (a=="sTeam connection lost.")
   {
       conn = ((program)"client_base.pike")();
       conn->close();
@@ -44,8 +45,6 @@ void ping(string host, string port, string user, string|void pw)
         }
       }
   }
-  else
-      conn->send_command(14, 0); 
 }
 
 object conn;
