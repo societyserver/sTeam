@@ -59,7 +59,7 @@ array(object|array(string)) resolv(Evaluator e, array completable,
     {
       return resolv(e, completable[1..], base, "object");
     }
-    if (sizeof(completable) > 1)
+    if ((sizeof(completable) > 1)
         && (base=master()->root_module[completable[0]]))
       return resolv(e, completable[1..], base, "module");
     return ({ 0, completable, type });
@@ -341,7 +341,6 @@ string input;
 mixed show_path_completions(string cur_path)
 {
   cur_path = cur_path - "\"";   //trimming "s in suppose "/"-> /
-  o->write("cur path is "+cur_path+"\n");
   mixed demo = ({ });
   if(cur_path=="")
   {
@@ -384,7 +383,6 @@ mixed show_path_completions(string cur_path)
       if(sizeof(demo)==1)
       {
         demo = demo[0]-(rest);
-        o->write("demo[0] is "+demo);
         if(demo=="")
           demo = "/";
       }

@@ -684,7 +684,6 @@ mixed create_object(string|void objectclass, string|void name, void|string desc,
 
 string getstring(int i)
 {
-  write("came in here\n");
   if(i==1&&flag==1)
       return "> ";
   else if(i==1&&(flag==0))
