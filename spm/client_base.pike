@@ -116,6 +116,16 @@ class SteamObj
     return search(functions, fun);
   }
 
+  array _indices()
+  {
+    mixed result = catch {
+    if(this_object()->__indices)
+      return this_object()->__indices();
+    };
+    if(result!=0)
+      return ::_indices();
+  }
+
   string _sprintf()
   {
     mixed describe="";
