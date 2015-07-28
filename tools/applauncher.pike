@@ -108,7 +108,7 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
   else if (exit_callback)
   {
     exit_callback(editor->wait());
-    exit(1);  
+//    exit(1);  
   }
 }
 
@@ -144,7 +144,7 @@ array edit(object obj)
   else if(enveditor=="emacs")
     command=({ "emacs", "--eval","(add-hook 'emacs-startup-hook 'toggle-window-spt)", "--eval", "(global-auto-revert-mode t)", dir+"/"+filename, dir+"/"+debugfile, "--eval", "(setq buffer-read-only t)", "--eval", sprintf("(setq frame-title-format \"%s\")",obj->get_identifier()) , "--eval", "(windmove-up)", "--eval", "(enlarge-window 5)"});
   else
-    command=({ "vi","-S", "/home/trilok/sTeam/tools/watchforchanges.vim", "-S", "/home/trilok/sTeam/tools/golden_ratio.vim", dir+"/"+filename, "-c","set splitbelow", "-c"  ,sprintf("split|view %s",name), "-c", "wincmd w"});
+    command=({ "vi","-S", "/usr/local/lib/steam/tools/watchforchanges.vim", "-S", "/usr/local/lib/steam/tools/golden_ratio.vim", dir+"/"+filename, "-c","set splitbelow", "-c"  ,sprintf("split|view %s",name), "-c", "wincmd w"});
 
   object editor=Process.create_process(command,
                                      ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));

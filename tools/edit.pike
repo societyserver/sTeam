@@ -22,7 +22,7 @@
 
 constant cvs_version="$Id: edit.pike.in,v 1.0 2010/09/15 14:19:52 martin Exp $";
 
-inherit "/usr/local/lib/sTeam/tools/applauncher.pike";
+inherit "applauncher.pike";
 //inherit "/usr/local/lib/steam/server/modules/groups.pike";
 void ping(string host, string port, string user, string|void pw)
 {
