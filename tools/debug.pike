@@ -22,7 +22,7 @@
 
 constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
-inherit "/usr/local/lib/steam/tools/applauncher.pike";
+inherit "applauncher.pike";
 
 Stdio.Readline readln;
 mapping options;
@@ -542,6 +542,7 @@ mapping init(array argv)
     options->port=(int)options->port;
 
   string server_path = "/usr/local/lib/steam";
+  //change this to working directory
 
   master()->add_include_path(server_path+"/server/include");
   master()->add_program_path(server_path+"/server/");
