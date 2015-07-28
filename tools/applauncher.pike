@@ -20,11 +20,13 @@
 
 constant cvs_version="$Id: applauncher.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
+//before using this file, patch the paths for watchforchanges.vim and golden_ratio.vim
 object newfileobj;
 string content;
 int i=1;
 int j=1;
 int count=0;
+int set=0;
 string dir;
 string debugfile;
 
@@ -84,9 +86,11 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
 
   if (exit_status != 2)
   {
-    if((obj->get_class()=="DocLpc")&&(count!=1))  //if pike script
+    if(set<3)
+      set++;
+    if((obj->get_class()=="DocLpc")&&((set==3)&&(count!=1)))  //if pike script . Count is a timer for dispalying compile status
     {
-    count = 1;
+    set=1;
     array errors = obj->get_errors();
     send_message("-----------------------------------------\n");
     if(errors==({}))
@@ -103,17 +107,6 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
   }
   else if (exit_callback)
   {
-    if(count!=1)
-    {array errors = obj->get_errors();
-    if(errors==({}))
-      send_message("Compiled successfully");
-    else
-    {
-      foreach(errors, string err)
-        send_message(err);
-      send_message("Compilation failed");
-    }
-    }
     exit_callback(editor->wait());
     exit(1);  
   }
@@ -140,18 +133,18 @@ array edit(object obj)
   //werror("%O\n", content);
   Stdio.write_file(dir+"/"+filename, content||"", 0600);
   
-  Stdio.write_file(dir+"/"+debugfile, "", 0600);
+  Stdio.write_file(dir+"/"+debugfile, "This is your log window\n", 0600);
   array command;
   //array command=({ "screen", "-X", "screen", "vi", dir+"/"+filename });
   //array command=({ "vim", "--servername", "VIM", "--remote-wait", dir+"/"+filename });
     string enveditor = getenv("EDITOR");
-
-  if((enveditor=="VIM")||(enveditor=="vim"))
-    command=({ "vim","-S", "/usr/local/steam/tools/watchforchanges.vim", "-c", sprintf("split|view %s",dir+"/"+debugfile), dir+"/"+filename });
+  string name = dir+"/"+debugfile;
+  if((enveditor=="VIM")||(enveditor=="vim"))    //full path to .vim files to be mentioned
+    command=({ "vim","-S", "/usr/local/lib/steam/tools/watchforchanges.vim", "-S", "/usr/local/lib/steam/tools/golden_ratio.vim", dir+"/"+filename, "-c","set splitbelow", "-c"  ,sprintf("split|view %s",name), "-c", "wincmd w"});
   else if(enveditor=="emacs")
-    command=({ "emacs", "--eval","(add-hook 'emacs-startup-hook 'toggle-window-spt)", "--eval", "(global-auto-revert-mode t)", dir+"/"+filename, dir+"/"+debugfile, "--eval", "(setq buffer-read-only t)", "--eval", sprintf("(setq frame-title-format \"%s\")",obj->get_identifier()) });
+    command=({ "emacs", "--eval","(add-hook 'emacs-startup-hook 'toggle-window-spt)", "--eval", "(global-auto-revert-mode t)", dir+"/"+filename, dir+"/"+debugfile, "--eval", "(setq buffer-read-only t)", "--eval", sprintf("(setq frame-title-format \"%s\")",obj->get_identifier()) , "--eval", "(windmove-up)", "--eval", "(enlarge-window 5)"});
   else
-    command=({ "vi" , dir+"/"+filename });
+    command=({ "vi","-S", "/home/trilok/sTeam/tools/watchforchanges.vim", "-S", "/home/trilok/sTeam/tools/golden_ratio.vim", dir+"/"+filename, "-c","set splitbelow", "-c"  ,sprintf("split|view %s",name), "-c", "wincmd w"});
 
   object editor=Process.create_process(command,
                                      ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
