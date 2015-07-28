@@ -22,7 +22,7 @@
 
 constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
-inherit "@steamdir@/tools/applauncher.pike";
+inherit "applauncher.pike";
 
 Stdio.Readline readln;
 mapping options;
