@@ -31,6 +31,92 @@ int flag=1,c=1;
 string pw,str;
 object me;
 
+protected class StashHelp {
+  inherit Tools.Hilfe;
+  string help(string what) { return "Show STASH help"; }
+
+  void exec(Evaluator e, string line, array(string) words,
+      array(string) tokens) {
+    line = words[1..]*" ";
+    function(array(string)|string, mixed ... : void) write = e->safe_write;
+
+          constant all = #"
+list            List Gates/Exits, Documents, Containers in the current Room.
+goto            Goto a Room using a full path to the Room.
+title           Set your own description.
+room            Describe the Room you are currently in.
+look            Look around the Room.
+take            Copy a object in your inventory.
+gothrough       Go through a gate.
+create          Create an object (File/Container/Exit) in current Room.
+peek            Peek through a container.
+inventory(i)    List your inventory.
+edit            Edit a file in the current Room.
+hilfe           Help for Hilfe commands.
+";
+    switch(line) {
+
+    case "commands":
+      write(all);
+      return;
+
+    case "list":
+      write("List Gates/Exits, Documents, Containers in the current Room.\n");
+      return;
+    case "goto":
+      write("Goto a Room using a full path to the Room.\n");
+      return;
+    case "title":
+      write("Set your own description.\n");
+      return;
+    case "room":
+      write("Describe the Room you are currently in.\n");
+      return;
+    case "look":
+      write("Look around the Room.\n");
+      return;
+    case "take":
+      write("Copy a object in your inventory.\n");
+      return;
+    case "gothrough":
+      write("Go through a gate.\n");
+      return;
+    case "create":
+      write("Create an object (File/Container/Exit) in current Room.\n");
+      return;
+    case "peek":
+      write("Peek through a container.\n");
+      return;
+    case "i":
+    case "inventory":
+      write("Lists your inventory\n");
+      return;
+    case "edit":
+      write("Edit a file in the current Room.\n");
+      return;
+    //Hilfe internal help
+    case "me more":
+      write( documentation_help_me_more );
+      write("Type \"hilfe\" to get more help on Hilfe commands\n");
+      return;
+    case "hilfe todo":
+      write(hilfe_todo);
+      return;
+    case "about hilfe":
+      e->print_version();
+      write(cvs_version+#"
+Initial version written by Fredrik Hübinette 1996-2000
+Rewritten by Martin Nilsson 2002
+");
+      return;
+    default:
+      write(stash_help_doc);
+      write(all);
+      write("\n\nEnter \"help me more\" for further Hilfe help.\n\n");
+    }
+  }
+}
+
 class Handler
 {
   inherit Tools.Hilfe.Evaluator;
@@ -47,6 +133,8 @@ class Handler
     p->constants+=_constants;  //For listing sTeam commands and objects on tab
     constants = p->constants;  //For running those commands
     readln->get_input_controller()->bind("\t",p->handle_completions);
+    commands->help = StashHelp();
+    commands->hilfe = CommandHelp();
   }
 
   void add_constants(mapping a)
@@ -686,7 +774,10 @@ int editfile(string filename)
 
 void exitnow()
 {}
+
 string getpath()
 {
   return me->get_last_trail()->query_attribute("OBJ_PATH");
 }
+
+constant stash_help_doc = #"This is a sTeam Advanced Shell. All the STASH commands work with normal pike commands. Tab completion is available for both STASH commands and pike commands.\n\n";
