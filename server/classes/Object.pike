@@ -53,6 +53,11 @@ static array     aDependingObjects; /* objects that depend on this object */
 static array          aDependingOn; /* objects that this object depends on */
 
 
+array __indices()
+{
+  return indices(this_object());
+}
+
 mixed set_attribute(string index, mixed data);
 
 /**
