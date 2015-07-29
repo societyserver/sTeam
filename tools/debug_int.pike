@@ -122,10 +122,11 @@ class Handler
   inherit Tools.Hilfe.Evaluator;
   inherit Tools.Hilfe;
 
+  object p;
   void create(mapping _constants)
   {
     readln = Stdio.Readline();
-    object p = ((program)"tab_completion.pmod")();
+    p = ((program)"tab_completion.pmod")();
     readln = p->readln;
     write=predef::write;
     ::create();
@@ -254,6 +255,7 @@ int main(int argc, array(string) argv)
 //          handler->write("came in here\n");
 //          flag=0;
 //        }
+      handler->p->set(handler->variables);
       continue;
     }
 //    else { continue; }
