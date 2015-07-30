@@ -82,7 +82,7 @@ void git_object(object obj, string to)
     }
 }
  
-void git_add(mapping doc, string to)
+void git_add(mapping doc, string to, string complete_path)
 {
     string content = doc->obj->get_content();
     if (!content)
@@ -92,14 +92,16 @@ void git_add(mapping doc, string to)
     object err = catch
     {
         Stdio.write_file(to+doc->name, content);
+        write("CAME INSIDE NORMAL doc->name\n");
         actual = doc->name[1 ..];
     };
     if (err)
     {
-        Stdio.write_file(to+doc->path[1 ..], content);
+        write("CAME INSIDE COMPLETE_PATH\n");
+        Stdio.write_file(complete_path, content);
         actual = doc->path;
     }
-    Process.create_process(({ "git", "add", to+actual }), ([ "cwd": to ]))->wait();
+    Process.create_process(({ "git", "add", complete_path }), ([ "cwd": to ]))->wait();
 }
  
 string git_commit(string message, string to, string author, int time)
@@ -138,17 +140,16 @@ int main(int argc, array(string) argv)
     options->src = argv[-2];
     options->dest = argv[-1];
     _Server=conn->SteamObj(0);
-    export_to_git(OBJ(options->src), options->dest+"/root/", ({ OBJ("/home") }));
+    export_to_git(OBJ(options->src), options->dest, ({ OBJ("/home") }));
 }
  
 int count=0;
-void dir_check(string def, string dir)
+string dir_check(string def, string dir)
 {
-   count=count+1;  
-   if(count==2)
+   if(def!="")
    {
-        array(string) new = dir/"/";   
-        foreach(new[1..] , string x)
+        array(string) new = dir/"/";
+        foreach(new[1..sizeof(new)-2] , string x)
         {
                
                 if (!Stdio.is_dir(def+"/"+x))
@@ -157,12 +158,30 @@ void dir_check(string def, string dir)
                 }
                 def = def+"/"+x;
         }
+        return def+"/"+new[sizeof(new)-1];  //complete path to file or folder
    }
    else
    {
-        if (!Stdio.is_dir(dir))
-                mkdir(dir);
+        array(string) arr = dir/"/";
+        if(arr[-1] == "")
+          arr = arr[0 .. sizeof(arr)-2]; //last "/" should not be counted
+        array(string) temp = arr;
+        int flag = 0;
+        int x = 0;
+        while (!Stdio.is_dir(temp*"/")) //checking what all directories need to be created
+        {
+                flag=1;
+                temp = temp[0 .. sizeof(temp)-2];
+                x = sizeof(temp);
+        }
+        while(!Stdio.is_dir(dir) && flag==1) //flag is 1 means some directories have to be created. this loop creates the directories one by one.
+        {
+          temp = temp + ({ arr[x] });
+          mkdir(temp*"/");
+          x++;
+        }
    }
+  return "";
 }
  
 void git_create_branch(string to)
@@ -177,12 +196,12 @@ void export_to_git(object from, string to, void|array(object) exclude)
 {
     git_init(to);
     git_create_branch(to);
-    dir_check(to,options->src);
+    string complete_path = dir_check(to,options->src);
     git_object(from, to);
     sort(history->time, history);
     foreach(history;; mapping doc)
     {  
-            git_add(doc, to);
+            git_add(doc, to, complete_path);
             string message = sprintf("%s - %d - %d", doc->obj->get_identifier(), doc->obj->get_object_id(), doc->version);
             write("Commit message : "+message+"\n");
             object author = doc->obj->query_attribute("DOC_USER_MODIFIED")||doc->obj->query_attribute("OBJ_OWNER");
