@@ -92,12 +92,10 @@ void git_add(mapping doc, string to, string complete_path)
     object err = catch
     {
         Stdio.write_file(to+doc->name, content);
-        write("CAME INSIDE NORMAL doc->name\n");
         actual = doc->name[1 ..];
     };
     if (err)
     {
-        write("CAME INSIDE COMPLETE_PATH\n");
         Stdio.write_file(complete_path, content);
         actual = doc->path;
     }
@@ -148,8 +146,14 @@ string dir_check(string def, string dir)
 {
    if(def!="")
    {
+        int y=1;
         array(string) new = dir/"/";
-        foreach(new[1..sizeof(new)-2] , string x)
+        string oclass = OBJ(dir)->get_class();
+        if(oclass=="Container"||oclass=="Room") //if its a container/room like /sources , then last element of new doesn't get discarded. 
+            y=1;
+        else
+            y=2;      //if it is a file like /sources/file , then file gets discarded because only sourced folder needs to be created
+        foreach(new[1..sizeof(new)-y] , string x)
         {
                
                 if (!Stdio.is_dir(def+"/"+x))
@@ -158,6 +162,8 @@ string dir_check(string def, string dir)
                 }
                 def = def+"/"+x;
         }
+        if(oclass=="Container"||oclass=="Room")
+          return def;
         return def+"/"+new[sizeof(new)-1];  //complete path to file or folder
    }
    else
