@@ -102,10 +102,14 @@ void git_add(mapping doc, string to, string complete_path)
     Process.create_process(({ "git", "add", complete_path }), ([ "cwd": to ]))->wait();
 }
  
-string git_commit(string message, string to, string author, int time)
+string git_commit(string message, string to, string author, int time, int|void isempty)
 {
     Stdio.File output = Stdio.File();
-    int errno = Process.create_process(({ "git", "commit", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
+    int errno;
+    if(isempty)
+      errno =  Process.create_process(({ "git", "commit", "--allow-empty", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
+    else
+      errno = Process.create_process(({ "git", "commit", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
     output->read();
     if (!errno)
     {
@@ -204,6 +208,8 @@ void export_to_git(object from, string to, void|array(object) exclude)
     git_create_branch(to);
     string complete_path = dir_check(to,options->src);
     git_object(from, to);
+    write("Commit message : sTeam export-to-git\n");
+    git_commit("sTeam export-to-git", to, sprintf("root <root@%s>",_Server->get_server_name()), 0, 1);  //empty commit
     sort(history->time, history);
     foreach(history;; mapping doc)
     {  
