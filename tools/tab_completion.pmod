@@ -386,6 +386,12 @@ mixed show_path_completions(string cur_path)
         if(demo=="")
           demo = "/";
       }
+      else if(sizeof(demo)!=0)
+      {
+        string common = String.common_prefix(demo);
+        if((common!="")&&((common-rest)!=""))
+          demo = common-(rest);
+      }
     };
   }
   return demo;
