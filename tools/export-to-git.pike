@@ -35,8 +35,11 @@ void git_object(object obj, string to)
     if (obj->get_object_class() & CLASS_DOCUMENT)
     {
          mapping versions = obj->query_attribute("DOC_VERSIONS");
+         string path = obj->query_attribute("OBJ_PATH");
+         int flag=0;
          if (!sizeof(versions))
          {
+             flag=1;
              versions = ([ 1:obj ]);
          }
  
@@ -46,6 +49,7 @@ void git_object(object obj, string to)
              this_history += ({ ([ "obj":version, "version":nr, "time":version->query_attribute("DOC_LAST_MODIFIED"), "path":obj->query_attribute("OBJ_PATH") ]) });
          }
          sort(this_history->version, this_history);
+       if(flag==0)
          this_history += ({ ([ "obj":obj, "version":this_history[-1]->version+1, "time":obj->query_attribute("DOC_LAST_MODIFIED"), "path":obj->query_attribute("OBJ_PATH") ]) });
          
          int timestamp = 0;
@@ -54,9 +58,9 @@ void git_object(object obj, string to)
          {
             string newname;
             if (version->obj->query_attribute("OBJ_VERSIONOF"))
-                newname = version->obj->query_attribute("OBJ_VERSIONOF")->query_attribute("OBJ_PATH");
+                newname = version->obj->query_attribute("OBJ_VERSIONOF")->query_attribute("OBJ_NAME");
             else
-                newname = version->obj->query_attribute("OBJ_PATH");
+                newname = version->obj->query_attribute("OBJ_NAME");
             if (oldname && oldname != newname)
             {
                 werror("rename %s -> %s\n", oldname, newname);
@@ -71,45 +75,90 @@ void git_object(object obj, string to)
          }
          history += this_history;
     }
+    //THIS IS FOR CREATING THE FOLDERS. NEED TO DISABLE IT WITH NO PATH OPTION
+    string tocreate;
+    string from = options->src;
+    if(from[-1]=='/'&&sizeof(from)!=1)
+      from = from[ ..sizeof(from)-2];
+    if(from=="/")
+      options->nopath=0;
+    if(options->nopath)
+    {
+      string temppath = obj->query_attribute("OBJ_PATH");
+      string tempclass = OBJ(from)->get_class();
+
+      if(sizeof(temppath)>0 && temppath[-1]=='/')
+        temppath = temppath[ ..sizeof(temppath)-2];
+      int s =sizeof((from/"/")-({""}));
+      if(tempclass!="Container" && tempclass!="Room")
+        s=s-1;
+      array temp = (temppath/"/") - ({""});
+      tocreate = to+"/"+(temp[s..]*"/");
+    }
+    else
+      tocreate = to+obj->query_attribute("OBJ_PATH");
+
     if (obj->get_object_class() & CLASS_CONTAINER && obj->query_attribute("OBJ_PATH") != "/home")
     {
-        mkdir(to+obj->query_attribute("OBJ_PATH"));
  
+      string objname="";
+      string base = basename(from);
+      mixed error = catch {
+      objname = obj->query_attribute("OBJ_NAME");
+      };
+      if((options->nopath&&!(objname[0 .. sizeof(base)]==base))||!options->nopath)
+      {
+        mkdir(tocreate); //CHANGE changed path to name here
+      }
         foreach(obj->get_inventory();; object cont)
         {
+          if(!(obj->get_object_class() & CLASS_USER))
             git_object(cont, to);
         }
     }
 }
  
-void git_add(mapping doc, string to, string complete_path)
+void git_add(mapping doc, string to)
 {
+    string from = options->src;
     string content = doc->obj->get_content();
     if (!content)
         return;
     string actual;
+    if(to[-1]=='/')
+      to = to[ ..sizeof(to)-2];
     //Checks whether there is a / at the end of to, if yes first one writes otherwise second one writes
-    object err = catch
+    if(options->nopath)
     {
-        Stdio.write_file(to+doc->name, content);
-        actual = doc->name[1 ..];
-    };
-    if (err)
-    {
-        Stdio.write_file(complete_path, content);
-        actual = doc->path;
+      string temppath = doc->path;
+      string tempclass = OBJ(from)->get_class();
+      if(temppath[-1]=='/')
+        temppath = temppath[ ..sizeof(temppath)-2];
+      int s =sizeof((from/"/")-({""}));
+      if(tempclass!="Container" && tempclass!="Room")
+        s=s-1;
+      array temp = (temppath/"/") - ({""});
+      string tocreate =to+"/"+(temp[s..]*"/");
+      Stdio.write_file(tocreate, content); //changed doc->name from /home/coder/demo1 to demo1
+      actual = (temp[s..]*"/");  //to+"/" not needed, as git add using path as to.
+      if(actual[0]=='/')
+        actual = actual[1..];
     }
-    Process.create_process(({ "git", "add", complete_path }), ([ "cwd": to ]))->wait();
+    else
+    {
+        Stdio.write_file(to+doc->path, content);
+        actual = doc->path;
+        if(actual[0]=='/')
+          actual = actual[1..];
+    }
+    Process.create_process(({ "git", "add", actual }), ([ "cwd": to ]))->wait();
 }
  
 string git_commit(string message, string to, string author, int time, int|void isempty)
 {
     Stdio.File output = Stdio.File();
     int errno;
-    if(isempty)
       errno =  Process.create_process(({ "git", "commit", "--allow-empty", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
-    else
-      errno = Process.create_process(({ "git", "commit", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
     output->read();
     if (!errno)
     {
@@ -137,6 +186,7 @@ int main(int argc, array(string) argv)
     array opt = Getopt.find_all_options(argv,aggregate(
     ({"update",Getopt.NO_ARG,({"-U","--update"})}),
     ({"restart",Getopt.NO_ARG,({"-R","--restart"})}),
+    ({"nopath",Getopt.NO_ARG,({"-N","--no-path"})}),
     ));
     options += mkmapping(opt[*][0], opt[*][1]);
     options->src = argv[-2];
@@ -201,19 +251,21 @@ void git_create_branch(string to)
     Process.create_process(({ "git", "rm", "-rf", "."}),([ "cwd": to]))->wait();
     dir_check("",to);
 }
-    
+
 void export_to_git(object from, string to, void|array(object) exclude)
 {
+    string complete_path;
     git_init(to);
     git_create_branch(to);
-    string complete_path = dir_check(to,options->src);
+    if(!options->nopath)  // only if paths have to be created
+      complete_path = dir_check(to,options->src);
     git_object(from, to);
     write("Commit message : sTeam export-to-git\n");
     git_commit("sTeam export-to-git", to, sprintf("root <root@%s>",_Server->get_server_name()), 0, 1);  //empty commit
     sort(history->time, history);
     foreach(history;; mapping doc)
-    {  
-            git_add(doc, to, complete_path);
+    {
+            git_add(doc, to);
             string message = sprintf("%s - %d - %d", doc->obj->get_identifier(), doc->obj->get_object_id(), doc->version);
             write("Commit message : "+message+"\n");
             object author = doc->obj->query_attribute("DOC_USER_MODIFIED")||doc->obj->query_attribute("OBJ_OWNER");
