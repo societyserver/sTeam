@@ -154,11 +154,12 @@ void git_add(mapping doc, string to)
     Process.create_process(({ "git", "add", actual }), ([ "cwd": to ]))->wait();
 }
  
-string git_commit(string message, string to, string author, int time, int|void isempty)
+string git_commit(string message, string to, string authorname, string authoremail, int time, int|void isempty)
 {
     Stdio.File output = Stdio.File();
+    write("committing: %s\n", message);
     int errno;
-      errno =  Process.create_process(({ "git", "commit", "--allow-empty", "-m", message, "--author", author }), ([ "env":([ "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
+      errno =  Process.create_process(({ "git", "commit", "--allow-empty", "-m", message }), ([ "env":([ "GIT_AUTHOR_NAME":authorname, "GIT_AUTHOR_EMAIL":authoremail, "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_NAME":authorname, "GIT_COMMITTER_EMAIL":authoremail, "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
     output->read();
     if (!errno)
     {
@@ -261,7 +262,7 @@ void export_to_git(object from, string to, void|array(object) exclude)
       complete_path = dir_check(to,options->src);
     git_object(from, to);
     write("Commit message : sTeam export-to-git\n");
-    git_commit("sTeam export-to-git", to, sprintf("root <root@%s>",_Server->get_server_name()), 0, 1);  //empty commit
+    git_commit("sTeam export-to-git", to, "root", "root@localhost", 0, 1);  //empty commit
     sort(history->time, history);
     foreach(history;; mapping doc)
     {
@@ -269,10 +270,10 @@ void export_to_git(object from, string to, void|array(object) exclude)
             string message = sprintf("%s - %d - %d", doc->obj->get_identifier(), doc->obj->get_object_id(), doc->version);
             write("Commit message : "+message+"\n");
             object author = doc->obj->query_attribute("DOC_USER_MODIFIED")||doc->obj->query_attribute("OBJ_OWNER");
-            string author_name = "unknown";
+            string author_username = "unknown";
             if (author)
-                author_name = author->get_user_name();
-            string author_field = sprintf("%s <%s@%s>", author_name, author_name, _Server->get_server_name());
-            string hash = (string)git_commit(message, to, author_field, doc->time);
+                author_username = author->get_user_name();
+            string author_email = sprintf("%s@%s", author_username, _Server->get_server_name());
+            string hash = (string)git_commit(message, to, author->query_attribute("USER_FULLNAME"), author_email, doc->time);
     }
 }
