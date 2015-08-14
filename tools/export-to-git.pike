@@ -159,7 +159,8 @@ string git_commit(string message, string to, string authorname, string authorema
     Stdio.File output = Stdio.File();
     write("committing: %s\n", message);
     int errno;
-      errno =  Process.create_process(({ "git", "commit", "--allow-empty", "-m", message }), ([ "env":([ "GIT_AUTHOR_NAME":authorname, "GIT_AUTHOR_EMAIL":authoremail, "GIT_AUTHOR_DATE":ctime(time), "GIT_COMMITTER_NAME":authorname, "GIT_COMMITTER_EMAIL":authoremail, "GIT_COMMITTER_DATE":ctime(time) ]), "cwd":to , "stdout":output->pipe() ]))->wait();
+    string time_s = Calendar.Second("unix", time)->set_timezone("UTC")->format_nice();
+      errno =  Process.create_process(({ "git", "commit", "--allow-empty", "-m", message }), ([ "env":([ "GIT_AUTHOR_NAME":authorname, "GIT_AUTHOR_EMAIL":authoremail, "GIT_AUTHOR_DATE":time_s, "GIT_COMMITTER_NAME":authorname, "GIT_COMMITTER_EMAIL":authoremail, "GIT_COMMITTER_DATE":time_s ]), "cwd":to , "stdout":output->pipe() ]))->wait();
     output->read();
     if (!errno)
     {
@@ -247,7 +248,7 @@ string dir_check(string def, string dir)
  
 void git_create_branch(string to)
 {
-    string cur_time = replace(ctime(time(0))[4 ..]-"\n",([":":"-" , " ":"-"]));
+    string cur_time = replace(Calendar.Second("unix", 0)->set_timezone("UTC")->format_nice(),([":":"-" , " ":"-"]));
     Process.create_process(({ "git", "checkout", "--orphan", cur_time }), ([ "cwd": to ]))->wait();
     Process.create_process(({ "git", "rm", "-rf", "."}),([ "cwd": to]))->wait();
     dir_check("",to);
