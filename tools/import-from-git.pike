@@ -2,7 +2,7 @@
 
 #include "/usr/local/lib/steam/server/include/classes.h"
 inherit .client;
-inherit "/home/trilok/Desktop/my_gsoc_work/new/sTeam/tools/applauncher.pike";
+inherit "applauncher.pike";
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
 constant cvs_version="$Id: import-from-git.pike.in,v 1.1 2015/06/08 14:19:52 martin Exp $";
@@ -46,6 +46,7 @@ void import_from_git(string from, string to)
       from=from[ .. (sizeof(from)-2)];
       string curfrom=from;
       string curto = to;
+      int c=0;
       int num_versions = get_num_versions(from);
       write("Number of versions to check/import : %O\n",num_versions);
       array(string) all_files = get_all_affected(from,num_versions);
@@ -89,7 +90,7 @@ void import_from_git(string from, string to)
             }
           if(newfile_flag!=1)
           {  
-            int c = check_content(curto, curfrom,0);
+            c = check_content(curto, curfrom,0);
             if(!c)
             {
               flag_check=1;
@@ -111,6 +112,7 @@ void import_from_git(string from, string to)
               }
             }
           }
+          if(c==3) { commitcount--; i--;write("comitco--\n"); }   //c=3 when empty commit not there, and last 2 steam contents are equal
         }
       //Starting import now.
       else if(check==1) //Force option directly comes here using check=1
@@ -481,6 +483,7 @@ int get_num_versions(string path)
   return (int)result;
 }
 
+string tempcontent = " ";
 int check_content(string steampath, string gitpath, int wasempty)
 {
   int version = get_version(steampath);
@@ -492,8 +495,12 @@ int check_content(string steampath, string gitpath, int wasempty)
       to_import = to_import + ([ steampath:(["gitpath":gitpath, "commitcount":commitcount, "empty":wasempty]) ]);
       return  2;
     }
-  string gitcontent = git_version_content(gitpath, commitcount, wasempty);
   string steamcontent = get_steam_content(steampath, version);
+  if(tempcontent == steamcontent && !wasempty)
+    return 3; //empty commit not present but same file content in sTeam.
+  tempcontent = steamcontent;
+  string gitcontent = git_version_content(gitpath, commitcount, wasempty);
+
   if(gitcontent == steamcontent)
   {
     if(version==steam_number_vers[steampath])
