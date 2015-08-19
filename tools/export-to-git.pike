@@ -248,7 +248,7 @@ string dir_check(string def, string dir)
  
 void git_create_branch(string to)
 {
-    string cur_time = replace(Calendar.Second("unix", 0)->set_timezone("UTC")->format_nice(),([":":"-" , " ":"-"]));
+    string cur_time = replace(Calendar.Second("unix", time())->set_timezone("UTC")->format_nice(),([":":"-" , " ":"-"]));
     Process.create_process(({ "git", "checkout", "--orphan", cur_time }), ([ "cwd": to ]))->wait();
     Process.create_process(({ "git", "rm", "-rf", "."}),([ "cwd": to]))->wait();
     dir_check("",to);
