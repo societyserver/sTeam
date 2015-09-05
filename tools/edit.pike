@@ -22,42 +22,106 @@
 
 constant cvs_version="$Id: edit.pike.in,v 1.0 2010/09/15 14:19:52 martin Exp $";
 
-inherit "/usr/local/lib/steam/tools/applauncher.pike";
-
+inherit "applauncher.pike";
+//inherit "/usr/local/lib/steam/server/modules/groups.pike";
 void ping(string host, string port, string user, string|void pw)
 {
-  call_out(ping, 60, host, port, user, pw);
-  if (conn->is_closed())
+  call_out(ping, 10, host, port, user, pw);
+  mixed a = conn->send_command(14, 0);
+  if (a=="sTeam connection lost.")
   {
+      conn = ((program)"client_base.pike")();
+      conn->close();
       if (conn->connect_server(host, port) && user != "guest")
+      {
+        if(conn->send_command(14,0)!="sTeam connection lost.")
+        {
           conn->login(user, pw, 1);
+          _Server=conn->SteamObj(0);
+          user_obj = _Server->get_module("users")->lookup(options->user);
+          gp = user_obj->get_groups();
+	        get_file_object();
+          update(file);
+        }
+      }
   }
-  else
-      conn->send_command(14, 0); 
 }
 
 object conn;
 mapping conn_options = ([]);
+object _Server,user_obj,file;
+array(object) gp;
 
 int main(int argc, array(string) argv)
 {
+ 
+ 
+//  program pGroup = (program)"/classes/Group.pike";
   mapping options=init(argv);
-  object _Server=conn->SteamObj(0);
-  object file;
+//  gp=_Server->get_module("groups")->lookup("helloworld");
+  _Server=conn->SteamObj(0);
+  user_obj = _Server->get_module("users")->lookup(options->user); 
+  gp = user_obj->get_groups();
+
+/* WORKING AND GIVING GROUP OBJECTS AND NAMES */
+  int i = 1; 
+  write("Listing all groups : \n\n");
+  foreach(gp, object obj) {
+	write("Group "+i+" : "+obj->get_group_name()+".\n");
+        i=i+1;
+	}
+
+//	 groups_pgm = ((program)"/usr/local/lib/steam/server/modules/groups.pike")();
+//   gp= _Server->get_module("groups")->lookup(1);
+/*   gp=_Server->get_module("filepath:tree")->path_to_object("/home/WikiGroups"); 
+//   write(gp->get_group_name());
+ */
+//  mystr = gp->get_group_name();
+//  write(mystr);
+// array(string) gps = ({ "Admin" , "coder" , "help" , "PrivGroups" , "WikiGroups" , "sTeam" });
+  get_file_object();
+  return applaunch(file,demo);
+}
+
+void demo(){}
+
+void get_file_object()
+{
+  int len = sizeof(gp);
   if ((string)(int)options->file == options->file)
     file = conn->find_object(options->file);
   else if (options->file[0] == '/')
     file = _Server->get_module("filepath:tree")->path_to_object(options->file);
   else // FIXME: try to find out how to use relative paths
-    file = _Server->get_module("filepath:tree")->path_to_object(options->file);
+  {
+   string a = options->file;
+   int tmp_len = 0;
+   while(!file && tmp_len!=(len+2)){
+    write("Checking in "+(string)a+"\n");
+    file = _Server->get_module("filepath:tree")->path_to_object(a);
+  if(tmp_len<len)
+  {
+    string gp_name = gp[tmp_len]->get_group_name();
+    if(gp_name[.. 10] == "WikiGroups.")
+    {
+	gp_name=gp_name[11 ..];
+        a = "/wiki/"+gp_name+"/"+options->file;
+    }
+    else
+    {
+   	 a="/home/"+gp_name+"/"+options->file;
+    }
+  }
+    tmp_len=tmp_len+1;
+   }
+  }
   if (file->get_class() == "Link")
       file = file->get_link_object();
-  return applaunch(file, exit);
 }
 
+  mapping options = ([ ]);
 mapping init(array argv)
 {
-  mapping options = ([ ]);
 
   array opt=Getopt.find_all_options(argv,aggregate(
     ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
@@ -84,12 +148,13 @@ mapping init(array argv)
 
   master()->add_include_path(server_path+"/server/include");
   master()->add_program_path(server_path+"/server/");
+  master()->add_program_path(server_path+"/server/modules/groups.pike");
   master()->add_program_path(server_path+"/conf/");
   master()->add_program_path(server_path+"/spm/");
   master()->add_program_path(server_path+"/server/net/coal/");
 
   conn = ((program)"client_base.pike")();
-
+//  groups_pgm = ((program)"groups.pike")();
   int start_time = time();
 
   werror("Connecting to sTeam server...\n");
@@ -117,6 +182,7 @@ mapping init(array argv)
   {
     pw = Input.read_password( sprintf("Password for %s@%s", options->user,
            options->host), "steam" );
+//    pw ="steam"; 
     //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
   }
   while((err = catch(conn->login(options->user, pw, 1))) && --tries);
