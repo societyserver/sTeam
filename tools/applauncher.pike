@@ -30,7 +30,7 @@ int set=0;
 string dir;
 string debugfile;
 
-void upload(object editor, string file, int last_mtime, object obj, object xslobj, function|void exit_callback)
+void upload(object editor, string file, int last_mtime, object obj, object xslobj, function|void exit_callback, string|void olderrors)
 {
   int exit_status = editor->status();
   object new_stat = file_stat(file);
@@ -62,6 +62,7 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
     content = newcontent;  //update initial content to new after saving
     mixed result=obj->set_content(newcontent);
     string message=sprintf("File saved - upload: %O\n", result);
+    olderrors = UNDEFINED;
     send_message(message);
     count=0;  //so that compile status can be rewritten for newfile
     if (xslobj)
@@ -86,24 +87,26 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
 
   if (exit_status != 2)
   {
-    if(set<3)
-      set++;
-    if((obj->get_class()=="DocLpc")&&((set==3)&&(count!=1)))  //if pike script . Count is a timer for dispalying compile status
+    if(obj->get_class()=="DocLpc")  //if pike script .
     {
-    set=1;
-    array errors = obj->get_errors();
-    send_message("-----------------------------------------\n");
-    if(errors==({}))
-      send_message("Compiled successfully\n");
-    else
-    {
-      foreach(errors, string err)
-        send_message(err);
-      send_message("Compilation failed\n");
+      array errors = obj->get_errors();
+      string newerrors = sprintf("%O", errors);
+      if (newerrors != olderrors)
+      {
+        olderrors = newerrors;
+        send_message("-----------------------------------------\n");
+        if(errors==({}))
+          send_message("Compiled successfully\n");
+        else
+        {
+          foreach(errors, string err)
+            send_message(err);
+          send_message("Compilation failed\n");
+        }
+        send_message("-----------------------------------------\n");
+      }
     }
-    send_message("-----------------------------------------\n");
-    }
-    call_out(upload, 1, editor, file, new_mtime, obj, xslobj, exit_callback);
+    call_out(upload, 1, editor, file, new_mtime, obj, xslobj, exit_callback, olderrors);
   }
   else if (exit_callback)
   {
@@ -180,6 +183,7 @@ int applaunch(object obj, function exit_callback)
   mixed status;
   //while(!(status=editor->status()))
 
+  send_message(sprintf("(opened %O %s)\n", obj, file));
   call_out(upload, 1, editor, file, file_stat(file)->mtime, obj, xslobj, exit_callback);
 
 //  signal(signum("SIGINT"), prompt);
