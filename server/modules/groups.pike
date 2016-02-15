@@ -300,7 +300,7 @@ void test()
   oldgroup = GROUP("groupstestgroup.groupstestgroup");
   if ( objectp(oldgroup) )
     catch( oldgroup->delete() );
-  oldgroup = GROUP("PrivGroups.groupstestgroup");
+  oldgroup = GROUP("Groups.groupstestgroup");
   if ( objectp(oldgroup) )
     catch( oldgroup->delete() );
 
@@ -320,16 +320,16 @@ void test()
   
   // now move
   Test.test( "add_member", 
-	     GROUP("PrivGroups")->add_member(grp) == 1,
-	     "Cannot Add Group to PrivGroups");
+	     GROUP("Groups")->add_member(grp) == 1,
+	     "Cannot Add Group to Groups");
   Test.add_test_function(test_more, 1, grp, grp2);
 }
 
 static void test_more(object grp, object grp2) 
 {
   Test.test( "moving group",
-	     (grp->get_parent() == GROUP("PrivGroups")),
-	     "Moved groups parent is not PrivGroups (is "+
+	     (grp->get_parent() == GROUP("Groups")),
+	     "Moved groups parent is not Groups (is "+
 	     sprintf("%O", grp->get_parent()) + ")");
 
   Test.test( "top groups",

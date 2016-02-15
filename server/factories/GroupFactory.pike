@@ -47,6 +47,7 @@ static void init_factory()
 				 CMD_TYPE_ARRAY, ({ }), 0, CONTROL_ATTR_USER,
 				 EVENT_ATTRIBUTES_QUERY, EVENT_ATTRIBUTES_CHANGE));
     register_attribute(UserAttribute(GROUP_WORKROOM,"workroom",CMD_TYPE_OBJECT,0));
+    register_attribute(UserAttribute(GROUP_PUBLICROOM,"workroom",CMD_TYPE_OBJECT,0));
     register_attribute(UserAttribute(GROUP_CALENDAR,"calendar",CMD_TYPE_OBJECT,0));
     register_attribute(UserAttribute(GROUP_MAXSIZE,"Group Maximum Pending Size",
 				     CMD_TYPE_INT, 0));
@@ -339,9 +340,9 @@ void test()
   Test.test( "forbid renaming group to an existing name",
              !rename_group(grp, grp2->get_identifier()) );
   Test.test( "forbid renaming group to a name with a '.' in it",
-             !rename_group(grp, "PrivGroups."+name) );
+             !rename_group(grp, "Groups."+name) );
 
-  GROUP("PrivGroups")->add_member(grp);
+  GROUP("Groups")->add_member(grp);
   // changing group name is delayed ....
   Test.add_test_function( test_more, 1, grp, name );
   test_load_group(grp);
@@ -376,7 +377,7 @@ void test_load_group(object grp)
 static void test_more(object grp, string name)
 {
   Test.test( "adding group to another group changes the identifier",
-             has_prefix( grp->get_identifier(), "PrivGroups." ) );
+             has_prefix( grp->get_identifier(), "Groups." ) );
   Test.test( "forbid renaming group with same parent name",
              !rename_group(grp, name));
   Test.test( "Moved group is still a top-level-group!",
@@ -386,9 +387,9 @@ static void test_more(object grp, string name)
   Test.test( "renaming group",
              rename_group(grp, new_name) );
   Test.test( "renamed group still has parent prefix",
-             has_prefix( grp->get_identifier(), "PrivGroups." ) );
+             has_prefix( grp->get_identifier(), "Groups." ) );
   Test.test( "renamed group can be found under the new name",
-             get_module("groups")->lookup( "PrivGroups."+new_name ) == grp );
+             get_module("groups")->lookup( "Groups."+new_name ) == grp );
   Test.test( "old name of renamed group is no longer valid",
              !objectp(get_module("groups")->lookup( name )) );
   Test.test("group does not have a workroom!", grp->get_workroom());

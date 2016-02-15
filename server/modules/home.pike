@@ -267,7 +267,7 @@ string contains_virtual(object obj)
 
 void add_paths() 
 {
-    get_module("filepath:url")->add_virtual_path("/home/", this());
+    get_module("filepath:url")->add_virtual_path("/", this());
 }
 
 /**

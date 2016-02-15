@@ -199,6 +199,11 @@ int is_valid(string address)
         }
         else LOG_FORWARD("not found");
     }
+    // TODO: check for paths (replace - with /)
+    //IDEA: allow creation of subgroups and forum objects here
+    //      split user part into components . for subgroups, - for areas
+    //LOG_FORWARD("no - trying to replace - with /...");
+    //
     LOG_FORWARD("sorry - no valid target found!");
     
     return 0; //no checks succeeded, target address is invalid

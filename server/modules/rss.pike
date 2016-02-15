@@ -22,7 +22,9 @@ inherit "/kernel/module";
 #include <database.h>
 #include <exception.h>
 #include <attributes.h>
+#include <access.h>
 
+#define MODULE_VERSION "0.3"
 //! The rss module return rss code for objects in steam.
 //! It is also able to read and parse external rss streams
 
@@ -119,19 +121,19 @@ string rss_document(object o, string mode, object fp, string server)
       forum = ann;
       ann = ann->get_annotating();
     }
-    link = _FILEPATH->object_to_filename(forum);
+    link = fp->object_to_filename(forum);
     link = httplib.replace_uml(link);
     link += "?active="+o->get_object_id();
   }
   else {
-    link = _FILEPATH->object_to_filename(o);
+    link = fp->object_to_filename(o);
     link = httplib.replace_uml(link);
   }
-  link = "https://"+_Server->get_server_name() + link;
+  link = server + link;
   
   rss = "<item>\n"+
-    " <title>"+o->get_identifier() + "</title>\n"+
-    " <description>"+o->query_attribute(OBJ_DESC)+"</description>\n"+
+    " <title>"+ (o->query_attribute(OBJ_DESC)||o->get_identifier()) + "</title>\n"+
+    //" <description>"+o->query_attribute(OBJ_DESC)+"</description>\n"+
     " <link>"+link+"</link>\n";
   if ( mode == "2.0" ) {
     rss +=
@@ -204,21 +206,27 @@ static string rss_doc_versions(object o, object fp, string server)
 }
 
 
-mixed rss(object obj, void|object fp, string|void v)
+mixed rss(object obj, void|object fp, string|void v, mapping|void vars)
 {
   string mode = "2.0";
   string tag = "rss";
   string mimetype = "application/rss+xml";
   
-  if ( !objectp(fp) ) {
-    fp = _FILEPATH;
-  }
+//  if ( !objectp(fp) ) {
+//    fp = _FILEPATH;
+//  }
+//
+//  string server = _Server->get_server_name();
+//  if ( fp == _FILEPATH )
+//    server = "https://"+server;
+//  else
+//    server = "http://"+server;
 
-  string server = _Server->get_server_name();
-  if ( fp == _FILEPATH )
-    server = "https://"+server;
-  else
-    server = "http://"+server;
+  if (!vars)
+     vars = ([ "interface":"admin" ]);
+  fp = ([ "admin":MOD("filepath:tree"), "public":MOD("filepath:url") ])[vars->interface];
+  werror("RSS: %O\n", vars);
+  string server = sprintf("%s://%s", ([ "admin":"https", "public":"http" ])[vars->interface], vars->__internal->request_headers->host);
 
   if ( stringp(v) )
     mode = v;
@@ -240,9 +248,9 @@ mixed rss(object obj, void|object fp, string|void v)
   rss += "<channel>\n"+
     "<title>"+obj->query_attribute(OBJ_NAME)+"</title>\n"+
     "<description>"+obj->query_attribute(OBJ_DESC)+"</description>\n"+
-    "<link>https://"+_Server->get_server_name()+_FILEPATH->object_to_filename(obj)+"</link>\n";
+    "<link>"+server+fp->object_to_filename(obj)+"</link>\n";
   
-  rss += "<generator>http://www.open-steam.org/scripts/rss.pike?v=0.1</generator>\n";
+  rss += "<generator>http://societyserver.org/scripts/rss.pike?module_version="+MODULE_VERSION+"</generator>\n";
   
   array inv;
   
@@ -260,6 +268,10 @@ mixed rss(object obj, void|object fp, string|void v)
   
   foreach(inv, object o) {
     if ( !objectp(o) )
+      continue;
+    if ( o->get_object_class() & CLASS_LINK ) 
+        o = o->get_link_object();
+    if (!_SECURITY->get_user_permissions(o, this_user(), SANCTION_READ))
       continue;
     if ( o->get_object_class() & CLASS_DOCUMENT ) {
       rss += rss_document(o, mode, fp, server);

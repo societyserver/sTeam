@@ -34,10 +34,17 @@ import httplib;
 #define DEBUG_HTTP
 
 #ifdef DEBUG_HTTP
-#define HTTP_DEBUG(s, args...) get_module("log")->log_debug("http", s, args)
+// #define HTTP_DEBUG(s, args...) get_module("log")->log_debug("http", s, args)
+#define HTTP_DEBUG(s, args...) debug_http("http", s, args)
 #else
 #define HTTP_DEBUG(s, args...)
 #endif
+
+mixed debug_http(string type, string s, mixed ... args)
+{
+    werror(sprintf("%s: %s\n", type, s), @args);
+    return get_module("log")->log_debug("http", s, args);
+}
 
 object                    _fp;
 static object      __notfound;
@@ -540,6 +547,28 @@ mapping handle_OPTIONS(object obj, mapping vars)
 
 mapping handle_PUT(object obj, mapping vars)
 {
+    // original handle_PUT only deals with uploading files via webdav
+    // PUT requests for scripts are done in handle_POST
+    // FIXME: this should check for webdav requests
+    mapping result;
+    if ( obj->get_object_class() & CLASS_SCRIPT ) 
+    {
+        result = handle_POST(obj, vars);
+	if ( !mappingp(result) )
+	  return result;
+    }
+    else if ( vars->type == "execute" &&
+              obj->get_object_class() & CLASS_DOCLPC ) 
+    {
+        result = handle_POST(obj, vars);
+    }
+    else return handle_webdav_PUT(obj, vars);
+
+    return result;
+}
+
+mapping handle_webdav_PUT(object obj, mapping vars)
+{
     __newfile = 0;
 
     if ( !check_precondition(obj) )
@@ -622,6 +651,29 @@ mapping handle_MKDIR(object obj, mapping vars)
 
 mapping handle_DELETE(object obj, mapping vars)
 {
+    // original handle_DELETE only deals with deleting steam objects directly
+    // presumably via webdav
+    // DELETE requests for scripts are done in handle_POST
+    // FIXME: this should check for webdav requests
+    mapping result;
+    if ( obj->get_object_class() & CLASS_SCRIPT ) 
+    {
+        result = handle_POST(obj, vars);
+        if ( !mappingp(result) )
+          return result;
+    }
+    else if ( vars->type == "execute" &&
+              obj->get_object_class() & CLASS_DOCLPC ) 
+    {
+        result = handle_POST(obj, vars);
+    }
+    else return handle_webdav_DELETE(obj, vars);
+
+    return result;
+}
+
+mapping handle_webdav_DELETE(object obj, mapping vars)
+{
   if ( !objectp(obj) )
     return response_notfound(__request->not_query, vars);
   if ( !check_precondition(obj) )
@@ -666,8 +718,10 @@ mapping read_body(object req, int len)
     if ( stringp(req->body_raw) )
       len -= strlen(req->body_raw);
     
-    if ( req->request_type == "PUT" )
-	return ([ ]);
+// i suppose webdav has another method to read the body, 
+// but we need it in __vars to handle PUT for scripts
+//    if ( req->request_type == "PUT" )
+//	return ([ ]);
 
     __toread = len;
     __body = "";
@@ -681,7 +735,7 @@ mapping read_body(object req, int len)
 	return ([ ]);
     
     content_type = lower_case(content_type);
-    if ( search(content_type, "multipart/form-data") >= 0 )
+    if (search(content_type, "multipart/form-data") >= 0 )
 	return parse_multipart_form_data(req, __body);
     else 
       return ([ "__body": __body, ]);
@@ -746,13 +800,26 @@ static mapping call_command(string cmd, object obj, mapping vars)
     HTTP_DEBUG("HTTP: " + __request->not_query + " (%O)", get_ip());
 
     function call = this_object()["handle_"+cmd];
+    vars->__internal->request_method = cmd;
+
     if ( functionp(call) ) {
 	result = call(obj, vars);
+    }
+    else if ( obj->get_object_class() & CLASS_SCRIPT ) 
+    {
+        result = handle_POST(obj, vars);
+        if ( !mappingp(result) )
+          return result;
     }
     else {
 	result->error = 501;
 	result->data = "Not implemented";
     }
+    result->extra_heads += ([
+        "Access-Control-Allow-Origin": vars->__internal->request_headers->origin,
+        "Access-Control-Allow-Headers": vars->__internal->request_headers["access-control-request-headers"],
+        "Access-Control-Allow-Methods": vars->__internal->request_headers["access-control-request-method"],
+	]);
     return result;
 }
 
@@ -765,7 +832,10 @@ mapping run_request(object req)
 {
     mapping result = ([ ]);
     mixed              err;
+    string host = (req->request_headers->host || _Server->get_server_name());
 
+    //HTTP_DEBUG("run_request(%O)", req->request_headers);
+    //HTTP_DEBUG("run_request(): host = %O,%O", req->request_headers->host, host);
 
     // see if the server is ready for requests
     if ( !objectp(get_module("package:web") ) && 
@@ -793,7 +863,8 @@ mapping run_request(object req)
     //  find the requested object
     req->not_query = url_to_string(req->not_query);
     not_query = req->not_query;
-    req->not_query = rewrite_url(req->not_query, req->request_headers);
+//    if (!__admin_port)
+//      req->not_query = rewrite_url(req->not_query, req->request_headers);
 
 
     // cookie based authorization
@@ -841,10 +912,15 @@ mapping run_request(object req)
       return result;
     }
 
-    object obj = _fp->path_to_object(req->not_query);
-    if ( !objectp(obj) ) {
+    HTTP_DEBUG("run_request(): calling %O->url_to_object(%O,%O)", _fp, host, req->not_query);
+    object obj = _fp->url_to_object(req->not_query, host);
+
+    if (!objectp(obj) && host[..3] == "www.")
+	return low_answer(301, "Found",
+			  ([ "Location": (__admin_port ? "https://" : "http://" )+host[4..]+req->full_query ]));
+
+    if ( !objectp(obj) )
       obj = _fp->path_to_object(req->not_query, 1);
-    }
 
     mapping m = req->variables;
 
@@ -858,12 +934,14 @@ mapping run_request(object req)
 	else
 	    m->type = "content";
     }
-    if ( m->type == "content" ) {
-      if ( objectp(obj) && obj->get_object_class() & CLASS_LINK ) {
-	if ( objectp(obj->get_link_object()) )
-	  obj = obj->get_link_object();
-      }
-    }
+    // don't silently replace link objects with the destination,
+    // the context of the link object is needed to properly display the content with a stylesheet.
+    //if ( m->type == "content" ) {
+    //  if ( objectp(obj) && obj->get_object_class() & CLASS_LINK ) {
+    //    if ( objectp(obj->get_link_object()) )
+    //      obj = obj->get_link_object();
+    //  }
+    //}
 
     object _obj = obj;
     if ( m->object ) 
@@ -921,9 +999,20 @@ mapping run_request(object req)
     m->__internal = ([ 
       "request_headers": req->request_headers, 
       "client": ({ "Mozilla", }), 
+      "full_query": req->full_query,
+      "raw": req->raw
     ]);
     m->referer = referer;
     m->interface = (__admin_port ? "admin" : "public" );
+    if (req->request_headers["content-type"])
+    {
+        //object mime = MIME.Message("Content-Type: "+req->request_headers["content-type"]);
+        object mime = MIME.Message(req->raw);
+        m->__internal->type = mime->type;
+        m->__internal->subtype = mime->subtype;
+        m->__internal->mime_type = mime->type+"/"+mime->subtype;
+        m->__internal->charset = mime->charset;
+    }
 
     float tt = gauge {
       err = catch ( result = call_command(req->request_type, obj, m) );
@@ -996,7 +1085,7 @@ string rewrite_url(string url, mapping headers)
     // http://steam.uni-paderborn.de : /steam
     if ( mappingp(virtual_hosts) ) {
       foreach(indices(virtual_hosts), string host) 
-	if ( search(headers->host, host) >= 0 )
+	if ( search(headers->host, host) >= 0 && _fp->path_to_object(virtual_hosts[host] + url))
 	  return virtual_hosts[host] + url;
     }
     return url;
@@ -1016,7 +1105,6 @@ void http_request(object req)
     __request = req;
     __touch   = time();
 
-    HTTP_DEBUG("HTTP: %O(%O)",req, req->request_headers);
 
     // read body always...., if body is too large abort.
     len = (int)req->request_headers["content-length"];
@@ -1056,7 +1144,6 @@ void http_request(object req)
 			"type": "text/html", ]);
 	}
     }
-    set_this_user(0);
     if (slow) {
       tt = get_time_millis() - tt;
       loaded_objects = master()->get_in_memory() - loaded_objects;
@@ -1076,6 +1163,7 @@ void http_request(object req)
       respond( req, result );
       __finished = 1;
     }
+    set_this_user(0);
 }
 
 /**
@@ -1181,7 +1269,11 @@ string|int|mapping show_object(object obj, mapping vars)
 
     HTTP_DEBUG("show_object("+obj->describe()+")");
 
-    if ( obj == _ROOTROOM && !_ADMIN->is_member(user) ) {
+    if ( obj == _ROOTROOM && !_ADMIN->is_member(user) && 
+        !(user == _GUEST && (_ROOTROOM->query_attribute("html:index") ||
+                             _ROOTROOM->get_object_byname("index.xml") ))) 
+                             // make compatible with old webinterface
+    {
       mapping result = ([
          "data": redirect("/home/"+user->get_user_name()+"/", 0),
          "extra_heads": ([ "Pragma":"No-Cache", 
@@ -1191,8 +1283,6 @@ string|int|mapping show_object(object obj, mapping vars)
       return result;
     }
     
-    _SECURITY->check_access(obj, user, SANCTION_READ,ROLE_READ_ALL, false);
-
     mapping client_map = get_client_map(vars);
     if ( user != _GUEST ) {
       if ( !stringp(user->query_attribute(USER_LANGUAGE)) )
@@ -1200,7 +1290,7 @@ string|int|mapping show_object(object obj, mapping vars)
     }
 
     string lang = client_map->language;
-    // the standard presentation port shouild behave like a normal webserver
+    // the standard presentation port should behave like a normal webserver
     // so, if present, index files are used instead of the container.
     if ( !__admin_port && obj->get_object_class() & CLASS_CONTAINER )
     {
@@ -1219,12 +1309,17 @@ string|int|mapping show_object(object obj, mapping vars)
 	      }
 	    }
 	}
-	object indexfile = obj->get_object_byname("index.html");
+	object indexfile = obj->get_object_byname(obj->query_attribute("html:index"))
+                           ||obj->get_object_byname("index.html")
+                           ||obj->get_object_byname("index.xml");
+                           // old webinterface by default loads /index.xml
 	if ( objectp(indexfile) ) {
 	    vars->type = "content";
 	    return handle_GET(indexfile, vars);
 	}
     }
+
+    _SECURITY->check_access(obj, user, SANCTION_READ,ROLE_READ_ALL, false);
 
     if ( obj->get_object_class() & CLASS_ROOM && !user->contains(obj, true) ) 
     {
@@ -1296,7 +1391,7 @@ mapping response_noaccess(object obj, mapping vars)
 
 
     // on the admin port users are already logged in - so just show no access
-    if ( this_user() == _GUEST )
+    if ( this_user() == _GUEST && (__admin_port || !_Server->query_config("secure_credentials")) )
       result->error = 401;
     else
       result->error = (__admin_port ? 403 : 
@@ -1455,11 +1550,16 @@ mapping response_error(object obj, mapping vars, mixed err)
     "<li>Report Bug: <a href=\"http://www.open-steam.org:8080/jira\">http://www.open-steam.org:8080/jira</a></li>"+
     "</ul>";
   object xsl = OBJ("/stylesheets/errors.xsl");
-  xml =  
-    "<?xml version='1.0' encoding='utf-8'?>\n"+
-    "<error><actions/><message><![CDATA["+xml+"]]></message></error>";
-  html = run_xml(xml, xsl, vars);
-  return ([ "data": html, "type": "text/html", "error": 500, ]);
+  if (xsl)
+  {
+    xml =  
+      "<?xml version='1.0' encoding='utf-8'?>\n"+
+      "<error><actions/><message><![CDATA["+xml+"]]></message></error>";
+    html = run_xml(xml, xsl, vars);
+    return ([ "data": html, "type": "text/html", "error": 500, ]);
+  }
+  else
+    return ([ "data": xml, "type": "text/plain", "error": 500, ]);
 }
 
 mapping response_loginfailed(object obj, mapping vars)
@@ -1527,8 +1627,11 @@ static void respond(object req, mapping result)
 	    if ( length != strlen(result->data) )
 		steam_error("Length mismatch in http!\n");
     }
-    get_module("log")->log("http", LOG_LEVEL_INFO, "%s - - %s \"%s\" %d %d \"%s\" \"%s\"",
+    // FIXME: hits should be logged seperately
+    get_module("log")->log("http", LOG_LEVEL_ERROR, "%s %s - %s %s \"%s\" %d %d \"%s\" \"%s\"",
+                           __request->request_headers->host || "none", 
 			   get_ip() || "unknown", 
+                           (this_user()?this_user()->get_identifier():"-"),
 			   timelib.event_time(time()), 
 			   __request->request_raw,
 			   result->error,
@@ -1601,6 +1704,7 @@ int get_last_response()
     return __touch; 
 }
 
+string get_vhost(){ return __request->request_headers->host; }
 string get_socket_name() { return "http"; }
 int is_closed() { return __finished; }
 int get_client_features() { return 0; }

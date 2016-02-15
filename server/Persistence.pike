@@ -1288,9 +1288,9 @@ static bool synchronize_object_internal ( object obj ) {
           tmp_namespaces -= subgroup_namespaces;
           // only remove user from group if they're from the same namespaces:
           if ( sizeof(tmp_namespaces) < 1 ) {
-            object privgroups = GROUP( "PrivGroups" );
+            object privgroups = GROUP( "Groups" );
             if ( objectp(privgroups) ) {
-              PDEBUG( "removing sub group %s of group %s (moving to PrivGroups)", subgroup_name, identifier );
+              PDEBUG( "removing sub group %s of group %s (moving to Groups)", subgroup_name, identifier );
               get_factory( CLASS_GROUP )->move_group( subgroup, privgroups );
             }
             // what if we cannot move the group to privgroups?

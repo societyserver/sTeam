@@ -20,52 +20,154 @@
 
 constant cvs_version="$Id: applauncher.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
+//before using this file, patch the paths for watchforchanges.vim and golden_ratio.vim
+object newfileobj;
+string content;
+int i=1;
+int j=1;
+int count=0;
+int set=0;
+string dir;
+string debugfile;
 
-void upload(object editor, string file, int last_mtime, object obj, object xslobj)
+void upload(object editor, string file, int last_mtime, object obj, object xslobj, function|void exit_callback, string|void olderrors)
 {
-  int new_mtime=file_stat(file)->mtime;
-  if(new_mtime > last_mtime)
+  int exit_status = editor->status();
+  object new_stat = file_stat(file);
+  int new_mtime;
+  string newcontent;
+  string oldcontent = obj->get_content();  //currently changing 
+
+  if((content!=oldcontent)&&(oldcontent!=("sTeam connection lost."||""))&&obj&&(i==1))
+  {
+    i=0;
+    send_message("File changed on server.\n");
+//Not needed -    Stdio.write_file(file, oldcontent||"", 0600);
+    last_mtime = new_stat->mtime;
+  }
+  if (!new_stat)
+    send_message(sprintf("%s is gone!", file));
+
+  if (new_stat && new_stat->mtime > last_mtime)
+  {
+    new_mtime = new_stat->mtime;
+    newcontent = Stdio.read_file(file);
+    if (!stringp(newcontent))
+      send_message(sprintf("failed to read %s", file));
+  }
+
+  if (stringp(newcontent) && newcontent != content && oldcontent!="sTeam connection lost.")
   {
     last_mtime=new_mtime;
-    mixed result=obj->set_content(Stdio.read_file(file));
-    string message=sprintf("%O: upload: %O", obj, result);
-    write(message+"\n");
-    Process.create_process(({ "screen", "-X", "wall", message }));
-    if(xslobj)
+    content = newcontent;  //update initial content to new after saving
+    mixed result=obj->set_content(newcontent);
+    string message=sprintf("File saved - upload: %O\n", result);
+    olderrors = UNDEFINED;
+    send_message(message);
+    count=0;  //so that compile status can be rewritten for newfile
+    if (xslobj)
     {
       result=xslobj->load_xml_structure();
       message=sprintf("%O: load xml struct: %O", xslobj, result);
-      write(message+"\n");
-      Process.create_process(({ "screen", "-X", "wall", message }));
+      send_message(message);
     }
   }
-  if(!editor->status())
-    call_out(upload, 1, editor, file, new_mtime, obj, xslobj);
+  if(oldcontent=="sTeam connection lost.")
+  {
+    if(j==1){
+      send_message("Disconnected\n");
+      j--;
+    }
+      if(newfileobj)
+      {
+        send_message("Connected back\n");
+        obj = newfileobj;
+      }
+  }
+
+  if (exit_status != 2)
+  {
+    if(obj->get_class()=="DocLpc")  //if pike script .
+    {
+      array errors = obj->get_errors();
+      string newerrors = sprintf("%O", errors);
+      if (newerrors != olderrors)
+      {
+        olderrors = newerrors;
+        send_message("-----------------------------------------\n");
+        if(errors==({}))
+          send_message("Compiled successfully\n");
+        else
+        {
+          foreach(errors, string err)
+            send_message(err);
+          send_message("Compilation failed\n");
+        }
+        send_message("-----------------------------------------\n");
+      }
+    }
+    call_out(upload, 1, editor, file, new_mtime, obj, xslobj, exit_callback, olderrors);
+  }
+  else if (exit_callback)
+  {
+    exit_callback(editor->wait());
+//    exit(1);  
+  }
 }
 
+
+void update(object obj)
+{
+  newfileobj = obj;
+}
 
 array edit(object obj)
 {
 #if constant(Crypto.Random)
-  string dir="/tmp/"+(MIME.encode_base64(Crypto.Random.random_string(10), 1)-("/"))+System.getpid();
+  dir="/tmp/"+(MIME.encode_base64(Crypto.Random.random_string(10), 1)-("/"))+System.getpid();
 #else
-  string dir="/tmp/"+(MIME.encode_base64(Crypto.randomness.pike_random()->read(10), 1)-("/"))+System.getpid();
+   dir="/tmp/"+(MIME.encode_base64(Crypto.randomness.pike_random()->read(10), 1)-("/"))+System.getpid();
 #endif
   string filename=obj->get_object_id()+"-"+obj->get_identifier();
 
+  debugfile = filename+"-disp";
   mkdir(dir, 0700);
-  string content=obj->get_content();
+  content=obj->get_content();  //made content global, this is content when vim starts and remains same. oldcontent keeps changing in upload function.
   //werror("%O\n", content);
   Stdio.write_file(dir+"/"+filename, content||"", 0600);
   
+  Stdio.write_file(dir+"/"+debugfile, "This is your log window\n", 0600);
+  array command;
   //array command=({ "screen", "-X", "screen", "vi", dir+"/"+filename });
-  array command=({ "vim", "--servername", "VIM", "--remote-wait", dir+"/"+filename });
+  //array command=({ "vim", "--servername", "VIM", "--remote-wait", dir+"/"+filename });
+    string enveditor = getenv("EDITOR");
+  string name = dir+"/"+debugfile;
+  if((enveditor=="VIM")||(enveditor=="vim"))    //full path to .vim files to be mentioned
+    command=({ "vim","-S", "/usr/local/lib/steam/tools/watchforchanges.vim", "-S", "/usr/local/lib/steam/tools/golden_ratio.vim", dir+"/"+filename, "-c","set splitbelow", "-c"  ,sprintf("split|view %s",name), "-c", "wincmd w"});
+  else if(enveditor=="emacs")
+    command=({ "emacs", "--eval","(add-hook 'emacs-startup-hook 'toggle-window-spt)", "--eval", "(global-auto-revert-mode t)", dir+"/"+filename, dir+"/"+debugfile, "--eval", "(setq buffer-read-only t)", "--eval", sprintf("(setq frame-title-format \"%s\")",obj->get_identifier()) , "--eval", "(windmove-up)", "--eval", "(enlarge-window 5)"});
+  else
+    command=({ "vi","-S", "/usr/local/lib/steam/tools/watchforchanges.vim", "-S", "/usr/local/lib/steam/tools/golden_ratio.vim", dir+"/"+filename, "-c","set splitbelow", "-c"  ,sprintf("split|view %s",name), "-c", "wincmd w"});
+
   object editor=Process.create_process(command,
-                                     ([ "cwd":dir, "env":getenv() ]));
+                                     ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
   return ({ editor, dir+"/"+filename });
 } 
 
-int applaunch(object obj)
+int send_message(string message)
+{
+/*
+  if (getenv("STY"))
+      Process.create_process(({ "screen", "-X", "wall", message }));
+  else if (getenv("TMUX"))
+      Process.create_process(({ "tmux", "display-message", message }));
+  else
+      werror("%s\n", message);
+*/
+  Stdio.append_file(dir+"/"+debugfile, message||"", 0600); //result buffer
+}
+
+int applaunch(object obj, function exit_callback)
 {
   object xslobj;
   if(obj->get_identifier()[sizeof(obj->get_identifier())-8..]==".xsl.xml")
@@ -81,8 +183,8 @@ int applaunch(object obj)
   mixed status;
   //while(!(status=editor->status()))
 
-  if(!editor->status())
-    call_out(upload, 1, editor, file, file_stat(file)->mtime, obj, xslobj);
+  send_message(sprintf("(opened %O %s)\n", obj, file));
+  call_out(upload, 1, editor, file, file_stat(file)->mtime, obj, xslobj, exit_callback);
 
 //  signal(signum("SIGINT"), prompt);
   return -1;

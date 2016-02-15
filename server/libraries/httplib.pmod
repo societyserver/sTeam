@@ -241,6 +241,7 @@ mapping parse_multipart_form_data(object req, string data)
     
     foreach(messg->body_parts||({}), object part) {
 	if(part->disp_params->filename) {
+            // FIXME: this overwrites multiple parts and only keeps the last one
 	    variables[part->disp_params->name]=part->getdata();
 	    string fname=part->disp_params->filename;
 	    if( part->headers["content-disposition"] ) {
@@ -1045,3 +1046,7 @@ mapping find_tags(object obj)
   return 0;
 }
 
+// hack to force pike to load JSON into the chroot
+#if constant(Standards.JSON)
+int json = 1;
+#endif

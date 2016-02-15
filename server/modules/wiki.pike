@@ -299,6 +299,9 @@ string embedWiki(object obj, object fp, string embed)
   if ( o->get_object_class() & CLASS_DOCEXTERN )
     return sprintf("<iframe width=\"90%%\" height=\"400\" src=\"%s\">Das Frame kann nicht angezeigt werden</iframe>", o->query_attribute(DOC_EXTERN_URL));
   
+  if ( o->get_object_class() & CLASS_CONTAINER )
+    return add_wiki_list(o, fp, "", 0, CLASS_ALL);
+
   string mtype = o->query_attribute(DOC_MIME_TYPE) || "";
   
   switch(mtype) {
@@ -883,18 +886,25 @@ static string add_toc ( object wikiContext, string|void levels ) {
 }
 
 
-static string add_wiki_list ( object env, object wikiContext, string code ) {
+static string add_wiki_list ( object env, object wikiContext, string code, string|void mimetype, int|void objclass) 
+{
+
+  if (!objclass && !mimetype)
+    mimetype = "text/wiki";
+  if (!objclass)
+    objclass = CLASS_DOCUMENT;
+ 
   if ( !stringp(code) || !objectp(env) ||
-       (env->get_object_class() & CLASS_CONTAINER == 0) )
+       ((env->get_object_class() & CLASS_CONTAINER) == 0) )
     return "";
-  array files = env->get_inventory_filtered(
-    ({
-      ({ "-", "!class", CLASS_DOCUMENT }),
-      ({ "+", "attribute", DOC_MIME_TYPE, "==", "text/wiki" })
-    }), ({
-      ({ "<", "attribute", OBJ_NAME })
-    })
-  );
+
+  array files = env->get_inventory_by_class(objclass);
+  if (mimetype)
+    files = filter( files, lambda(object o){
+      return o->query_attribute(DOC_MIME_TYPE) == mimetype; } );
+  files = filter( files, lambda(object o){
+    return (o->get_object_class() & CLASS_USER) == 0; } );
+
   array identifiers = files->get_identifier();
   array list = allocate( sizeof(files) );
   for ( int i=0; i<sizeof(list); i++ ) list[i] = i;
@@ -922,6 +932,7 @@ static string add_wiki_list ( object env, object wikiContext, string code ) {
     else if ( spec == ":description" ) {
       show_desc = true;
     }
+    
   }
   string html = "<ul>";
   foreach ( list, mixed item ) {

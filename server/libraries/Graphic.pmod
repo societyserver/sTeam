@@ -219,4 +219,8 @@ int get_object_id() { return 1; }
 bool trust(object obj) { return true; }
 #endif
 
+#if constant(Standards.EXIF)
+int exif = 1;
+#endif
+
 string get_identifier() { return "Graphic Module"; }

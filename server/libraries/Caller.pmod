@@ -56,3 +56,21 @@ object low_get_caller(object obj, mixed bt)
     return 0;
 }
 
+object get_socket(object obj, mixed bt)
+{
+    int sz = sizeof(bt);
+    object       caller;
+
+    sz -= 2;
+    for ( ; sz >= 0; sz-- ) 
+    {
+	if ( functionp(bt[sz][2]) ) 
+        {
+	    function f = bt[sz][2];
+	    caller = function_object(f);
+	    if ( master()->is_socket(caller) ) 
+              return caller;
+	}
+    }
+    return 0;
+}
