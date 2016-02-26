@@ -47,6 +47,7 @@
 
 #include "xslt.h"
 #include "xml_dom.h"
+#include "xml_config.h"
 
 //#define XSLT_DEBUG 1
 

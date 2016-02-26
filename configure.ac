@@ -2,7 +2,6 @@ AC_INIT([steam],[2.7],[open-steam <info@open-steam.org>], [steam])
 
 AM_INIT_AUTOMAKE
 
-AM_CONFIG_HEADER(sources/_XML/xml_config.h)
 
 # if you add anything to DIRS or SOURCES_DIRS, then you might also want to add
 # corresponding Makefiles to AC_CONFIG_FILES at the bottom of this file, too:
@@ -474,13 +473,14 @@ else
 fi
 AC_SUBST(WIKI_LDFLAGS)
 export WIKI_LDFLAGS
-AC_CHECK_FUNCS(xmlBufContent)
-
+AC_CHECK_FUNCS([xmlBufContent])
+AC_SUBST(HAVE_XMLBUFCONTENT)
 
 # *** Configure output ****************************************************
 
 #AC_CONFIG_SUBDIRS() # all is handled by this top-level configure.ac now
 
+AM_CONFIG_HEADER(sources/_XML/xml_config.h sources/libxslt/xml_config.h)
 AC_CONFIG_FILES(Makefile start setup version backup distrib/redhat/init.d/steam distrib/suse/init.d/steam distrib/generic-lsb/init.d/steam distrib/generic/init.d/steam tools/debug.pike tools/export tools/export_users tools/import tools/create_cert.pike server/include/configure.h sources/Makefile sources/_XML/Makefile sources/coal/Makefile sources/libxslt/Makefile sources/steam/Makefile sources/steamtools/Makefile sources/wiki/Makefile spm/Makefile spm/spm)
 
 AC_OUTPUT
