@@ -474,6 +474,7 @@ else
 fi
 AC_SUBST(WIKI_LDFLAGS)
 export WIKI_LDFLAGS
+AC_CHECK_FUNCS(xmlBufContent)
 
 
 # *** Configure output ****************************************************
