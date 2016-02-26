@@ -408,13 +408,22 @@ static void f_run( INT32 args )
 	pop_n_elems(args);
 	if ( cur->encoding != NULL && strcmp(cur->encoding,"iso-8859-1") == 0 )
 	{
+#if HAVE_XMLBUFCONTENT
+	  resultBuffer = malloc(strlen(xmlBufContent(xmlBuf->conv))+1);
+	  strcpy(resultBuffer, xmlBufContent(xmlBuf->conv));
+#else
 	  resultBuffer = malloc(strlen(xmlBuf->conv->content)+1);
 	  strcpy(resultBuffer, xmlBuf->conv->content);
+#endif
 	  push_text(resultBuffer);
 	  free(resultBuffer);
 	}
 	else
+#if HAVE_XMLBUFCONTENT
+	  push_text(xmlBufContent(xmlBuf->conv));
+#else
 	  push_text(xmlBuf->buffer->content);
+#endif
     }
     xmlOutputBufferClose(xmlBuf);
     xmlFreeDoc(res);
