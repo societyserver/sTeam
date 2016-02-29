@@ -71,10 +71,42 @@ install: install_steam force
 	$(INSTALL) -m644 spms/spm_support*.spm $(DESTDIR)/$(STEAMDIR)/spms/.
 
 	$(INSTALL) -m755 tools/create_cert.pike $(DESTDIR)/$(STEAMDIR)/tools 
+	$(INSTALL) -m775 tools/create_cert.pike.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/import_users $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/export_users $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/export_users.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m644 tools/applauncher.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/applauncher $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/check_database.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/checkout.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/checkout_web.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/client.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/dbContentReader.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/dbcopy $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/debug.pike.in $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/edit.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m644 tools/export $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/export.in $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/export.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/export-to-git.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/golden_ratio.vim $(DESTDIR)/$(STEAMDIR)/tools/golden_ratio.vim
+	$(INSTALL) -m775 tools/gtklogin.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m644 tools/import $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/import-from-git.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/import.in $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/import.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/import_users $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/ldd.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/logo.gif $(DESTDIR)/$(STEAMDIR)/tools/logo.gif
+	$(INSTALL) -m775 tools/maintainance.html $(DESTDIR)/$(STEAMDIR)/tools/maintainance.html
+	$(INSTALL) -m775 tools/maintainance.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/new_database.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/steam-shell.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/tab_completion.pmod $(DESTDIR)/$(STEAMDIR)/tools/tab_completion.pmod
+	$(INSTALL) -m775 tools/upd-source.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/watchforchanges.vim $(DESTDIR)/$(STEAMDIR)/tools/watchfromchanges.vim
 
 	$(INSTALL) -m755 sources/steam/steam $(DESTDIR)/$(STEAMDIR)/bin/$(STEAMBRAND)
 	$(INSTALL) -m755 start $(DESTDIR)/$(STEAMDIR)
