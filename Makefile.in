@@ -74,7 +74,6 @@ install: install_steam force
 	$(INSTALL) -m775 tools/create_cert.pike.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/import_users $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/export_users $(DESTDIR)/$(STEAMDIR)/tools
-	$(INSTALL) -m775 tools/export_users.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m644 tools/applauncher.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m775 tools/applauncher $(DESTDIR)/$(STEAMDIR)/tools
@@ -88,14 +87,12 @@ install: install_steam force
 	$(INSTALL) -m775 tools/debug.pike.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m775 tools/edit.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m644 tools/export $(DESTDIR)/$(STEAMDIR)/tools
-	$(INSTALL) -m775 tools/export.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m664 tools/export.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m775 tools/export-to-git.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m664 tools/golden_ratio.vim $(DESTDIR)/$(STEAMDIR)/tools/golden_ratio.vim
 	$(INSTALL) -m775 tools/gtklogin.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m644 tools/import $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m775 tools/import-from-git.pike $(DESTDIR)/$(STEAMDIR)/tools
-	$(INSTALL) -m775 tools/import.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m664 tools/import.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m775 tools/import_users $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m664 tools/ldd.pike $(DESTDIR)/$(STEAMDIR)/tools
