@@ -111,7 +111,7 @@ void upload(object editor, string file, int last_mtime, object obj, object xslob
   else if (exit_callback)
   {
     exit_callback(editor->wait());
-//    exit(1);  
+    exit(1);  
   }
 }
 
