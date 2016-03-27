@@ -1,0 +1,190 @@
+INSTALL=@INSTALL@ 
+PREFIX=@prefix@
+CONFIGDIR=@configdir@
+STEAMDIR=@steamdir@
+STEAMBRAND=@brand@
+LOGDIR=@logdir@
+DESTDIR=@installdir@
+
+
+all: @DIRS@
+
+force:
+	@:
+
+
+sources: force
+	( cd $@ && $(MAKE) $(MAKE_FLAGS))
+
+install: install_steam force
+	chmod ugo+rx setup
+	tar -cpf __tmp.tar --exclude CVS server
+	test -d $(DESTDIR)/$(CONFIGDIR) || mkdir -p -m750 $(DESTDIR)/$(CONFIGDIR)
+	test -d $(DESTDIR)/$(CONFIGDIR)/modules || mkdir -p -m750 $(DESTDIR)/$(CONFIGDIR)/modules
+	test -d $(DESTDIR)/$(CONFIGDIR)/services || mkdir -p -m750 $(DESTDIR)/$(CONFIGDIR)/services
+	test -d $(DESTDIR)/$(LOGDIR) || mkdir -p $(DESTDIR)/$(LOGDIR)
+	test -d $(DESTDIR)/$(STEAMDIR)/spm || mkdir -p $(DESTDIR)/$(STEAMDIR)/spm
+	test -d $(DESTDIR)/$(STEAMDIR)/client || mkdir -p $(DESTDIR)/$(STEAMDIR)/client
+	test -d $(DESTDIR)/$(STEAMDIR)/services || mkdir -p $(DESTDIR)/$(STEAMDIR)/services
+	test -d $(DESTDIR)/$(STEAMDIR)/tools || mkdir -p $(DESTDIR)/$(STEAMDIR)/tools
+	test -d $(DESTDIR)/$(STEAMDIR)/bin || mkdir -p $(DESTDIR)/$(STEAMDIR)/bin
+	test -d $(DESTDIR)/$(STEAMDIR)/spms || mkdir -p $(DESTDIR)/$(STEAMDIR)/spms
+
+	# configs:
+	test -f $(DESTDIR)/$(CONFIGDIR)/steam.cfg || $(INSTALL) -m640 config/steam.cfg $(DESTDIR)/$(CONFIGDIR)/steam.cfg
+	test -f $(DESTDIR)/$(CONFIGDIR)/persistence.cfg || $(INSTALL) -m640 config/persistence.cfg $(DESTDIR)/$(CONFIGDIR)/persistence.cfg
+	$(INSTALL) -m640 config/mimetypes.txt $(DESTDIR)/$(CONFIGDIR)
+	$(INSTALL) -m640 config/classtypes.txt $(DESTDIR)/$(CONFIGDIR)
+	test -f $(DESTDIR)/$(CONFIGDIR)/cgi.txt || $(INSTALL) -m640 config/cgi.txt $(DESTDIR)/$(CONFIGDIR)
+	test -f $(DESTDIR)/$(CONFIGDIR)/auth.xml || $(INSTALL) -m640 config/auth.xml $(DESTDIR)/$(CONFIGDIR)
+	test -f $(DESTDIR)/$(CONFIGDIR)/icons.xml || $(INSTALL) -m640 config/icons.xml $(DESTDIR)/$(CONFIGDIR)
+	# module configs: (note: a "-" in front ignores any failures of the line)
+	test -f $(DESTDIR)/$(CONFIGDIR)/ldap.txt && mv $(DESTDIR)/$(CONFIGDIR)/ldap.txt $(DESTDIR)/$(CONFIGDIR)/modules/ldap.cfg || true
+	test -f $(DESTDIR)/$(CONFIGDIR)/modules/ldap.cfg || $(INSTALL) -m640 config/modules/ldap.cfg $(DESTDIR)/$(CONFIGDIR)/modules
+	test -f $(DESTDIR)/$(CONFIGDIR)/auth.cfg && mv $(DESTDIR)/$(CONFIGDIR)/auth.cfg $(DESTDIR)/$(CONFIGDIR)/modules/auth.cfg || true
+	test -f $(DESTDIR)/$(CONFIGDIR)/modules/auth.cfg || $(INSTALL) -m640 config/modules/auth.cfg $(DESTDIR)/$(CONFIGDIR)/modules
+	test -f $(DESTDIR)/$(CONFIGDIR)/modules/home.cfg || $(INSTALL) -m640 config/modules/home.cfg $(DESTDIR)/$(CONFIGDIR)/modules
+	# service configs:
+	test -f $(DESTDIR)/$(CONFIGDIR)/fulltext.cfg && mv $(DESTDIR)/$(CONFIGDIR)/fulltext.cfg $(DESTDIR)/$(CONFIGDIR)/services/fulltext.cfg || true
+	test -f $(DESTDIR)/$(CONFIGDIR)/services/fulltext.cfg || $(INSTALL) -m640 config/services/fulltext.cfg $(DESTDIR)/$(CONFIGDIR)/services
+
+	$(INSTALL) -m644 spm/connection.pike $(DESTDIR)/$(STEAMDIR)/spm
+	$(INSTALL) -m644 spm/client_base.pike $(DESTDIR)/$(STEAMDIR)/spm
+	$(INSTALL) -m755 spm/spm $(DESTDIR)/$(STEAMDIR)/bin
+	$(INSTALL) -m755 jail $(DESTDIR)/$(STEAMDIR)/bin
+
+	$(INSTALL) -m644 client/client_base.pike $(DESTDIR)/$(STEAMDIR)/client/.
+	$(INSTALL) -m644 client/Service.pmod $(DESTDIR)/$(STEAMDIR)/client/Service.pmod
+	$(INSTALL) -m644 client/Input.pmod $(DESTDIR)/$(STEAMDIR)/client/Input.pmod
+	$(INSTALL) -m644 services/search.pike $(DESTDIR)/$(STEAMDIR)/services/.
+	$(INSTALL) -m644 services/fulltext.pike $(DESTDIR)/$(STEAMDIR)/services/.
+	$(INSTALL) -m644 services/graphic.pike $(DESTDIR)/$(STEAMDIR)/services/.
+	$(INSTALL) -m644 services/tex.pike $(DESTDIR)/$(STEAMDIR)/services/.
+	$(INSTALL) -m644 services/spm.pike $(DESTDIR)/$(STEAMDIR)/services/.
+	test -f $(DESTDIR)/$(STEAMDIR)/services/smtp.pike && rm -f $(DESTDIR)/$(STEAMDIR)/services/smtp.pike || true
+
+	rm -f $(DESTDIR)/$(STEAMDIR)/spms/icons_doctypes*.spm
+	$(INSTALL) -m644 spms/icons_doctypes*.spm $(DESTDIR)/$(STEAMDIR)/spms/.
+	rm -f $(DESTDIR)/$(STEAMDIR)/spms/server_base*.spm
+	$(INSTALL) -m644 spms/server_base*.spm $(DESTDIR)/$(STEAMDIR)/spms/.
+	rm -f $(DESTDIR)/$(STEAMDIR)/spms/spm_support*.spm
+	$(INSTALL) -m644 spms/spm_support*.spm $(DESTDIR)/$(STEAMDIR)/spms/.
+
+	$(INSTALL) -m755 tools/create_cert.pike $(DESTDIR)/$(STEAMDIR)/tools 
+	$(INSTALL) -m775 tools/create_cert.pike.in $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m755 tools/import_users $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m755 tools/export_users $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/export_users.in $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m644 tools/applauncher.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/applauncher $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/check_database.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/checkout.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/checkout_web.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/client.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/dbContentReader.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/dbcopy $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/debug.pike.in $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/edit.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m644 tools/export $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/export.in $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/export.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/export-to-git.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/golden_ratio.vim $(DESTDIR)/$(STEAMDIR)/tools/golden_ratio.vim
+	$(INSTALL) -m775 tools/gtklogin.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m644 tools/import $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/import-from-git.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/import.in $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/import.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/import_users $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/ldd.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/logo.gif $(DESTDIR)/$(STEAMDIR)/tools/logo.gif
+	$(INSTALL) -m775 tools/maintainance.html $(DESTDIR)/$(STEAMDIR)/tools/maintainance.html
+	$(INSTALL) -m775 tools/maintainance.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/new_database.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/steam-shell.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m775 tools/tab_completion.pmod $(DESTDIR)/$(STEAMDIR)/tools/tab_completion.pmod
+	$(INSTALL) -m775 tools/upd-source.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m664 tools/watchforchanges.vim $(DESTDIR)/$(STEAMDIR)/tools/watchfromchanges.vim
+
+	$(INSTALL) -m755 sources/steam/steam $(DESTDIR)/$(STEAMDIR)/bin/$(STEAMBRAND)
+	$(INSTALL) -m755 start $(DESTDIR)/$(STEAMDIR)
+	$(INSTALL) -m755 stop $(DESTDIR)/$(STEAMDIR)
+	$(INSTALL) -m755 setup $(DESTDIR)/$(STEAMDIR)/bin
+	$(INSTALL) -m644 loader.pike $(DESTDIR)/$(STEAMDIR)
+	$(INSTALL) -m644 config.pike $(DESTDIR)/$(STEAMDIR)
+	$(INSTALL) -m755 version $(DESTDIR)/$(STEAMDIR)
+	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/bin/$(STEAMBRAND)-shell
+	test -f $(DESTDIR)/$(STEAMDIR)/bin/$(STEAMBRAND)-backup || $(INSTALL) -m755 backup $(DESTDIR)/$(STEAMDIR)/bin/$(STEAMBRAND)-backup
+	mypwd=`pwd` && cd $(DESTDIR)/$(STEAMDIR) && tar -xpf $$mypwd/__tmp.tar 
+	-cd $(DESTDIR)/$(STEAMDIR); find . -type d -name CVS -exec rm -fr {} \;
+	ln -f -s @PIKE@ $(DESTDIR)/$(STEAMDIR)/$(STEAMBRAND) || true
+
+	#remove old stuff
+	test -e $(DESTDIR)/$(STEAMDIR)/server/libraries/xslt.pmod.so && rm $(DESTDIR)/$(STEAMDIR)/server/libraries/xslt.pmod.so ||true
+	test -e $(DESTDIR)/$(STEAMDIR)/server/classes/Bug.pike && rm $(DESTDIR)/$(STEAMDIR)/server/classes/Bug.pike || true
+	test -e $(DESTDIR)/$(STEAMDIR)/server/factories/BugFactory.pike && rm $(DESTDIR)/$(STEAMDIR)/server/factories/BugFactory.pike || true
+	test -e $(DESTDIR)/$(STEAMDIR)/server/classes/DocWiki.pike && rm $(DESTDIR)/$(STEAMDIR)/server/classes/DocWiki.pike || true
+	test -e $(DESTDIR)/$(CONFIGDIR)/config.tmp && rm $(DESTDIR)/$(CONFIGDIR)/config.tmp ||true
+	test -e $(DESTDIR)/$(CONFIGDIR)/config.template && rm $(DESTDIR)/$(CONFIGDIR)/config.template ||true
+	test -e $(DESTDIR)/$(CONFIGDIR)/mount.txt && rm $(DESTDIR)/$(CONFIGDIR)/mount.txt ||true
+	test -e $(DESTDIR)/$(CONFIGDIR)/mount.tmp && rm $(DESTDIR)/$(CONFIGDIR)/mount.tmp ||true
+	rm -f $(DESTDIR)/$(LOGDIR)/*_?.log  # remove old log files
+	rm -f $(DESTDIR)/$(LOGDIR)/smtp.pike.log* # remove old smtp service logs
+
+	test -d $(DESTDIR)/$(STEAMDIR)/server/dev || mkdir -p $(DESTDIR)/$(STEAMDIR)/server/dev
+
+	rm __tmp.tar
+
+install-cert:
+	@PIKE@ tools/create_cert.pike --file=$(DESTDIR)/$(CONFIGDIR)/steam.cer
+
+check-install-cert:
+	test -f $(DESTDIR)/$(CONFIGDIR)/steam.cer || test -f $(DESTDIR)/$(CONFIGDIR)/steam.crt || @PIKE@ tools/create_cert.pike --file=$(DESTDIR)/$(CONFIGDIR)/steam.cer
+
+install-php:
+	$(DESTDIR)/$(STEAMDIR)/steam tools/ldd.pike /usr/local/bin/php $(DESTDIR)/$(STEAMDIR)/server/cgi
+
+null:
+	mknod $(DESTDIR)/$(STEAMDIR)/server/dev/null c 1 3 || true
+	chown root:root $(DESTDIR)/$(STEAMDIR)/server/dev/null || true
+	chmod 666 $(DESTDIR)/$(STEAMDIR)/server/dev/null || true
+
+etc: 
+	tar -cf __etc.tar /etc/resolv.conf
+	echo "Copying System files for Sandbox"
+	mypwd=`pwd`; cd $(DESTDIR)/$(STEAMDIR)/server && tar -xf $$mypwd/__etc.tar 
+	rm __etc.tar
+
+devices: 
+	mkdir -p $(DESTDIR)/$(STEAMDIR)/server/dev || true
+	cp -a /dev/random $(DESTDIR)/$(STEAMDIR)/server/dev/random ||true
+	cp -a /dev/urandom $(DESTDIR)/$(STEAMDIR)/server/dev/urandom ||true
+	mkdir -p $(DESTDIR)/$(STEAMDIR)/var/run/mysqld || true
+	cp -a /var/run/mysqld/mysqld.sock $(DESTDIR)/$(STEAMDIR)/var/run/mysqld/mysqld.sock || true
+
+linstall:
+	$(INSTALL) sources/libxslt/libxslt.so server/libraries/xslt.so
+	$(INSTALL) sources/_XML/xml.so server/libraries/xml.so
+	$(INSTALL) sources/_XML/AbstractCallbacks.pike server/libraries/AbstractCallbacks.pike
+	rm steam || true
+	ln -s @PIKE@ steam || true
+	cp steam.cer config/steam.cer || true
+
+install_steam: force
+	for a in @DIRS@; do ( cd $$a && $(MAKE) $(MAKE_FLAGS) install); done
+
+clean: force
+	for a in @DIRS@; do ( cd $$a && [ -e Makefile ] && $(MAKE) $(MAKE_FLAGS) clean ); done
+	rm -rf server/libraries/AbstractCallbacks.pike server/libraries/*.so
+
+distclean: clean force
+	for a in @DIRS@; do ( cd $$a && [ -e Makefile ] && $(MAKE) $(MAKE_FLAGS) distclean ); done
+	rm -rf spm/configure spm/config.log spm/config.status spm/spm spm/aclocal.m4 spm/autom4te.cache
+	rm -rf start setup version backup
+	rm -rf distrib/generic/init.d/steam distrib/generic-lsb/init.d/steam distrib/redhat/init.d/steam distrib/suse/init.d/steam setup
+	rm -rf tools/import tools/export tools/export_users tools/debug.pike tools/create_cert.pike
+	rm -rf server/include/configure.h
+	rm -rf depcomp missing mkinstalldirs
+	rm -rf aclocal.m4 autom4te.cache configure config.log config.status Makefile
