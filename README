@@ -1,7 +1,15 @@
 BRANCH OVERVIEW
 ===============
 
-steam-2.9-source is an archive of the source that our server is built with.
-ekita-devel is the binary-build that we are currently running made from that source.
+steam-2.9-source is an archive of the original unmodified source that our server is built with.
+societyserver-devel is the build that we are currently running made from that source.
 
-because there is no official public steam repository at the moment, we are collecting our patches in a repository in our binary-build, so that they can be merged into a steam source repository at a later time.
+because there is no official public steam repository at the moment, we are
+collecting our patches in a repository in our binary-build, so that they can be
+merged into a steam source repository at a later time.
+
+societyserver-source is a branch with our patches merged on top of steam-2.9-source
+
+steam-packages contains the old sTeam webinterface
+
+any other branches are temporary and should be ignored.
