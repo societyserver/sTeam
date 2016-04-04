@@ -464,15 +464,17 @@ int list(string what)
   string a="";
   if(sizeof(display)==0)
     toappend = "There are no "+what+" in this room\n";
-  else
-    toappend = "Here is a list of all "+what+" in the current room\n";
-  foreach(display,string str)
-  {
-    a=a+(str+"\n");
-    if(str=="Invalid command")
+  else if(display[0]=="Invalid command")
     {
       flag=1;
-      write(str+"\n");
+      write(display[0]+"\n");
+    }
+  else
+  {
+    toappend = "Here is a list of all "+what+" in the current room\n";
+    foreach(display,string str)
+    {
+      a=a+(str+"\n");
     }
   }
   if(flag==0)
