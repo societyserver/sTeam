@@ -468,7 +468,7 @@ int list(string what)
     toappend = "Here is a list of all "+what+" in the current room\n";
   foreach(display,string str)
   {
-    a=a+(str+"    ");
+    a=a+(str+"\n");
     if(str=="Invalid command")
     {
       flag=1;
@@ -476,7 +476,11 @@ int list(string what)
     }
   }
   if(flag==0)
-    write(toappend+a+"\n\n");
+    {
+      write(toappend+"\n");
+      write(sprintf("%#-80s",a));
+      write("\n");
+    }
   return 0;
 }
 
