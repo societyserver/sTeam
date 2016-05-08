@@ -702,8 +702,9 @@ int create_ob(string type,string name)
     data = ([ "link_to":link_to ]);
   }
   object myobj = create_object(type,name,desc,data);
-  if(type=="Room")
+  if(type=="Room" || type=="Container")
     myobj->move(OBJ(getpath()));
+  
 
   return 0;
 }
