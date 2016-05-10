@@ -548,16 +548,8 @@ int goto_room(string where)
     pathobj = OBJ(where);
     if(!pathobj)    //Relative room checking
     {
-      if(getpath()[-1]==47)    //check last "/"
-      {
-        pathobj = OBJ(getpath()+where);
-        where=getpath()+where;
-      }
-      else
-      {
-        pathobj = OBJ(getpath()+"/"+where);
-        where=getpath()+"/"+where;
-      }
+      pathobj = OBJ(getpath()+"/"+where);
+      where=getpath()+"/"+where;
     }
     roomname = pathobj->query_attribute("OBJ_NAME");
     string factory = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
@@ -628,10 +620,7 @@ int look(string|void str)
 int take(string name)
 {
     string fullpath="";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+name;
-    else
-      fullpath = getpath()+"/"+name;
+    fullpath = getpath()+"/"+name;
     object orig_file = OBJ(fullpath);
     if(orig_file)
     {
@@ -647,10 +636,7 @@ int take(string name)
 int gothrough(string gatename)
 {
     string fullpath = "";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+gatename;
-    else
-      fullpath = getpath()+"/"+gatename;
+    fullpath = getpath()+"/"+gatename;
     object gate = OBJ(fullpath);
     if(gate)
     {
@@ -676,10 +662,7 @@ int gothrough(string gatename)
 int delete(string file_cont_name)
 {
   string fullpath="";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+file_cont_name;
-  else
-      fullpath = getpath()+"/"+file_cont_name;
+  fullpath = getpath()+"/"+file_cont_name;
   if(OBJ(fullpath))
     return 0;
   return 0;
@@ -712,10 +695,7 @@ int create_ob(string type,string name)
 int peek(string container)
 {
   string fullpath = "";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+container;
-  else
-      fullpath = getpath()+"/"+container;
+  fullpath = getpath()+"/"+container;
   string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
   if(pathfact=="Room.factory")
   {
@@ -763,10 +743,7 @@ int inventory()
 int editfile(string filename)
 {
   string fullpath = "";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+filename;
-  else
-      fullpath = getpath()+"/"+filename;
+  fullpath = getpath()+"/"+filename;
   string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
   if(pathfact=="Document.factory")
     applaunch(OBJ(fullpath),exitnow);
