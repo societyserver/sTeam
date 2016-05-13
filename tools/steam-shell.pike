@@ -681,11 +681,13 @@ int create_ob(string type,string name,string destination)
   string desc = readln->read("How would you describe it?\n");
   mapping data = ([]);
   type = String.capitalize(type);
+  if(destination == ".")
+    destination = getpath();
   if(type=="Exit")
   {
     object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
-    object exit_from = OBJ(getpath());
-    data = ([ "exit_from":exit_from, "exit_to":exit_to ]);
+//    object exit_from = OBJ(getpath());
+    data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
   }
   else if(type=="Link")
   {
@@ -693,13 +695,15 @@ int create_ob(string type,string name,string destination)
     data = ([ "link_to":link_to ]);
   }
   object myobj = create_object(type,name,desc,data);
-  if(type=="Room" || type=="Container"){
+/*  if(type=="Room" || type=="Container"){
     if(destination==".")
       myobj->move(OBJ(getpath()));
     else
       myobj->move(OBJ(destination));
   }
-  
+ */
+  if(!(type == "Exit"))
+    myobj->move(OBJ(destination));
 
   return 0;
 }
