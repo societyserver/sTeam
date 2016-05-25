@@ -151,6 +151,7 @@ array edit(object obj)
 
   object editor=Process.create_process(command,
                                      ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
+  editor.wait();
   return ({ editor, dir+"/"+filename });
 } 
 
