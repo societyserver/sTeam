@@ -151,7 +151,6 @@ array edit(object obj)
 
   object editor=Process.create_process(command,
                                      ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
-  editor.wait();
   return ({ editor, dir+"/"+filename });
 } 
 
@@ -186,7 +185,7 @@ int applaunch(object obj, function exit_callback)
 
   send_message(sprintf("(opened %O %s)\n", obj, file));
   call_out(upload, 1, editor, file, file_stat(file)->mtime, obj, xslobj, exit_callback);
-
+  editor.wait();
 //  signal(signum("SIGINT"), prompt);
   return -1;
 }
