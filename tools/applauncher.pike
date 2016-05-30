@@ -128,6 +128,7 @@ void upload(object editor, array(string) filearr ,array(int) last_mtimearr, arra
 
 void update(array(object) obj)
 {
+  newfileobjarr = allocate(sizeof(obj));
   for(int j = 0; j < sizeof(obj); j++)
     newfileobjarr[j] = obj[j];
 }
