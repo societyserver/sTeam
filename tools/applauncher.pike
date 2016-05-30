@@ -21,171 +21,226 @@
 constant cvs_version="$Id: applauncher.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
 //before using this file, patch the paths for watchforchanges.vim and golden_ratio.vim
-object newfileobj;
-string content;
+array(object) newfileobjarr;
+array(string) contentarr;
 int i=1;
-int j=1;
+int k=1;
 int count=0;
 int set=0;
 string dir;
-string debugfile;
+array(string) debugfilearr;
+array(string) olderrorsarr;
 
-void upload(object editor, string file, int last_mtime, object obj, object xslobj, function|void exit_callback, string|void olderrors)
+void upload(object editor, array(string) filearr ,array(int) last_mtimearr, array(object) objarr, array(object) xslobjarr, function|void exit_callback)
 {
   int exit_status = editor->status();
-  object new_stat = file_stat(file);
-  int new_mtime;
-  string newcontent;
-  string oldcontent = obj->get_content();  //currently changing 
-
-  if((content!=oldcontent)&&(oldcontent!=("sTeam connection lost."||""))&&obj&&(i==1))
-  {
+  int size = sizeof(filearr);
+  array(object) new_statarr = allocate(size);
+  array(int) new_mtimearr = allocate(size);
+  array(string) new_errorarr = allocate(size);
+  for(int j=0;j<size;j++){
+    new_statarr[j] = file_stat(filearr[j]);
+    string newcontentx;
+    string oldcontentx = objarr[j]->get_content();
+    if((contentarr[j]!=oldcontentx)&&(oldcontentx!=("sTeam connection lost."||""))&&objarr[j]&&(i==1))
+    {
     i=0;
-    send_message("File changed on server.\n");
-//Not needed -    Stdio.write_file(file, oldcontent||"", 0600);
-    last_mtime = new_stat->mtime;
-  }
-  if (!new_stat)
-    send_message(sprintf("%s is gone!", file));
+    send_message("File changed on server.\n",debugfilearr[j]);
+    last_mtimearr[j] = new_statarr[j]->mtime;
+    }
 
-  if (new_stat && new_stat->mtime > last_mtime)
-  {
-    new_mtime = new_stat->mtime;
-    newcontent = Stdio.read_file(file);
-    if (!stringp(newcontent))
-      send_message(sprintf("failed to read %s", file));
-  }
+    if (!new_statarr[j])
+      send_message(sprintf("%s is gone!", filearr[j]),debugfilearr[j]);
 
-  if (stringp(newcontent) && newcontent != content && oldcontent!="sTeam connection lost.")
-  {
-    last_mtime=new_mtime;
-    content = newcontent;  //update initial content to new after saving
-    mixed result=obj->set_content(newcontent);
+    if (new_statarr[j] && new_statarr[j]->mtime > last_mtimearr[j])
+    {
+    new_mtimearr[j] = new_statarr[j]->mtime;
+    newcontentx = Stdio.read_file(filearr[j]);
+    if (!stringp(newcontentx))
+      send_message(sprintf("failed to read %s", filearr[j]),debugfilearr[j]);
+    }
+
+
+    if (stringp(newcontentx) && newcontentx != contentarr[j] && oldcontentx!="sTeam connection lost.")
+    {
+    last_mtimearr[j]=new_mtimearr[j];
+    contentarr[j] = newcontentx;  //update initial content to new after saving
+    mixed result=objarr[j]->set_content(newcontentx);
     string message=sprintf("File saved - upload: %O\n", result);
-    olderrors = UNDEFINED;
-    send_message(message);
+    olderrorsarr[j] = UNDEFINED;
+    send_message(message,debugfilearr[j]);
     count=0;  //so that compile status can be rewritten for newfile
-    if (xslobj)
+    if (xslobjarr[j])
     {
-      result=xslobj->load_xml_structure();
-      message=sprintf("%O: load xml struct: %O", xslobj, result);
-      send_message(message);
+      result=xslobjarr[j]->load_xml_structure();
+      message=sprintf("%O: load xml struct: %O", xslobjarr[j], result);
+      send_message(message,debugfilearr[j]);
     }
-  }
-  if(oldcontent=="sTeam connection lost.")
-  {
-    if(j==1){
-      send_message("Disconnected\n");
-      j--;
     }
-      if(newfileobj)
-      {
-        send_message("Connected back\n");
-        obj = newfileobj;
-      }
-  }
 
-  if (exit_status != 2)
-  {
-    if(obj->get_class()=="DocLpc")  //if pike script .
+    if(oldcontentx=="sTeam connection lost.")
     {
-      array errors = obj->get_errors();
-      string newerrors = sprintf("%O", errors);
-      if (newerrors != olderrors)
+    if(k==1){
+      send_message("Disconnected\n",debugfilearr[j]);
+      k--;
+    }
+      if(newfileobjarr[j])
       {
-        olderrors = newerrors;
-        send_message("-----------------------------------------\n");
+        send_message("Connected back\n",debugfilearr[j]);
+        objarr[j] = newfileobjarr[j];
+      }
+    }
+
+    if (exit_status != 2)
+    {
+    if(objarr[j]->get_class()=="DocLpc")  //if pike script .
+    {
+      array errors = objarr[j]->get_errors();
+ //     string newerrors = sprintf("%O", errors);
+      new_errorarr[j] = sprintf("%O", errors);
+      if (new_errorarr[j] != olderrorsarr[j])
+      {
+        olderrorsarr[j] = new_errorarr[j];
+        send_message("-----------------------------------------\n",debugfilearr[j]);
         if(errors==({}))
-          send_message("Compiled successfully\n");
+          send_message("Compiled successfully\n",debugfilearr[j]);
         else
         {
           foreach(errors, string err)
-            send_message(err);
-          send_message("Compilation failed\n");
+            send_message(err,debugfilearr[j]);
+          send_message("Compilation failed\n",debugfilearr[j]);
         }
-        send_message("-----------------------------------------\n");
+        send_message("-----------------------------------------\n",debugfilearr[j]);
       }
     }
-    call_out(upload, 1, editor, file, new_mtime, obj, xslobj, exit_callback, olderrors);
-  }
+    }
   else if (exit_callback)
   {
     exit_callback(editor->wait());
-//    exit(1);  
+    exit(1);  
   }
+  
+  }
+  if(exit_status !=2)
+    call_out(upload, 1, editor, filearr, new_mtimearr, objarr, xslobjarr, exit_callback);
 }
 
 
-void update(object obj)
+void update(array(object) obj)
 {
-  newfileobj = obj;
+  newfileobjarr = allocate(sizeof(obj));
+  for(int j = 0; j < sizeof(obj); j++)
+    newfileobjarr[j] = obj[j];
 }
 
-array edit(object obj)
+array edit(array(object) objarr)
 {
 #if constant(Crypto.Random)
   dir="/tmp/"+(MIME.encode_base64(Crypto.Random.random_string(10), 1)-("/"))+System.getpid();
 #else
    dir="/tmp/"+(MIME.encode_base64(Crypto.randomness.pike_random()->read(10), 1)-("/"))+System.getpid();
 #endif
-  string filename=obj->get_object_id()+"-"+obj->get_identifier();
+  int size = sizeof(objarr); //get the number of files
+  contentarr=allocate(size); //made content global, this is content when vim starts and remains same. oldcontent keeps changing in upload function.
+  debugfilearr=allocate(size);
+  array(string) filenamearr = allocate(size);
 
-  debugfile = filename+"-disp";
+
   mkdir(dir, 0700);
-  content=obj->get_content();  //made content global, this is content when vim starts and remains same. oldcontent keeps changing in upload function.
-  //werror("%O\n", content);
-  Stdio.write_file(dir+"/"+filename, content||"", 0600);
-  
-  Stdio.write_file(dir+"/"+debugfile, "This is your log window\n", 0600);
+
+  //get the filename and debugfile name for all the files
+  //also get content for all the files
+  //initialize the files
+
+  for(int j = 0; j < size; j++){
+    filenamearr[j] = objarr[j]->get_object_id()+"-"+objarr[j]->get_identifier();
+    debugfilearr[j] = filenamearr[j]+"-disp";
+    contentarr[j] = objarr[j]->get_content();
+    filenamearr[j]=dir+"/"+filenamearr[j];
+    Stdio.write_file(filenamearr[j], contentarr[j]||"", 0600);
+    debugfilearr[j]=dir+"/"+debugfilearr[j];
+    Stdio.write_file(debugfilearr[j], "This is your log window\n", 0600);
+  }
+
+  string comm;//command in string form
   array command;
+  
   //array command=({ "screen", "-X", "screen", "vi", dir+"/"+filename });
   //array command=({ "vim", "--servername", "VIM", "--remote-wait", dir+"/"+filename });
-    string enveditor = getenv("EDITOR");
-  string name = dir+"/"+debugfile;
-  if((enveditor=="VIM")||(enveditor=="vim"))    //full path to .vim files to be mentioned
-    command=({ "vim","-S", "/usr/local/lib/steam/tools/watchforchanges.vim", "-S", "/usr/local/lib/steam/tools/golden_ratio.vim", dir+"/"+filename, "-c","set splitbelow", "-c"  ,sprintf("split|view %s",name), "-c", "wincmd w"});
-  else if(enveditor=="emacs")
-    command=({ "emacs", "--eval","(add-hook 'emacs-startup-hook 'toggle-window-spt)", "--eval", "(global-auto-revert-mode t)", dir+"/"+filename, dir+"/"+debugfile, "--eval", "(setq buffer-read-only t)", "--eval", sprintf("(setq frame-title-format \"%s\")",obj->get_identifier()) , "--eval", "(windmove-up)", "--eval", "(enlarge-window 5)"});
-  else
-    command=({ "vi","-S", "/usr/local/lib/steam/tools/watchforchanges.vim", "-S", "/usr/local/lib/steam/tools/golden_ratio.vim", dir+"/"+filename, "-c","set splitbelow", "-c"  ,sprintf("split|view %s",name), "-c", "wincmd w"});
+  
+  string enveditor = getenv("EDITOR");
+  
+  
+  if((enveditor=="VIM")||(enveditor=="vim")){    //full path to .vim files to be mentioned
+    comm="vim*-S*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit "+debugfilearr[0]+"|sp "+filenamearr[0];
+    if(size>1)
+      comm = add_file_name(comm,filenamearr[1..],debugfilearr[1..]);
+    }
+  else if(enveditor=="emacs"){
+    comm="emacs*--eval*(add-hook 'emacs-startup-hook 'toggle-window-spt)*--eval*(global-auto-revert-mode t)";
+    for(int j = 0;j<size;j++){
+      comm=comm+"*"+filenamearr[j]+"*"+debugfilearr[j];
+    }
+    comm=comm+"*--eval*(setq buffer-read-only t)*--eval*"+sprintf("(setq frame-title-format \"%s\")",objarr[0]->get_identifier()) +"*--eval*(windmove-up)*--eval*(enlarge-window 5)";
+    }
+  else{
+     comm="vi*-S*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit "+debugfilearr[0]+"|sp "+filenamearr[0];
+
+    if(size>1)
+      comm = add_file_name(comm,filenamearr[1..],debugfilearr[1..]);
+    }
+    
+    command=comm/"*"; // convert the string to array.
 
   object editor=Process.create_process(command,
                                      ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
-  return ({ editor, dir+"/"+filename });
+  return ({ editor,filenamearr});
 } 
 
-int send_message(string message)
-{
-/*
-  if (getenv("STY"))
-      Process.create_process(({ "screen", "-X", "wall", message }));
-  else if (getenv("TMUX"))
-      Process.create_process(({ "tmux", "display-message", message }));
-  else
-      werror("%s\n", message);
-*/
-  Stdio.append_file(dir+"/"+debugfile, message||"", 0600); //result buffer
+string add_file_name(string command,array(string) arr,array(string) debug){
+  int size = sizeof(arr);
+  for(int j=0;j<size;j++){
+    command = command+"|tabe "+debug[j]+"|sp "+arr[j];
+  }
+  return command;
 }
 
-int applaunch(object obj, function exit_callback)
+int send_message(string message,string debugfile)
 {
-  object xslobj;
-  if(obj->get_identifier()[sizeof(obj->get_identifier())-8..]==".xsl.xml")
-  {
-    string xslname=
-      obj->get_identifier()[..sizeof(obj->get_identifier())-9]+ ".xsl";
-    xslobj=obj->get_environment()->get_object_byname(xslname);
+  Stdio.append_file(debugfile, message||"", 0600); //result buffer
+}
+
+int applaunch(array(object) objarr,function exit_callback)
+{
+  int size = sizeof(objarr);
+  array(object) xslobjarr = allocate(size);
+  for(int j = 0; j < size; j++){
+    if(objarr[j]->get_identifier()[sizeof(objarr[j]->get_identifier())-8..]==".xsl.xml")
+    {
+    string xslnamex=
+      objarr[j]->get_identifier()[..sizeof(objarr[j]->get_identifier())-9]+ ".xsl";
+    xslobjarr[j]=objarr[j]->get_environment()->get_object_byname(xslnamex);
+    }
   }
 
   object editor;
-  string file;
-  [editor, file]=edit(obj);
-  mixed status;
+  array(string) filearr;
+  [editor,filearr]=edit(objarr);
+ 
+ // mixed status;
   //while(!(status=editor->status()))
+ 
+  array(int) filestatarr = allocate(size);
+  for(int j = 0; j < size; j++){
+    send_message(sprintf("(opened %O %s)\n", objarr[j], filearr[j]),debugfilearr[j]);
+    filestatarr[j] =  file_stat(filearr[j])->mtime;
+  }
 
-  send_message(sprintf("(opened %O %s)\n", obj, file));
-  call_out(upload, 1, editor, file, file_stat(file)->mtime, obj, xslobj, exit_callback);
+  olderrorsarr = allocate(size);
+  call_out(upload, 1, editor, filearr, filestatarr, objarr, xslobjarr, exit_callback);
+  editor.wait();
 
 //  signal(signum("SIGINT"), prompt);
+  
   return -1;
 }
