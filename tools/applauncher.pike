@@ -172,7 +172,7 @@ array edit(array(object) objarr)
   
   
   if((enveditor=="VIM")||(enveditor=="vim")){    //full path to .vim files to be mentioned
-    comm="vim*-S*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit "+debugfilearr[0]+"|sp "+filenamearr[0];
+    comm="vim*-S*/usr/local/lib/steam/tools/steam-shell.vim*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit "+debugfilearr[0]+"|sp "+filenamearr[0];
     if(size>1)
       comm = add_file_name(comm,filenamearr[1..],debugfilearr[1..]);
     }
@@ -184,7 +184,7 @@ array edit(array(object) objarr)
     comm=comm+"*--eval*(setq buffer-read-only t)*--eval*"+sprintf("(setq frame-title-format \"%s\")",objarr[0]->get_identifier()) +"*--eval*(windmove-up)*--eval*(enlarge-window 5)";
     }
   else{
-     comm="vi*-S*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit "+debugfilearr[0]+"|sp "+filenamearr[0];
+     comm="vi*-S*/usr/local/lib/steam/tools/steam-shell.vim*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit "+debugfilearr[0]+"|sp "+filenamearr[0];
 
     if(size>1)
       comm = add_file_name(comm,filenamearr[1..],debugfilearr[1..]);

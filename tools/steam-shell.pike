@@ -208,13 +208,12 @@ int main(int argc, array(string) argv) {
 
             if (sizeof (argv) > 1) {
 	    	string cmd = "";
-          //write("\n %s %d",cmd , sizeof(argv));	
-        	if (sizeof (argv) >= 3){
+          	if (sizeof (argv) >= 3){
 			for (int i = 1; i<sizeof (argv); i++)
 	        	        cmd += argv[i] + " ";
 	        }
 		else cmd += argv[1];
-            write(cmd);
+            write("Command: %s",cmd);
 	    write("\n");
             exec_command(cmd);
             exit(0);

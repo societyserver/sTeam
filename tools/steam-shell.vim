@@ -1,7 +1,20 @@
 ﻿command! Steam call Steamshell() 
+"Note: This file needs to be included in the applauncher.pike in the function call edit(array(object))
+"Function Usage
+"Enter the Vi insert mode (i) and type the commands
+"Enter the Vi visual mode(v). Select the command using the Vi Visual mode.
+"Now type : . This would display :'<,'>
+"Press <Ctrl + U>
+"Now enter the command Steam
+"It would prompt you to enter steam password. After this the output of the command shall be displayed in a the log buffer which would be opened in a new tab.
 
 function! Steamshell()
-    execute "tabnew | r! ~/Desktop/sTeamOrig/tools/steam-shell.pike". " ".@*
+"tab sb 2 displays the contents of the buffer 2 in a new tab.
+"In this case the buffer 2 stands for the log buffer.
+"In future if a vim script is included the buffer number should be noted down for the log buffer using :ls and the below command should be modified to include the changes in it.
+"The contents selected in the Vi visual mode are savied in the "* register. The contents of this register are appended as an argument to the command which is simulated using execute command.
+"r!  Execute {cmd} and insert its standard output below the cursor or the specified line. 
+    execute "tab sb 2 | r! ~/Desktop/sTeamOrig/tools/steam-shell.pike". " ".@*
     silent !clear
 endfunction﻿
 
