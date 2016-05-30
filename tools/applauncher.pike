@@ -175,12 +175,13 @@ array edit(array(object) objarr)
     if(size>1)
       comm = add_file_name(comm,filenamearr[1..],debugfilearr[1..]);
     }
-  else if(enveditor=="emacs")
+  else if(enveditor=="emacs"){
     comm="emacs*--eval*(add-hook 'emacs-startup-hook 'toggle-window-spt)*--eval*(global-auto-revert-mode t)";
     for(int j = 0;j<size;j++){
       comm=comm+"*"+filenamearr[j]+"*"+debugfilearr[j];
     }
     comm=comm+"*--eval*(setq buffer-read-only t)*--eval*"+sprintf("(setq frame-title-format \"%s\")",objarr[0]->get_identifier()) +"*--eval*(windmove-up)*--eval*(enlarge-window 5)";
+    }
   else{
      comm="vi*-S*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit "+debugfilearr[0]+"|sp "+filenamearr[0];
 
