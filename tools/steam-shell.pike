@@ -205,7 +205,6 @@ int main(int argc, array(string) argv) {
             handler->add_input_line("start backend");
             string command;
             //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
-
             if (sizeof (argv) > 1) {
 	    	string cmd = "";
           	if (sizeof (argv) >= 3){
@@ -494,10 +493,11 @@ int list(string what) {
         }
     }
     if (flag == 0) {
-
+    mapping mp = Process.run("tput cols");
+    int screenwidth = (int)mp["stdout"];
         write(toappend + "\n");
-                write(sprintf("%#-80s", a));
-                write("\n");
+	write("%-$*s\n", screenwidth,a);
+        write("\n");
     }
     return 0;
 }
