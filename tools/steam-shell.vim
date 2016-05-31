@@ -3,8 +3,7 @@
 "Function Usage
 "Enter the Vi insert mode (i) and type the commands
 "Enter the Vi visual mode(v). Select the command using the Vi Visual mode.
-"Now type : . This would display :'<,'>
-"Press <Ctrl + U>
+"Now type : y To yank the text
 "Now enter the command Steam
 "It would prompt you to enter steam password. After this the output of the command shall be displayed in a the log buffer which would be opened in a new tab.
 
@@ -13,8 +12,8 @@ function! Steamshell()
 "In this case the buffer 2 stands for the log buffer.
 "In future if a vim script is included the buffer number should be noted down for the log buffer using :ls and the below command should be modified to include the changes in it.
 "The contents selected in the Vi visual mode are savied in the "* register. The contents of this register are appended as an argument to the command which is simulated using execute command.
-"r!  Execute {cmd} and insert its standard output below the cursor or the specified line. 
-    execute "tab sb 2 | r! /usr/local/lib/steam/tools/steam-shell.pike". " ".@*
+"r!  Execute {cmd} and insert its standard output below the cursor or the specified line. 	
+    execute "tab sb 2 | r! ~/home/Desktop/sTeamAjinkya/tools/steam-shell.pike". " ".@0
     silent !clear
 endfunction﻿
 
