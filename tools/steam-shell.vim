@@ -12,8 +12,9 @@ function! Steamshell()
 "In this case the buffer 2 stands for the log buffer.
 "In future if a vim script is included the buffer number should be noted down for the log buffer using :ls and the below command should be modified to include the changes in it.
 "The contents selected in the Vi visual mode are savied in the "* register. The contents of this register are appended as an argument to the command which is simulated using execute command.
-"r!  Execute {cmd} and insert its standard output below the cursor or the specified line. 	
-    execute "tab sb 2 | r! ~/home/Desktop/sTeamAjinkya/tools/steam-shell.pike". " ".@0
+"r!  Execute {cmd} and insert its standard output below the cursor or the specified line. 
+    let @0 = substitute(@0, '\n', " ", "g")
+    execute "tab sb 2 | r! /usr/local/lib/steam/tools/steam-shell.pike". " ".@0
     silent !clear
 endfunction﻿
 
