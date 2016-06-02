@@ -40,6 +40,8 @@ int main(int argc, array(string) argv) {
     all = all + (([
             ]));
     myobj = ({create_object("Document", "Command.pike", "Holds the commands which the user will type.")});
+    //Variable from applauncher.pike to exit the script after execution.
+    exitcall=1;
     return applaunch(myobj, demo);
 
 }
