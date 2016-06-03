@@ -442,12 +442,13 @@ array(string) get_commit_files(string gitpath, int ver) //returns list of files 
   return  (result/"\n")-({""});
 }
 
-int create_document(string name, string path) //only for text/plain right now; path is where the object has to be created
+int create_document(string name, string path) // path is where the object has to be created
 {
   if(path[-1]=='/' && sizeof(path)!=1)    //remove last "/"
       path=path[ .. (sizeof(path)-2)];
   object document_factory = _Server->get_factory("Document");
-  mapping map = (["url":path+"/"+name, "mimetype":"text/plain"]);
+// /server/factories/DocumentFactory.pike see the execute function for more details.
+  mapping map = (["url":path+"/"+name, "mimetype":"auto-detect"]);
   object doc = document_factory->execute(map);
   if(!doc)
     return 0;

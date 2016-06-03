@@ -522,9 +522,12 @@ array(string) get_list(string what, string | object | void lpath) {
             string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
                     string obj_name = obj->query_attribute("OBJ_NAME");
                     //    write("normally : "+obj_name+"\n");
-            if (fact_name == "Document.factory")
+            if (fact_name == "Document.factory"){
+//Check the Mimetype for the object created		    
+//write("Object: %s Mimetype: %s \n",obj_name,obj->query_attribute("DOC_MIME_TYPE"));
                     documents = Array.push(documents, obj_name);
                     //          write(obj_name+"\n");
+}
             else if (fact_name == "Exit.factory") {
                 string fullgate = obj_name + " : " + obj->get_exit()->query_attribute("OBJ_NAME");
                         gates = Array.push(gates, fullgate);
