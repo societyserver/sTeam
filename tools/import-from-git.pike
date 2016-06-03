@@ -541,9 +541,12 @@ string git_version_content(string path, int version, int wasempty)
        path=path[ .. (sizeof(path)-2)];
     string dir = dirname(path);
     string filename = basename(path);
-    Stdio.File output = Stdio.File();
-    Process.create_process(({ "git", "show", "HEAD~"+ver+":./"+filename }), ([ "env":getenv(), "cwd":dir , "stdout":output->pipe() ]))->wait();
-    string result = output->read();
+//  Stdio.File output = Stdio.File();
+//  Process.create_process(({ "git", "show", "HEAD~"+ver+":./"+filename }), ([ "env":getenv(), "cwd":dir , "stdout":output->pipe() ]))->wait();
+    mapping mp1 = Process.run(({"git", "show", "HEAD~" + ver + ":./" + filename}), ([ "env" : getenv(), "cwd" : dir]));
+//  write(mp1["stdout"]);
+//  string result = output->read();
+    string result = mp1["stdout"];
     return result;
 }
 /*
