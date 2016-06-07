@@ -19,7 +19,7 @@
 
 constant cvs_version="$Id: client_base.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
-inherit "kernel/sockets";
+inherit "kernel/socket";
 inherit "net/coal/binary";
 
 #include <coal.h>
