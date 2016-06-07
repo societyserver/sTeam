@@ -157,12 +157,15 @@ void ping()
 {
   call_out(ping, 10);
   mixed a = conn->send_command(14, 0);
+
+
   if(a=="sTeam connection lost.")
   {
       flag = 0;
       readln->set_prompt(getpath()+"~ ");
-      conn = ((program)"client_base.pike")();
-      conn->close();
+    //  conn = ((program)"client_base.pike")();
+        conn = ((program)compile_file("../server/client_base.pike"))();
+        conn->close();
       if(conn->connect_server(options->host, options->port))
       {
           remove_call_out(ping);
@@ -247,7 +250,6 @@ int main(int argc, array(string) argv)
 
         if(result!=0)
         {
-          write(result[0]);
           write("Wrong command.||maybe some bug.\n");
         }
       }
@@ -289,7 +291,7 @@ mapping init(array argv)
   if(!options->user)
     options->user="root";
   if(!options->port)
-    options->port=1900;
+    options->port=1999;
   else
     options->port=(int)options->port;
 
@@ -301,8 +303,8 @@ mapping init(array argv)
   master()->add_program_path(server_path+"/spm/");
   master()->add_program_path(server_path+"/server/net/coal/");
 
-  conn = ((program)"client_base.pike")();
-
+//  conn = ((program)"client_base.pike")();
+    conn = ((program)compile_file("../server/client_base.pike"))();
   int start_time = time();
 
   werror("Connecting to sTeam server...\n");
@@ -315,8 +317,8 @@ mapping init(array argv)
     werror("Failed to connect... still trying ... (server running ?)\n");
     sleep(10);
   }
- 
   ping();
+
   if(lower_case(options->user) == "guest")
     return options;
 

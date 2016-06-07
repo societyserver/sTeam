@@ -1,4 +1,4 @@
-/* Copyright (C) 2000-2004  Thomas Bopp, Thorsten Hampel, Ludger Merkens
+/* Copyright (C) 2000-2005  Thomas Bopp, Thorsten Hampel, Ludger Merkens
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -14,17 +14,26 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  * 
- * $Id: client_base.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $
+ * $Id: client_base.pike,v 1.2 2008/07/17 16:45:00 astra Exp $
  */
 
-constant cvs_version="$Id: client_base.pike,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
+constant cvs_version="$Id: client_base.pike,v 1.2 2008/07/17 16:45:00 astra Exp $";
 
 inherit "kernel/sockets";
 inherit "net/coal/binary";
 
 #include <coal.h>
+#include <classes.h>
 #include <macros.h>
 #include <client.h>
+
+#undef CLIENT_DEBUG
+
+#ifdef CLIENT_DEBUG
+#define DEBUG_CLIENT(s, args...) werror(s+"\n", args)
+#else
+#define DEBUG_CLIENT(s, args...)
+#endif
 
 private static mapping        mObjects; // objects
 private static string      sLastPacket; // last package while communicating
@@ -37,21 +46,20 @@ private static int            iWaitTID;
         static int     __downloadBytes;
                int     __last_response;
         static function  downloadStore;
+        static mapping         mEvents;
 
 private static mixed          miResult;
 private static int           miCommand;
 
-int            flag=1;
 static Thread.Mutex    cmd_mutex =     Thread.Mutex();
-static Thread.Mutex    newmut =     Thread.Mutex();
 static Thread.Condition cmd_cond = Thread.Condition();
 static Thread.Queue      resultQueue = Thread.Queue();
-static Thread.MutexKey newmutkey;
-static Thread.Condition    th = Thread.Condition();
+static Thread.Queue         cmdQueue = Thread.Queue();
 static object                                cmd_lock;
 
 string connected_server;
 int connected_port;
+
 
 class SteamObj 
 {
@@ -63,10 +71,6 @@ class SteamObj
   
   int get_object_id() {
     return oID;
-  }
-
-  object get_environment() {
-    return send_command(COAL_COMMAND, ({ "get_environment" }));
   }
 
   int get_object_class() {
@@ -81,8 +85,9 @@ class SteamObj
     }
     return cl;
   }
-  int status() {
-    return 1; //PSTAT_SAVE_OK
+
+  object get_environment() {
+    return send_command(COAL_COMMAND, ({ "get_environment" }));
   }
 
   string get_identifier() {
@@ -98,6 +103,10 @@ class SteamObj
 
   void create(int id) {
     oID = id;
+  }
+
+  int status() {
+    return 1; // PSTAT_SAVE_OK
   }
 
   int no_wait(void|int(0..1) _nowait)
@@ -116,28 +125,12 @@ class SteamObj
     return search(functions, fun);
   }
 
-  array _indices()
-  {
-    mixed result = catch {
-    if(this_object()->__indices)
-      return this_object()->__indices();
-    };
-    if(result!=0)
-      return ::_indices();
-  }
-
   string _sprintf()
   {
-    mixed describe="";
+    return "OBJ#"+oID;
+    string describe="";
     catch{ describe=`->("describe")(); };
-    string format = "";
-    if ( stringp(connected_server) ) format += "%s:";
-    else format += "%O:";
-    if ( intp(connected_port) ) format += "%d/";
-    else format += "%O/";
-    if ( stringp(describe) ) format += "%s";
-    else format += "%O";
-    return sprintf( format, connected_server, connected_port, describe );
+    return sprintf("%s:%d/%s", connected_server, connected_port, describe);
   }
 
   function `->(string fun) 
@@ -146,25 +139,25 @@ class SteamObj
       return ::`->(fun);
     else
     {
-      if ( fun == "exec_code" )
+      if(fun == "exec_code")
 	return 0;
-      else if ( fun == "serialize_coal" )
+      else if (fun=="serialize_coal")
 	return 0;
       if(!functions->fun)
-        functions[fun]=lambda(mixed|void ... args)
-                       { 
+        functions[fun]=lambda(mixed|void ... args) { 
                          return send_cmd(oID, fun, args, nowait); 
                        };
       return functions[fun];
     }
   }
-  function find_function(string fun) {
-    if(!functions->fun)
-      functions[fun]=lambda(mixed|void ... args)
-		     { 
-		       return send_cmd(oID, fun, args, nowait); 
-		     };
-    return functions[fun];
+  
+  function find_function(string fun) 
+  {
+      if(!functions->fun)
+        functions[fun]=lambda(mixed|void ... args) { 
+                         return send_cmd(oID, fun, args, nowait); 
+                       };
+      return functions[fun];
   }
 };
 
@@ -177,11 +170,17 @@ class SteamObj
  * @author <a href="mailto:astra@upb.de">Thomas Bopp</a>) 
  * @see 
  */
-int set_object(int|object id)
+int set_object(int|object|string id)
 {
     int oldID = iOID;
 
-    if ( objectp(id) )
+    if ( stringp(id) ) {
+	if ( objectp(mVariables[id]) )
+	    iOID = mVariables[id]->get_object_id();
+	else
+	    iOID = mVariables[id];
+    }
+    else if ( objectp(id) )
 	iOID = id->get_object_id();
     else
 	iOID = id;
@@ -196,17 +195,30 @@ int set_object(int|object id)
  * @author Thomas Bopp (astra@upb.de) 
  * @see 
  */
-static object find_obj(int id)
+static object find_obj(int|string id)
 {
-    if ( !mObjects[id] ) {
-	mObjects[id] = SteamObj(id);
+    int oid;
+    if ( stringp(id) ) {
+      object fp = send_cmd( 0, "get_module", "filepath:tree" );
+      object obj = send_cmd( fp, "path_to_object", id );
+      if ( !objectp(obj) ) return 0;
+      oid = obj->get_object_id();
+    }
+    else oid = id;
+
+    if ( !mObjects[oid] ) {
+	mObjects[oid] = SteamObj(oid);
 	//werror("Created:"+master()->describe_object(mObjects[id])+"\n");
     }
-    return mObjects[id];
+    return mObjects[oid];
 }
 
-object find_object(int id) { return find_obj(id); }
+object find_object(int|string id) { return find_obj(id); }
 
+mixed get_variable(string key)
+{
+  return mVariables[key];
+}
 
 /**
  *
@@ -220,25 +232,28 @@ int connect_server(string server, int port)
 {
     iTID = 1;
     iOID = 0;
-
     sLastPacket     = "";
     __downloadBytes =  0;
     mVariables      = ([ ]);
     mObjects        = ([ ]);
     aEvents         = ({ });
+    mEvents         = ([ ]);
     
-    open_socket();
-    set_blocking();
-    if ( connect(server, port) ) {
-	MESSAGE("Connected to " + server + ":"+port +"\n");
+    sock->open_socket();
+    sock->set_blocking();
+    if ( sock->connect(server, port) ) {
+    SSL.sslfile(sock,SSL.context(),1,1);
+    werror("here");
+  MESSAGE("Connected to " + server + ":"+port +"\n");
 	connected_server=server;
 	connected_port=port;
 	__last_response = time(); // timestamp of last response	
 	__connected = 1;
-	set_buffer(65536, "r");
-	set_buffer(65536, "w");
+	sock->set_buffer(65536, "r");
+	sock->set_buffer(65536, "w");
 	set_blocking();
 	thread_create(read_thread);
+	thread_create(handle_commands);
 	return 1;
     }
     return 0;
@@ -254,15 +269,25 @@ static int write(string str)
     return ::write(str);
 }
 
+static void handle_command(string func, mixed args) { }
 
-/**
- *
- *  
- * @param 
- * @return 
- * @author <a href="mailto:astra@upb.de">Thomas Bopp</a>) 
- * @see 
- */
+void handle_commands() 
+{
+  mixed res;
+  while ( res = cmdQueue->read() ) {
+      if ( arrayp(res) ) {
+	if ( arrayp(res[1]) ) {
+	  mixed err = catch {
+	    handle_command(res[1][0], res[1][1]);
+	  };
+	  if ( err != 0 )
+	    werror("Fatal error while calling command: %O\n%O", err[0], err[1]);
+	}
+      }
+  }
+}
+
+
 void read_callback(object id, string data)
 {
     __last_response = time();
@@ -284,18 +309,26 @@ void read_callback(object id, string data)
 	    resultQueue->write(sLastPacket);
 	return;
     }
-
-    mixed res = receive_binary(sLastPacket);
-    if ( arrayp(res) ) {
+    mixed res;
+    res = receive_binary(sLastPacket);
+    while ( arrayp(res) ) {
 	int tid = res[0][0];
 	int cmd = res[0][1];
-
+	
+	if ( cmd == COAL_EVENT ) {
+	    DEBUG_CLIENT("Event %O", res[1]);
+	}
+	DEBUG_CLIENT("RCVD Package(%d): Waiting for %d\n", tid, iWaitTID);
 	sLastPacket = res[2];
 	if ( tid == iWaitTID ) {
 	    miResult = res[1];
 	    miCommand = res[0][1];
 	    resultQueue->write(miResult);
 	}
+	else if ( cmd == COAL_COMMAND ) {
+	    cmdQueue->write(res);
+	}
+	res = receive_binary(sLastPacket);
     }
 }
 
@@ -365,46 +398,31 @@ void handle_error(mixed err)
  */
 mixed send_command(int cmd, array(mixed) args, int|void no_wait)
 {
-//    newmutkey = newmut->lock(1);
     if ( !no_wait ) iWaitTID = iTID;
     aEvents  = ({ });
+
     
     string msg = coal_compose(iTID++, cmd, iOID, 0, args);
     string nmsg = copy_value(msg);
 
     send_message(nmsg);
     if ( no_wait ) return 0;
-    
-    mixed result=0;
-    Thread.Thread(check_thread); 
-    result = resultQueue->read();
-    th->signal();
-//    newmutkey = 0;
+     
+    mixed result = resultQueue->read();
     if ( miCommand == COAL_ERROR ) {
 	handle_error(result);
     }
     return result;
 }
 
-void check_thread()
+void subscribe_event(object obj, int eid, function callback)
 {
-    int start_time = time();
-    th->wait(cmd_mutex->lock(), 10);
-    if((time()-start_time) >=10){
-      resultQueue->write("sTeam connection lost.");
-      flag=0;
-    }
-    else
-        flag=1;
+  int oid = set_object(obj);
+  send_command(COAL_SUBSCRIBE, ({ eid }) );
+  mEvents[eid] = callback;
+  set_object(oid);
 }
-/**
- *
- *  
- * @param 
- * @return 
- * @author <a href="mailto:astra@upb.de">Thomas Bopp</a>) 
- * @see 
- */
+
 mixed send_cmd(object|int obj, string func, mixed|void args, void|int no_wait)
 {
     int oid = set_object(obj);
@@ -412,20 +430,11 @@ mixed send_cmd(object|int obj, string func, mixed|void args, void|int no_wait)
 	args = ({ });
     else if ( !arrayp(args) )
 	args = ({ args });
-    
     mixed res = send_command(COAL_COMMAND, ({ func, args }), no_wait);
     set_object(oid);
     return res;
 }
 
-/**
- *
- *  
- * @param 
- * @return 
- * @author Thomas Bopp (astra@upb.de) 
- * @see 
- */
 mixed 
 login(string name, string pw, int features, string|void cname, int|void novars)
 {
@@ -440,17 +449,17 @@ login(string name, string pw, int features, string|void cname, int|void novars)
 	    send_command(COAL_LOGIN,({ name, pw, cname,CLIENT_FEATURES_ALL, __id}));
     
     if ( arrayp(loginData) && sizeof(loginData) >= 9 ) {
-	mVariables["user"] = iOID;
-	foreach ( indices(loginData[8]), string key ) {
-	    mVariables[key] = loginData[8][key];
-	}
-	mVariables["rootroom"] = loginData[6];
+      mVariables["user"] = iOID;
+      foreach ( indices(loginData[8]), string key ) {
+	mVariables[key] = loginData[8][key];
+      }
+      mVariables["rootroom"] = loginData[6];
 	sLastPacket = "";
 	if ( novars != 1 ) {
-	    foreach ( values(loginData[9]), object cl ) {
-		set_object(cl->get_object_id());
-		mVariables[send_cmd(cl,"get_identifier")] = cl;
-	    }
+	  foreach ( values(loginData[9]), object cl ) {
+	    set_object(cl->get_object_id());
+	    mVariables[send_cmd(cl,"get_identifier")] = cl;
+	  }
 	}
 	return name;
     }
@@ -459,7 +468,6 @@ login(string name, string pw, int features, string|void cname, int|void novars)
 
 mixed logout()
 {
-    werror("logout()!!!\n\n");
     __connected = 0;
     write(coal_compose(0, COAL_LOGOUT, 0, 0, 0));
 }
@@ -514,4 +522,95 @@ void write_error2file(mixed|string err, int recursive) {
 }
 
 
+/**
+ * Creates a new document object on the server.
+ *
+ * @param name the name of the new object
+ * @param where the container or room in which to create the new object
+ * @param mimetype (optional) the mime type of the new object (if not
+ *   specified, the mime type will be determined by the object name)
+ * @param content (optional) the content for the new object (if not specified,
+ *   the new object will not have any content)
+ * @return the newly created object (if an error occurs, an exception will be
+ *   thrown instead)
+ */
+object create_document ( string name, object where, void|string mimetype, void|string content )
+{
+  if ( !stringp(name) || sizeof(name) < 1 )
+    throw( ({ "No name specified !" }) );
+  if ( !objectp(where) )
+    throw( ({ "No room or container specified !" }) );
+  object obj = send_cmd( where, "get_object_byname", name );
+  if ( objectp(obj) )
+    throw( ({ "Object \""+name+"\" already found !" }) );
+  object factory = send_cmd( 0, "get_factory", CLASS_DOCUMENT );
+  if ( !objectp(factory) )
+    throw( ({ "Document factory not found on server !" }) );
+  mapping params = ([ "name":name ]);
+  if ( stringp(mimetype) && sizeof(mimetype) > 0 )
+    params["mimetype"] = mimetype;
+  obj = send_cmd( factory, "execute", params );
+  if ( !objectp(obj) )
+    throw( ({ "Could not create document !" }) );
+  send_cmd( obj, "move", where );
+  
+  if ( stringp(content) )
+    send_cmd( obj, "set_content", content );
+  
+  return obj;
+}
 
+
+/**
+ * Creates a new room object on the server.
+ *
+ * @param name the name of the new object
+ * @param where the room in which to create the new object
+ * @return the newly created object (if an error occurs, an exception will be
+ *   thrown instead)
+ */
+object create_room ( string name, object where )
+{
+  if ( !stringp(name) || sizeof(name) < 1 )
+    throw( ({ "No name specified !" }) );
+  if ( !objectp(where) )
+    throw( ({ "No room specified !" }) );
+  object obj = send_cmd( where, "get_object_byname", name );
+  if ( objectp(obj) )
+    throw( ({ "Object \""+name+"\" already found !" }) );
+  object factory = send_cmd( 0, "get_factory", CLASS_ROOM );
+  if ( !objectp(factory) )
+    throw( ({ "Room factory not found on server !" }) );
+  obj = send_cmd( factory, "execute", ([ "name":name ]) );
+  if ( !objectp(obj) )
+    throw( ({ "Could not create room !" }) );
+  send_cmd( obj, "move", where );
+  return obj;
+}
+
+/**
+ * Creates a new container object on the server.
+ *
+ * @param name the name of the new object
+ * @param where the container or room in which to create the new object
+ * @return the newly created object (if an error occurs, an exception will be
+ *   thrown instead)
+ */
+object create_container ( string name, object where )
+{
+  if ( !stringp(name) || sizeof(name) < 1 )
+    throw( ({ "No name specified !" }) );
+  if ( !objectp(where) )
+    throw( ({ "No room or container specified !" }) );
+  object obj = send_cmd( where, "get_object_byname", name );
+  if ( objectp(obj) )
+    throw( ({ "Object \""+name+"\" already found !" }) );
+  object factory = send_cmd( 0, "get_factory", CLASS_CONTAINER );
+  if ( !objectp(factory) )
+    throw( ({ "Container factory not found on server !" }) );
+  obj = send_cmd( factory, "execute", ([ "name":name ]) );
+  if ( !objectp(obj) )
+    throw( ({ "Could not create container !" }) );
+  send_cmd( obj, "move", where );
+  return obj;
+}
