@@ -50,8 +50,8 @@ private static Thread.Queue closeQueue = Thread.Queue();
 
 int __id;
 
-void connect_ssl(object sock_file){
-    ::create(sock_file,SSL.context(),1,1);
+void connect_ssl(){
+    ::create(sock,SSL.context(),1,1);
 }
 
 /**

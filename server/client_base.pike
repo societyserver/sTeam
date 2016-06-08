@@ -242,7 +242,7 @@ int connect_server(string server, int port)
     sock->open_socket();
     sock->set_blocking();
     if ( sock->connect(server, port) ) {
-    connect_ssl(sock);
+    connect_ssl();
   MESSAGE("Connected to " + server + ":"+port +"\n");
 	connected_server=server;
 	connected_port=port;
