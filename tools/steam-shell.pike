@@ -53,7 +53,9 @@ room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
 gothrough       Go through a gate.
+create_user     Create a user. You can create a user only if you are a root user.
 create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
+delete          Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
@@ -86,9 +88,15 @@ hilfe           Help for Hilfe commands.
                     case "gothrough":
                         write("Go through a gate.\n");
                         return;
-                    case "create":
+                    case "create_user":
+                        write("Create a user. You can create a user only if you are a root user.\n");
+                        return;
+	            case "create":
                         write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
                         return;
+                    case "delete":
+                        write("Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.\n");
+                        return; 
                     case "peek":
                         write("Peek through a container.\n");
                         return;
@@ -252,7 +260,9 @@ void exec_command(string command) {
             "look" : look,
             "take" : take,
             "gothrough" : gothrough,
-            "create" : create_ob,
+            "create_user" : create_user,
+	    "create" : create_ob,
+            "delete" : delete,
             "peek" : peek,
             "inventory" : inventory,
             "i" : inventory,
@@ -372,7 +382,9 @@ mapping assign(object conn, object _Server, object users) {
             "groups" : _Server->get_module("groups"),
             "me" : users->lookup(options->user),
             "edit" : applaunch,
-            "create" : create_object,
+            "create_user" : create_user,
+	    "create" : create_object,
+            "delete" : delete,
             "list" : list,
             "goto" : goto_room,
             "title" : set_title,
@@ -675,10 +687,10 @@ int gothrough(string gatename) {
 int delete(string file_cont_name) {
     string fullpath = "";
             fullpath = getpath() + "/" + file_cont_name;
-    if (OBJ(fullpath))
-
-        return 0;
-        return 0;
+    if(OBJ(fullpath))
+      OBJ(fullpath)->delete(); 
+    else write("Object does not exist.\n") ;  
+    return 0;
     }
 
 int create_ob(string type, string name, string destination) {
@@ -708,6 +720,16 @@ int create_ob(string type, string name, string destination) {
 
         return 0;
     }
+
+int create_user(string uname, string pass, string email){
+
+    if(options->user=="root")
+        _Server->get_factory("User")->execute( (["name": uname, "pw":pass, "email": email]) );
+    else
+        write("You cannot create a user. You need to be a root user.\n");
+    
+    return 0;
+}
 
 int peek(string container) {
     string fullpath = "";
