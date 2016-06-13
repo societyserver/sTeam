@@ -205,7 +205,8 @@ int main(int argc, array(string) argv) {
             handler->add_input_line("start backend");
             string command;
             //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
-
+            // To run commands from the steam-shell.pike by passing them as argument to the script, note that the special characters which have been entered in the bash shell. In order to escape the special characters, pass them through the ''. The character's would lose their special meaning.
+	    // eg: ./steam-shell.pike '_Server->get_module("users")->get_users();'
             if (sizeof (argv) > 1) {
 	    	string cmd = "";
           	if (sizeof (argv) >= 3){
