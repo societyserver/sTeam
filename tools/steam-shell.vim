@@ -14,7 +14,7 @@ function! Steamshell()
 "The contents selected in the Vi visual mode are savied in the "* register. The contents of this register are appended as an argument to the command which is simulated using execute command.
 "r!  Execute {cmd} and insert its standard output below the cursor or the specified line. 
     let @0 = substitute(@0, '\n', " ", "g")
-    execute "tab sb 1 | r! /usr/local/lib/steam/tools/steam-shell.pike". " ".@0
+    execute "tab sb 1 | r! /usr/local/lib/steam/tools/steam-shell.pike". " '".@0."'"
     silent !clear
 endfunction﻿
 
