@@ -185,7 +185,7 @@ int applaunch(object obj, function exit_callback)
 
   send_message(sprintf("(opened %O %s)\n", obj, file));
   call_out(upload, 1, editor, file, file_stat(file)->mtime, obj, xslobj, exit_callback);
-  editor.wait();
+  editor->wait();
 //  signal(signum("SIGINT"), prompt);
   return -1;
 }
