@@ -244,3 +244,74 @@ int applaunch(array(object) objarr,function exit_callback)
   
   return -1;
 }
+
+
+int vim_upload(array(string) filearr, array(object) objarr, array(object) xslobjarr, function|void exit_callback)
+{
+  int size = sizeof(filearr);
+  string newcontentx;
+  array(object) new_statarr = allocate(size);
+  array(string) new_errorarr = allocate(size);
+  debugfilearr=allocate(size);
+  for(int j=0;j<size;j++){
+    debugfilearr[j]=filearr[j]+"-disp";
+    new_statarr[j] = file_stat(filearr[j]);
+    
+    string oldcontentx = objarr[j]->get_content();
+    
+    if (!new_statarr[j])
+      send_message(sprintf("%s is gone!", filearr[j]),debugfilearr[j]);
+
+    if (new_statarr[j])
+    {
+    newcontentx = Stdio.read_file(filearr[j]);
+    if (!stringp(newcontentx))
+      send_message(sprintf("failed to read %s", filearr[j]),debugfilearr[j]);
+    }
+
+
+    if (stringp(newcontentx) && oldcontentx!="sTeam connection lost.")
+    {
+      mixed result=objarr[j]->set_content(newcontentx);
+      string message=sprintf("File saved - upload: %O\n", result);
+      send_message(message,debugfilearr[j]);
+      count=0;  //so that compile status can be rewritten for newfile
+      if (xslobjarr[j])
+      {
+        result=xslobjarr[j]->load_xml_structure();
+        message=sprintf("%O: load xml struct: %O", xslobjarr[j], result);
+        send_message(message,debugfilearr[j]);
+      }
+    }
+
+    if(oldcontentx=="sTeam connection lost.")
+    {
+    if(k==1){
+      send_message("Disconnected\n",debugfilearr[j]);
+      k--;
+    }
+      if(newfileobjarr[j])
+      {
+        send_message("Connected back\n",debugfilearr[j]);
+        objarr[j] = newfileobjarr[j];
+      }
+    }
+
+    
+    if(objarr[j]->get_class()=="DocLpc")  //if pike script .
+    {
+      array errors = objarr[j]->get_errors();
+      new_errorarr[j] = sprintf("%O", errors);
+      send_message("-----------------------------------------\n",debugfilearr[j]);
+      if(errors==({}))
+        send_message("Compiled successfully\n",debugfilearr[j]);
+      else
+      {
+        foreach(errors, string err)
+          send_message(err,debugfilearr[j]);
+        send_message("Compilation failed\n",debugfilearr[j]);
+      }
+      send_message("-----------------------------------------\n",debugfilearr[j]);
+    }
+  }
+}
