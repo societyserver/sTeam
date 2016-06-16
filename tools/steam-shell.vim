@@ -32,14 +32,16 @@ function! Open(name)
 	execute "tabnew |r! /usr/local/lib/steam/tools/steam-shell.pike"." '".code."'"
 	silent !clear
 	"extract the file name from the result
+	"copy the results of pike script to the variable result
 	%y+
 	let result = @+
-	"echo result
+	"search for Result: and copy that line to register A
 	let @a=''
 	g/Result:/y A
 	let result = @a
+	"split the line based on space, the name of the file is the second element
 	let x = split(result,"\"")
-	"echo x
+	"close the file containing the result of the pike script
 	q!
 	execute("tabnew ".x[1]."-disp"."|sp ".x[1])
 	
