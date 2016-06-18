@@ -1,4 +1,5 @@
-﻿command! Steam call Steamshell() 
+﻿command! Steam call Steamshell()
+command! Q call Close()
 "Note: This file needs to be included in the applauncher.pike in the function call edit(array(object))
 "Function Usage
 "Enter the Vi insert mode (i) and type the commands
@@ -18,3 +19,11 @@ function! Steamshell()
     silent !clear
 endfunction﻿
 
+function! Close()
+	if(tabpagenr('$')>1)
+		tabclose
+	else
+		q
+		q
+	endif
+endfunction
