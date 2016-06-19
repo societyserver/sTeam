@@ -33,8 +33,9 @@ function! Open(name)
 	silent !clear
 	"extract the file name from the result
 	"copy the results of pike script to the variable result
-	%y+
-	let result = @+
+	let @a=''
+	%ya
+	let result = @a
 	"search for Result: and copy that line to register A
 	let @a=''
 	g/Result:/y A
