@@ -104,6 +104,8 @@ install: install_steam force
 	$(INSTALL) -m775 tools/tab_completion.pmod $(DESTDIR)/$(STEAMDIR)/tools/tab_completion.pmod
 	$(INSTALL) -m775 tools/upd-source.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m664 tools/watchforchanges.vim $(DESTDIR)/$(STEAMDIR)/tools/watchfromchanges.vim
+        $(INSTALL) -m664 tools/steam-shell.vim $(DESTDIR)/$(STEAMDIR)/tools/steam-shell.vim
+	$(INSTALL) -m664 tools/VisTeam.pike $(DESTDIR)/$(STEAMDIR)/tools
 
 	$(INSTALL) -m755 sources/steam/steam $(DESTDIR)/$(STEAMDIR)/bin/$(STEAMBRAND)
 	$(INSTALL) -m755 start $(DESTDIR)/$(STEAMDIR)
