@@ -23,7 +23,10 @@ function! Close()
 	if(tabpagenr('$')>1)
 		tabclose
 	else
-		q
-		q
+		let x = bufnr('$')
+		while x>0
+			let x -=1
+			q
+		endwhile
 	endif
 endfunction
