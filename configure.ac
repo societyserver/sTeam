@@ -77,7 +77,7 @@ for path in $DEFPIKE $PREFIXPIKE/bin/pike $pathpike/bin/pike /usr/local/bin/pike
         PIKE_INCLUDE_DIR="`$PIKE --show-paths 2>&1| grep -i 'include path'|head -1 | sed -e 's/.*: //'`"
         PIKE_INCLUDE_DIRS="-I${PIKE_INCLUDE_DIR} -I${PIKE_MODULE_DIR} -I`echo "$PIKE_MODULE_DIR" | sed -e 's,lib/pike/modules,include/pike,' -e 's,lib/modules,include/pike,'`"
 
-	for b in include/pike pike/${PIKE_VERSION}/include/pike include/pike${PIKE_VERSION}/include include/pike${PIKE_VERSION} pike/${PIKE_FULL_VERSION}/include/pike include/pike/${PIKE_FULL_VERSION} include/pike/pike${PIKE_VERSION} lib/pike/${PIKE_FULL_VERSION}/include/pike; do
+	for b in include/pike pike/${PIKE_VERSION}/include/pike include/pike${PIKE_VERSION}/include include/pike${PIKE_VERSION} pike/${PIKE_FULL_VERSION}/include/pike include/pike/${PIKE_FULL_VERSION} include/pike/pike${PIKE_VERSION} lib/pike/${PIKE_FULL_VERSION}/include/pike include/pike${PIKE_VERSION}/pike; do
 	    PIKE_C_INCLUDE=${a}/${b}
 	    AC_MSG_CHECKING("C_INCLUDE_DIR=${PIKE_C_INCLUDE}")
 	    if test -f $PIKE_C_INCLUDE/global.h; then
@@ -254,7 +254,7 @@ AC_MSG_RESULT(Found libxslt library in $xsllibdir)
 
 AC_MSG_CHECKING(Looking for libxml2 library)
 xmllibdir=no
-for a in /opt/local/lib64 /opt/local/lib /sw/lib64 /sw/lib /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib /opt/lib64 /opt/lib /lib64 /lib /opt/sfw/lib64 /opt/sfw/lib /usr/sfw/lib64 /usr/sfw/lib; do
+for a in /opt/local/lib64 /opt/local/lib /sw/lib64 /sw/lib /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib /opt/lib64 /opt/lib /lib64 /lib /opt/sfw/lib64 /opt/sfw/lib /usr/sfw/lib64 /usr/sfw/lib /usr/lib/i386-linux-gnu clear/usr/lib/x86_64-linux-gnu; do
 	if test -f ${a}/libxml2.so; then
 	   xmllibdir=${a}
 	fi
