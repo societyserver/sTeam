@@ -232,7 +232,7 @@ AC_HELP_STRING([--with-xslt-libdir[=xslt-dir]],[Use path for xslt library]),
 		fi
 ])
 if test $xsllibdir = no; then
-  for a in /opt/local/lib64 /opt/local/lib /sw/lib64 /sw/lib /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib /opt/lib64 /opt/lib /lib64 /lib /opt/sfw/lib64 /opt/sfw/lib /usr/sfw/lib64 /usr/sfw/lib; do
+  for a in /opt/local/lib64 /opt/local/lib /sw/lib64 /sw/lib /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib /opt/lib64 /opt/lib /lib64 /lib /opt/sfw/lib64 /opt/sfw/lib /usr/sfw/lib64 /usr/sfw/lib /usr/lib/i386-linux-gnu /usr/lib/x86_64-linux-gnu; do
 	if test -f ${a}/libxslt.so; then
 	   xsllibdir=${a}
 	   LIBS="-lxslt"
