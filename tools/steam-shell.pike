@@ -722,13 +722,16 @@ int create_ob(string type, string name, string destination) {
     }
 
 int create_user(string uname, string pass, string email){
-
-    if(options->user=="root")
-        _Server->get_factory("User")->execute( (["name": uname, "pw":pass, "email": email]) );
-    else
-        write("You cannot create a user. You need to be a root user.\n");
     
-    return 0;
+     if(options->user=="root"){
+         _Server->get_factory("User")->execute( (["name": uname, "pw":pass, "email": email]) );
+         _Server->get_module("users")->get_user(uname)->activate_user();
+         write("User: " + uname + " created successfully.\n");
+     }
+     else
+         write("You cannot create a user. You need to be a root user.\n");
+     
+     return 0;
 }
 
 int peek(string container) {
