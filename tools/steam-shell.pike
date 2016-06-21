@@ -52,6 +52,7 @@ create          Create an object (File/Container/Exit). Provide the full path of
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
+group           Use group commands. (list/join/leave)
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -93,6 +94,9 @@ hilfe           Help for Hilfe commands.
       return;
     case "edit":
       write("Edit a file in the current Room.\n");
+      return;
+    case "group":
+      write("Use group commands. (list/join/leave)");
       return;
     //Hilfe internal help
     case "me more":
@@ -216,6 +220,7 @@ int main(int argc, array(string) argv)
     "inventory"   : inventory,
     "i"           : inventory,
     "edit"        : editfile,
+    "group"       : group,
     ]);
 //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
   array(string) command_arr;
@@ -358,6 +363,7 @@ mapping assign(object conn, object _Server, object users)
     "look"        : look,
     "take"        : take,
     "gothrough"   : gothrough,
+    "group"       : group,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -388,6 +394,62 @@ mapping assign(object conn, object _Server, object users)
     "_CODER" : _Server->get_module("users")->lookup("coder"),
     ]);
 }
+
+void group(string command,void|string name)
+{
+  switch(command)
+  {
+    case "list":
+      mapping mp = Process.run("tput cols");
+      int screenwidth = (int)mp["stdout"];
+      string toappend="";
+      write("My groups\n");
+      array(object) joined_groups = me->get_groups();
+      foreach(joined_groups,object group)
+      {
+        toappend = toappend + group->get_name() +"\n";
+      }
+      write("%-$*s\n", screenwidth,toappend);
+      write("\nOther groups\n");
+      toappend="";
+      array(object) other_groups = _Server->get_module("groups")->get_groups();
+      foreach(other_groups,object group)
+      {
+        if(search(joined_groups,group)==-1)
+        toappend = toappend + group->get_name() + "\n";
+      }
+      write("%-$*s\n", screenwidth,toappend);
+      write("\n");
+      return;
+    case "join":
+      if(!stringp(name)){
+        write("group join <name of the group>");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      int result = group->add_member(me);
+      switch(result){
+        case 1:write("Joined group "+name+"\n");
+          break;
+        case 0:write("Couldn't join group "+name+"\n");
+          break;
+        case -1:write("pending\n");
+          break;
+        case -2:write("pending failed");
+          break;
+      }
+      return;
+    case "leave":
+      return;
+    default:
+      write("Group command: list/join/leave\n");
+  }
+}
+
 
 // create new sTeam objects
 // with code taken from the web script create.pike
@@ -688,6 +750,11 @@ int create_ob(string type,string name,string destination)
     object link_to = OBJ(readln->read("Where does the link lead?\n"));
     data = ([ "link_to":link_to ]);
   }
+  else if(type=="Group")
+  {
+    string parent = readln->read("Subgroup of?\n");
+    data = (["parentgroup":parent]);
+  }
   object myobj = create_object(type,name,desc,data);
 /*  if(type=="Room" || type=="Container"){
     if(destination==".")
@@ -696,9 +763,12 @@ int create_ob(string type,string name,string destination)
       myobj->move(OBJ(destination));
   }
  */
-  if(!(type == "Exit"))
+  if(!(type == "Exit" || type=="Group"))
     myobj->move(OBJ(destination));
-
+  if(type=="Group")
+  {
+    myobj->add_member(me);
+  }
   return 0;
 }
 
