@@ -30,6 +30,7 @@ int main(int argc, array(string) argv)
 }
 
 int commitcount = 0;
+string fromDir;
 void import_from_git(string from, string to)
 {
     int a=0;
@@ -38,16 +39,20 @@ void import_from_git(string from, string to)
     int isrootroom = 0;
     int flag_check=0;
     int i;
+    fromDir=from;
     if(check_steam_path(to)&&check_from_path(from))
     {
-      if(to[-1]=='/' && sizeof(to)!=1)    //remove last "/"
-        to=to[ .. (sizeof(to)-2)];
+//    if(to[-1]=='/' && sizeof(to)!=1)    //remove last "/"
+//      to=to[ .. (sizeof(to)-2)];
       if(from[-1]=='/')    //remove last "/"
       from=from[ .. (sizeof(from)-2)];
       string curfrom=from;
       string curto = to;
       int c=0;
       int num_versions = get_num_versions(from);
+      if(Stdio.is_file(from)){
+           string dir = dirname(from);
+       }
       write("Number of versions to check/import : %O\n",num_versions);
       array(string) all_files = get_all_affected(from,num_versions);
       if(!isrootroom||isrootroom)
@@ -79,11 +84,13 @@ void import_from_git(string from, string to)
           files = files - ({""});
           for(int j=0; j<sizeof(files); j++)
           {
-            curfrom = from+"/"+files[j];
-            curto = to+"/"+files[j];  //need to check whether this path exists, if not create files[j] inside to. Don't create now though. Only after checking all files.
+            curfrom = dirname(from)+"/"+files[j];
+	    if(Stdio.is_file(from) && to[-1]!='/')
+		curto = to;
+	    else                        
+                curto = to  + files[j];//need to check whether this path exists, if not create files[j] inside to. Don't create now though. Only after checking all files.
             if(!OBJ(curto)) //autocreate containers/files. -- this is done when to_import is iterated.
             {
-              write("Adding to to_import\n");
               to_import = to_import + ([ curto:(["gitpath":curfrom, "commitcount":commitcount, "empty":0]) ]); //this is a file not in sTeam, so handle creating it while iterating through to_import
               newfile_flag = 1;
               newfile_count++;
@@ -136,8 +143,9 @@ void import_from_git(string from, string to)
         for(int j=0; j<sizeof(files); j++)
           {
             write("setting content : "+files[j]+"\n");
-            curfrom = from+"/"+files[j];
-            curto = to+"/"+files[j];
+            curfrom = dirname(from)+"/"+files[j];
+            curto = dirname(to)+"/"+files[j];
+write("Curfrom : %s, Curto : %s\n", curfrom, curto);
             if(!OBJ(curto))
             {
               write("creating steam path : "+curto+"\n");
@@ -235,8 +243,10 @@ array get_steam_versions(string steampath)
 
 int check_from_path(string path)
 {
-  if(path[-1]=='/')    //remove last "/"
-      path=path[ .. (sizeof(path)-2)];
+//if(path[-1]=='/')    //remove last "/"
+//    path=path[ .. (sizeof(path)-2)];
+  if(Stdio.is_file(path))
+    path=dirname(path);
   Stdio.File output = Stdio.File();
   Process.create_process(({"git", "rev-parse", "--show-cdup"}), ([ "env":getenv(), "cwd":path , "stdout":output->pipe() ]))->wait();
   string result = output->read();
@@ -279,6 +289,9 @@ int check_steam_path(string path)
       return 1;
   if(path[-1]=='/')    //remove last "/"
       path=path[ .. (sizeof(path)-2)];
+  else if(path[-1] != '/' && Stdio.is_file(fromDir)){
+		path = dirname(path);
+	}
   int j=0;
   int i=0;
   string cur_path;
@@ -421,8 +434,13 @@ string get_steam_content(string steampath, int ver) //get the steam file's speci
 array(string) get_all_affected(string gitpath, int count)
 {
   Stdio.File output = Stdio.File();
+  string filename = "";
+  if(Stdio.is_file(gitpath)){
+    filename+=basename(gitpath);
+    gitpath=dirname(gitpath);
+  }
 //  Process.create_process(({ "git", "show", sprintf("%s=%s","--pretty","format:"), "--name-only","-"+(string)count }), ([ "env":getenv(), "cwd":gitpath , "stdout":output->pipe() ]))->wait();
-  Process.create_process(({"git", "ls-files" }), (["env":getenv(), "cwd":gitpath , "stdout":output->pipe() ]))->wait();
+  Process.create_process(({"git", "ls-files",filename }), (["env":getenv(), "cwd":gitpath , "stdout":output->pipe() ]))->wait();
   string result = output->read();
   array arr = result/"\n";
   arr = Array.uniq(arr)-({""});
@@ -437,7 +455,14 @@ array(string) get_commit_files(string gitpath, int ver) //returns list of files 
   int total = get_num_versions(options->src);
   string vers=(string)(total-(ver-1)-1);
   Stdio.File output = Stdio.File();
-  Process.create_process(({ "git", "show", sprintf("%s=%s","--pretty","format:"), "--name-only","HEAD~"+vers }), ([ "env":getenv(), "cwd":gitpath , "stdout":output->pipe() ]))->wait();
+  string filename = "";
+  if(Stdio.is_file(gitpath)){
+    filename+=basename(gitpath);
+    gitpath=dirname(gitpath);
+    Process.create_process(({"git", "show", sprintf("%s=%s", "--pretty", "format:"), "--name-only", "HEAD~" + vers, filename}), ([ "env" : getenv(), "cwd" : gitpath, "stdout" : output->pipe() ]))->wait();
+  }
+  else
+    Process.create_process(({"git", "show", sprintf("%s=%s", "--pretty", "format:"), "--name-only", "HEAD~" + vers}), ([ "env" : getenv(), "cwd" : gitpath, "stdout" : output->pipe() ]))->wait();
   string result = output->read();
   return  (result/"\n")-({""});
 }
@@ -479,6 +504,8 @@ int get_num_versions(string path)
       path=path[ .. (sizeof(path)-2)];
   Stdio.File output = Stdio.File();
 //  write("filename for get_num_versions is "+filename+"\n");
+  if(Stdio.is_file(path))
+    path=dirname(path);
   Process.create_process(({ "git", "rev-list", "HEAD", "--count" }), ([ "env":getenv(), "cwd":path , "stdout":output->pipe() ]))->wait();
   string result = output->read();
   return (int)result;
