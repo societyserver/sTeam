@@ -215,20 +215,27 @@ int main(int argc, array(string) argv) {
 	    readline_history = Stdio.Readline.History(512, history);
             readln->enable_history(readline_history);
             handler->add_input_line("start backend");
+	    write("User: " + options->user +"\n");
             string command;
             //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
 
             if (sizeof (argv) > 1) {
 	    	string cmd = "";
           	if (sizeof (argv) >= 3){
-			for (int i = 1; i<sizeof (argv); i++)
-	        	        cmd += argv[i] + " ";
-	        }
+			for (int i = 1; i<sizeof (argv); i++){
+	        	        if(argv[i]!=0){	        	        
+					if(i==sizeof(argv)-1) 
+						cmd += argv[i];
+					else cmd += argv[i] +" ";
+				}
+	        	}
+		}
 		else cmd += argv[1];
-            write("Command: %s",cmd);
-	    write("\n");
-            exec_command(cmd);
-            exit(0);
+                write("Command: %s",cmd);
+	        write("\n");
+                exec_command(cmd);
+                if(cmd!="")
+	                exit(0);
             }
     while ((command = readln->read(
             sprintf("%s", (handler->state->finishedp() ? getstring(1) : getstring(2)))))) {
