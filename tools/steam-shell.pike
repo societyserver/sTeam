@@ -49,7 +49,6 @@ room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
 gothrough       Go through a gate.
-User		User commands. Commands include creation, deletion and listing all users. Only for root user.
 create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
 delete          Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.
 peek            Peek through a container.
@@ -85,9 +84,6 @@ hilfe           Help for Hilfe commands.
                         return;
                     case "gothrough":
                         write("Go through a gate.\n");
-                        return;
-                   case "user":
-                        write("User commands. Commands include creation, deletion and listing all users. Only for root user.\n");
                         return;
  	            case "create":
                         write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
@@ -275,13 +271,14 @@ void exec_command(string command) {
             "look" : look,
             "take" : take,
             "gothrough" : gothrough,
-            "user" : user,
 	    "create" : create_ob,
             "delete" : delete,
             "peek" : peek,
             "inventory" : inventory,
             "i" : inventory,
             "edit" : editfile,
+            "join" : join,
+            "leave" : leave,
             ]);
 
             command_arr = command / " ";
@@ -397,7 +394,6 @@ mapping assign(object conn, object _Server, object users) {
             "groups" : _Server->get_module("groups"),
             "me" : users->lookup(options->user),
             "edit" : applaunch,
-            "user" : user,
 	    "create" : create_object,
             "delete" : delete,
             "list" : list,
@@ -640,6 +636,16 @@ array(string) get_list(string what,string|object|void lpath)
       }
     }
     break;
+    case "users":
+    {
+      array(object) users = _Server->get_module("users")->get_users();
+      foreach(users,object user)
+      {
+        string obj_name = user->get_user_name();
+        whatlist = Array.push(whatlist,obj_name);
+      }      
+    }
+    break;
     default:
       whatlist = ({"Invalid command"});
   }
@@ -775,23 +781,72 @@ int gothrough(string gatename)
     return 0;
 }
 
-int delete(string file_cont_name)
-{
-  string fullpath="";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+file_cont_name;
-  else
-      fullpath = getpath()+"/"+file_cont_name;
-  if(OBJ(fullpath))
+int delete(string type, string name) 
+{  
+    type = String.capitalize(type);
+    switch(type)
+    {
+      case "Container":
+      case "File":
+      case "Exit":
+      case "Gate":
+      case "Room":
+      {  
+        string fullpath = "";
+        fullpath = getpath() + "/" + name;
+        if(OBJ(fullpath)){
+          OBJ(fullpath)->delete(); 
+          write(type + ": "+ name + " deleted successfully.\n");
+        }
+        else write("Object does not exist.\n") ;  }
+    break;
+    case "User":
+      if(options->user!="root"){
+        write("You cannot create a user. You need to be a root user.\n");
+      return 0;
+      }
+      else{        
+        _Server->get_module("users")->get_user(name)->delete();
+        write("User: " + name + " deleted successfully.\n");    
+      return 0;
+      }
+    default:
+      write("Invalid Command. Enter the type of the object carefully.\n");
+    }
     return 0;
-  return 0;
 }
+
 
 int create_ob(string type,string name,string destination)
 {
-  string desc = readln->read("How would you describe it?\n");
   mapping data = ([]);
+  string desc;
   type = String.capitalize(type);
+  if(type=="User"){
+	if(options->user!="root"){
+        write("You cannot create a user. You need to be a root user.\n");
+        return 0;
+      }
+      else{
+        string pass = Input->read_password("Please enter the password for the user.",name);
+        write("Enter the email id for the user. ");
+        string email = readln->read();
+        _Server->get_factory("User")->execute( (["name": name, "pw":pass, "email": email]) );
+        _Server->get_module("users")->get_user(name)->activate_user();
+        write("User: " + name + " created successfully.\n");  
+        return 0;   
+      }
+  }  
+  if(type=="Group")
+  {
+    if(options->user != "root"){
+      write("Only a root user can create a group.\n");
+      return 0;
+    }
+    string parent = readln->read("Subgroup of?\n");
+    data = (["parentgroup":parent]);
+  } 
+  desc = readln->read("How would you describe it?\n");
   if(destination == ".")
     destination = getpath();
   if(type=="Exit")
@@ -805,12 +860,9 @@ int create_ob(string type,string name,string destination)
     object link_to = OBJ(readln->read("Where does the link lead?\n"));
     data = ([ "link_to":link_to ]);
   }
-  else if(type=="Group")
-  {
-    string parent = readln->read("Subgroup of?\n");
-    data = (["parentgroup":parent]);
-  }
-  object myobj = create_object(type,name,desc,data);
+  object myobj ;
+  if(type != "User")
+    myobj = create_object(type,name,desc,data);
 /*  if(type=="Room" || type=="Container"){
     if(destination==".")
       myobj->move(OBJ(getpath()));
@@ -824,50 +876,12 @@ int create_ob(string type,string name,string destination)
   {
     myobj->add_member(me);
   }
+  if(objectp(myobj))
+    write(type + ": " + name + " created successfully.\n");
+  else write(type + ": " + name + " not created.\n");
   return 0;
 }
 
-
-int user(string command, void|string uname, void|string pass, void|string email){
-
-    if(command == "list"){
-      mapping mp = Process.run("tput cols");
-      int screenwidth = (int)mp["stdout"];
-      string toappend="";
-      write("Users: \n");
-      array(object) users = _Server->get_module("users")->get_users();
-      foreach(users,object user)
-      {
-        toappend +=  user->get_user_name() + "\n";
-       }
-      write("%-$*s\n", screenwidth,toappend);
-      write("\n"); 
-     return 0;
-    }
-    else
-    {
-      if(options->user!="root"){
-        write("You cannot access the commands to create or delete users. You need to be a root user.\n");
-      }
-      else{
-        switch(command)
-        {
-         case "create":
-            _Server->get_factory("User")->execute( (["name": uname, "pw":pass, "email": email]) );
-            _Server->get_module("users")->get_user(uname)->activate_user();
-            write("User: " + uname + " created successfully.\n");
-         return 0;
-         case "delete":
-            _Server->get_module("users")->get_user(uname)->delete();
-            write("User: " + uname + " deleted successfully.\n");    
-         return 0;
-         default:
-         write("User commands. Commands include creation, deletion and listing all users.\n");
-        }
-      }
-    }
-    return 0;
-}
 
 
 int peek(string container)
