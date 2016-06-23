@@ -191,10 +191,8 @@ int main(int argc, array(string) argv)
     ({"nopath",Getopt.NO_ARG,({"-N","--no-path"})}),
     ));
     options += mkmapping(opt[*][0], opt[*][1]);
-    options->src = argv[-2];
-    options->dest = argv[-1];
     _Server=conn->SteamObj(0);
-    export_to_git(OBJ(options->src), options->dest, ({ OBJ("/home") }));
+    export_to_git(argv, ({ OBJ("/home") }));
 }
  
 int count=0;
@@ -246,24 +244,39 @@ string dir_check(string def, string dir)
   return "";
 }
  
-void git_create_branch(string to)
+void git_create_branch(array(string) argv, string to)
 {
     string cur_time = replace(Calendar.now()->set_timezone("UTC")->format_nice(),([":":"-" , " ":"-"]));
-    Process.create_process(({ "git", "checkout", "--orphan", cur_time }), ([ "cwd": to ]))->wait();
+    string branchname,branch_desc;
+    array(string) source = allocate(sizeof(argv)-2);
+    if(sizeof(argv)>3)
+      branchname = "MultipleSources-"+cur_time;
+    else 
+      branchname = OBJ(argv[-2])->query_attribute("OBJ_PATH")[1..]+"-"+cur_time;
+    for(int i =1; i < sizeof(argv)-1; i++)
+      source[i-1] = argv[i];       
+    Process.create_process(({ "git", "checkout", "--orphan", branchname }), ([ "cwd": to ]))->wait();
     Process.create_process(({ "git", "rm", "-rf", "."}),([ "cwd": to]))->wait();
+    branchname="branch."+branchname+".description";
+    branch_desc = "This branch contains the source folders: "+ String.implode_nicely(source);
+    Process.create_process(({"git", "config", branchname, branch_desc}),(["cwd": to]))->wait();
     dir_check("",to);
 }
 
-void export_to_git(object from, string to, void|array(object) exclude)
+void export_to_git(array(string) argv, void|array(object) exclude)
 {
     string complete_path;
+    string to = argv[-1];
     git_init(to);
-    git_create_branch(to);
+    git_create_branch(argv,to);
+    write("Commit message : sTeam export-to-git\n");
+    git_commit("sTeam export-to-git", to, "root", "root@localhost", 0, 1);  //empty commit        
+  for(int i =1;i<sizeof(argv)-1;i++){
+    options->src=argv[i];
+    Object from = OBJ(options->src);
     if(!options->nopath)  // only if paths have to be created
       complete_path = dir_check(to,options->src);
     git_object(from, to);
-    write("Commit message : sTeam export-to-git\n");
-    git_commit("sTeam export-to-git", to, "root", "root@localhost", 0, 1);  //empty commit
     sort(history->time, history);
     foreach(history;; mapping doc)
     {
@@ -275,6 +288,7 @@ void export_to_git(object from, string to, void|array(object) exclude)
             if (author)
                 author_username = author->get_user_name();
             string author_email = sprintf("%s@%s", author_username, _Server->get_server_name());
-            string hash = (string)git_commit(message, to, author->query_attribute("USER_FULLNAME"), author_email, doc->time);
+            string hash = (string)git_commit(message, to, author_username, author_email, doc->time);
     }
+  }
 }

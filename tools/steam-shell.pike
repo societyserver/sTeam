@@ -24,6 +24,7 @@ constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $
 
 inherit "applauncher.pike";
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
+#include <classes.h>
 
 Stdio.Readline readln;
 mapping options;
@@ -48,10 +49,13 @@ room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
 gothrough       Go through a gate.
-create          Create an object (File/Container/Exit) in current Room.
+create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
+delete          Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
+join            Join a group.
+leave           Leave a group.
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -60,61 +64,72 @@ hilfe           Help for Hilfe commands.
       write(all);
       return;
 
-    case "list":
-      write("List Gates/Exits, Documents, Containers in the current Room.\n");
-      return;
-    case "goto":
-      write("Goto a Room using a full path to the Room.\n");
-      return;
-    case "title":
-      write("Set your own description.\n");
-      return;
-    case "room":
-      write("Describe the Room you are currently in.\n");
-      return;
-    case "look":
-      write("Look around the Room.\n");
-      return;
-    case "take":
-      write("Copy a object in your inventory.\n");
-      return;
-    case "gothrough":
-      write("Go through a gate.\n");
-      return;
-    case "create":
-      write("Create an object (File/Container/Exit) in current Room.\n");
-      return;
-    case "peek":
-      write("Peek through a container.\n");
-      return;
-    case "i":
-    case "inventory":
-      write("Lists your inventory\n");
-      return;
-    case "edit":
-      write("Edit a file in the current Room.\n");
-      return;
-    //Hilfe internal help
-    case "me more":
-      write( documentation_help_me_more );
-      write("Type \"hilfe\" to get more help on Hilfe commands\n");
-      return;
-    case "hilfe todo":
-      write(hilfe_todo);
-      return;
-    case "about hilfe":
-      e->print_version();
-      write(cvs_version+#"
-Initial version written by Fredrik Hübinette 1996-2000
-Rewritten by Martin Nilsson 2002
-");
-      return;
-    default:
-      write(stash_help_doc);
-      write(all);
-      write("\n\nEnter \"help me more\" for further Hilfe help.\n\n");
+                    case "list":
+                        write("List Gates/Exits, Documents, Containers in the current Room.\n");
+                        return;
+                    case "goto":
+                        write("Goto a Room using a full path to the Room.\n");
+                        return;
+                    case "title":
+                        write("Set your own description.\n");
+                        return;
+                    case "room":
+                        write("Describe the Room you are currently in.\n");
+                        return;
+                    case "look":
+                        write("Look around the Room.\n");
+                        return;
+                    case "take":
+                        write("Copy a object in your inventory.\n");
+                        return;
+                    case "gothrough":
+                        write("Go through a gate.\n");
+                        return;
+ 	            case "create":
+                        write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
+                        return;
+                    case "delete":
+                        write("Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.\n");
+                        return; 
+                    case "peek":
+                        write("Peek through a container.\n");
+                        return;
+                    case "i":
+                    case "inventory":
+                        write("Lists your inventory\n");
+                        return;
+                    case "edit":
+                        write("Edit a file in the current Room.\n");
+                        return;
+                    case "join":
+      			write("Join a group.\n");
+      			return;
+    		    case "leave":
+      			write("Leave a group.\n");
+     			 return;
+   			 //Hilfe internal help
+                    case "me more":
+                        write(documentation_help_me_more);
+                        write("Type \"hilfe\" to get more help on Hilfe commands\n");
+                        return;
+                    case "hilfe todo":
+                        write(hilfe_todo);
+                        return;
+                    case "about hilfe":
+                        e->print_version();
+                        write(cvs_version +#"
+                                Initial version written by Fredrik Hübinette 1996 - 2000
+                                Rewritten by Martin Nilsson 2002
+                                ");
+
+                        return;
+                    default:
+                        write(stash_help_doc);
+                                write(all);
+                                write("\n\nEnter \"help me more\" for further Hilfe help.\n\n");
+                }
     }
-  }
+  
 }
 
 class Handler
@@ -182,180 +197,214 @@ void ping()
 
 object handler, conn;
 mapping myarray;
-int main(int argc, array(string) argv)
-{
-  options=init(argv);
-  _Server=conn->SteamObj(0);
-  users=_Server->get_module("users");
-  me = users->lookup(options->user);
-  all = assign(conn,_Server,users);
-  all = all + (([
-  ]));
-  handler = Handler(all);
-  array history=(Stdio.read_file(options->historyfile)||"")/"\n";
-  if(history[-1]!="")
-    history+=({""});
+array(string) command_arr;
 
-  readline_history=Stdio.Readline.History(512, history);
+int main(int argc, array(string) argv) {
 
-  readln->enable_history(readline_history);
+    	    options = init(argv);
+            _Server = conn->SteamObj(0);
+            users = _Server->get_module("users");
+            me = users->lookup(options->user);
+            all = assign(conn, _Server, users);
+            all = all + (([
+            ]));
+            handler = Handler(all);
+            array history = (Stdio.read_file(options->historyfile) || "") / "\n";
+    	    if (history[-1] != "")
+            	history += ({""});
+	    readline_history = Stdio.Readline.History(512, history);
+            readln->enable_history(readline_history);
+            handler->add_input_line("start backend");
+	    write("User: " + options->user +"\n");
+            string command;
+            //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
 
-  handler->add_input_line("start backend");
+            if (sizeof (argv) > 1) {
+	    	string cmd = "";
+          	if (sizeof (argv) >= 3){
+			for (int i = 1; i<sizeof (argv); i++){
+	        	        if(argv[i]!=0){	        	        
+					if(i==sizeof(argv)-1) 
+						cmd += argv[i];
+					else cmd += argv[i] +" ";
+				}
+	        	}
+		}
+		else cmd += argv[1];
+                write("Command: %s",cmd);
+	        write("\n");
+                exec_command(cmd);
+                if(cmd!="")
+	                exit(0);
+            }
+    while ((command = readln->read(
+            sprintf("%s", (handler->state->finishedp() ? getstring(1) : getstring(2)))))) {
+        if (sizeof (command)) {
+            Stdio.write_file(options->historyfile, readln->get_history()->encode());
+                    command = String.trim_whites(command);
+                    //      if(a->match(command))
+                    //          command_arr = array_sscanf(command,"%s [\"|']%s[\"|']");
+                    //      else
+                    exec_command(command);
 
-  string command;
-  myarray = ([ 
-    "list"        : list,
-    "goto"        : goto_room,
-    "title"       : set_title,
-    "room"        : desc_room,
-    "look"        : look,
-    "take"        : take,
-    "gothrough"   : gothrough,
-    "create"      : create_ob,
-    "peek"        : peek,
-    "inventory"   : inventory,
-    "i"           : inventory,
-    "edit"        : editfile,
-    ]);
-//  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
-  array(string) command_arr;
-  while((command=readln->read(
-           sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
-  {
-    if(sizeof(command))
-    {
-      Stdio.write_file(options->historyfile, readln->get_history()->encode());
-      command = String.trim_whites(command);
-//      if(a->match(command))
-//          command_arr = array_sscanf(command,"%s [\"|']%s[\"|']");
-//      else
-          command_arr = command/" ";
-      if(myarray[command_arr[0]])
-      {
-        int num = sizeof(command_arr);
-        mixed result = catch {
-        if(num==2)
-          myarray[command_arr[0]](command_arr[1]);
-        else if(num==3)
-          myarray[command_arr[0]](command_arr[1],command_arr[2]);
-        else if(num==1)
-          myarray[command_arr[0]]();
-        };
+                    //      array hist = handler->history->status()/"\n";
+                    //      if(hist)
+                    //        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
+                    //          handler->write("came in here\n");
+                    //          flag=0;
+                    //        }
+                    handler->p->set(handler->variables);
 
-        if(result!=0)
-        {
-          write("Wrong command.||maybe some bug.\n");
+            continue;
         }
-      }
-      else
-        handler->add_input_line(command);
-//      array hist = handler->history->status()/"\n";
-//      if(hist)
-//        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
-//          handler->write("came in here\n");
-//          flag=0;
-//        }
-      handler->p->set(handler->variables);
-      continue;
+        //    else { continue; }
     }
-//    else { continue; }
-  }
-  handler->add_input_line("exit");
+    handler->add_input_line("exit");
 }
 
-mapping init(array argv)
-{
-  mapping options = ([ "file":"/etc/shadow" ]);
+void exec_command(string command) {
+    myarray = ([
+            "list" : list,
+            "goto" : goto_room,
+            "title" : set_title,
+            "room" : desc_room,
+            "look" : look,
+            "take" : take,
+            "gothrough" : gothrough,
+	    "create" : create_ob,
+            "delete" : delete,
+            "peek" : peek,
+            "inventory" : inventory,
+            "i" : inventory,
+            "edit" : editfile,
+            "join" : join,
+            "leave" : leave,
+            ]);
 
-  array opt=Getopt.find_all_options(argv,aggregate(
-    ({"file",Getopt.HAS_ARG,({"-f","--file"})}),
-    ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
-    ({"user",Getopt.HAS_ARG,({"-u","--user"})}),
-    ({"port",Getopt.HAS_ARG,({"-p","--port"})}),
+            command_arr = command / " ";
+
+    if (myarray[command_arr[0]]) {
+        int num = sizeof (command_arr);
+                mixed result = catch {
+            if (num == 2)
+                    myarray[command_arr[0]](command_arr[1]);
+            else if (num == 3)
+                    myarray[command_arr[0]](command_arr[1], command_arr[2]);
+            else if (num == 1)
+                    myarray[command_arr[0]]();
+            else if (num == 4)
+                    myarray[command_arr[0]](command_arr[1], command_arr[2], command_arr[3]);
+            else
+                myarray[command_arr[0]](@command_arr[1..]);
+            };
+
+        if (result != 0) {
+            write(result[0]);
+                    write("Wrong command.||maybe some bug.\n");
+        }
+    }
+
+    else
+
+        handler->add_input_line(command);
+
+
+}
+mapping init(array argv) {
+
+    mapping options = ([ "file" : "/etc/shadow" ]);
+
+            array opt = Getopt.find_all_options(argv, aggregate(
+            ({"file", Getopt.HAS_ARG, (
+        {"-f", "--file"})}),
+    ({"host", Getopt.HAS_ARG, (
+        {"-h", "--host"})}),
+    ({"user", Getopt.HAS_ARG, (
+        {"-u", "--user"})}),
+    ({"port", Getopt.HAS_ARG, (
+        {"-p", "--port"})}),
     ));
 
-  options->historyfile=getenv("HOME")+"/.steam_history";
+    options->historyfile = getenv("HOME") + "/.steam_history";
 
-  foreach(opt, array option)
-  {
-    options[option[0]]=option[1];
-  }
-  if(!options->host)
-    options->host="127.0.0.1";
-  if(!options->user)
-    options->user="root";
-  if(!options->port)
-    options->port=1900;
-  else
-    options->port=(int)options->port;
-
-  string server_path = "/usr/local/lib/steam";
-
-  master()->add_include_path(server_path+"/server/include");
-  master()->add_program_path(server_path+"/server/");
-  master()->add_program_path(server_path+"/conf/");
-  master()->add_program_path(server_path+"/spm/");
-  master()->add_program_path(server_path+"/server/net/coal/");
-
-  conn = ((program)"client_base.pike")();
-
-  int start_time = time();
-
-  werror("Connecting to sTeam server...\n");
-  while ( !conn->connect_server(options->host, options->port)  ) 
-  {
-    if ( time() - start_time > 120 ) 
-    {
-      throw (({" Couldn't connect to server. Please check steam.log for details! \n", backtrace()}));
+            foreach(opt, array option) {
+        options[option[0]] = option[1];
     }
-    werror("Failed to connect... still trying ... (server running ?)\n");
-    sleep(10);
-  }
- 
-  ping();
-  if(lower_case(options->user) == "guest")
+    if (!options->host)
+            options->host = "127.0.0.1";
+        if (!options->user)
+                options->user = "root";
+            if (!options->port)
+                    options->port = 1900;
+            else
+                options->port = (int) options->port;
+
+                    string server_path = "/usr/local/lib/steam";
+
+                    master()->add_include_path(server_path + "/server/include");
+                    master()->add_program_path(server_path + "/server/");
+                    master()->add_program_path(server_path + "/conf/");
+                    master()->add_program_path(server_path + "/spm/");
+                    master()->add_program_path(server_path + "/server/net/coal/");
+
+                    conn = ((program) "client_base.pike")();
+
+                    int start_time = time();
+
+                    werror("Connecting to sTeam server...\n");
+                while (!conn->connect_server(options->host, options->port)) {
+                    if (time() - start_time > 120) {
+                        throw (({" Couldn't connect to server. Please check steam.log for details! \n", backtrace()}));
+                    }
+                    werror("Failed to connect... still trying ... (server running ?)\n");
+                            sleep(10);
+                }
+
+    ping();
+    if (lower_case(options->user) == "guest")
+        return options;
+
+            mixed err;
+            int tries = 3;
+            //readln->set_echo( 0 );
+        do {
+            pw = Input.read_password(sprintf("Password for %s@%s", options->user,
+                    options->host), "steam");
+                    //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
+        } while ((err = catch (conn->login(options->user, pw, 1))) && --tries);
+                    //readln->set_echo( 1 );
+
+                if (err != 0) {
+
+                    werror("Failed to log in!\nWrong Password!\n");
+                            exit(1);
+                }
     return options;
-
-  mixed err;
-  int tries=3;
-  //readln->set_echo( 0 );
-  do
-  {
-    pw = Input.read_password( sprintf("Password for %s@%s", options->user,
-           options->host), "steam" );
-    //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
-  }
-  while((err = catch(conn->login(options->user, pw, 1))) && --tries);
-  //readln->set_echo( 1 );
-
-  if ( err != 0 ) 
-  {
-    werror("Failed to log in!\nWrong Password!\n");
-    exit(1);
-  } 
-  return options;
 }
 
-mapping assign(object conn, object _Server, object users)
-{
-	return ([
-    "_Server"     : _Server,
-    "get_module"  : _Server->get_module,
-    "get_factory" : _Server->get_factory,
-    "conn"        : conn,
-    "find_object" : conn->find_object,
-    "users"       : users,
-    "groups"      : _Server->get_module("groups"),
-    "me"          : users->lookup(options->user),
-    "edit"        : applaunch,
-    "create"      : create_object,
-    "list"        : list,
-    "goto"        : goto_room,
-    "title"       : set_title,
-    "room"        : desc_room,
-    "look"        : look,
-    "take"        : take,
-    "gothrough"   : gothrough,
+mapping assign(object conn, object _Server, object users) {
+
+    return ([
+    "_Server" : _Server,
+            "get_module" : _Server->get_module,
+            "get_factory" : _Server->get_factory,
+            "conn" : conn,
+            "find_object" : conn->find_object,
+            "users" : users,
+            "groups" : _Server->get_module("groups"),
+            "me" : users->lookup(options->user),
+            "edit" : applaunch,
+	    "create" : create_object,
+            "delete" : delete,
+            "list" : list,
+            "goto" : goto_room,
+            "title" : set_title,
+            "room" : desc_room,
+            "look" : look,
+            "take" : take,
+            "gothrough" : gothrough,
+            "join" : join,
+            "leave" : leave,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -387,9 +436,53 @@ mapping assign(object conn, object _Server, object users)
     ]);
 }
 
+void leave(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("leave group <group name>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      group->remove_member(me);
+  }
+}
+
+void join(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("join group <name of the group>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      int result = group->add_member(me);
+      switch(result){
+        case 1:write("Joined group "+name+"\n");
+          break;
+        case 0:write("Couldn't join group "+name+"\n");
+          break;
+        case -1:write("pending\n");
+          break;
+        case -2:write("pending failed");
+          break;
+      }
+  }
+}
+
 // create new sTeam objects
 // with code taken from the web script create.pike
-mixed create_object(string|void objectclass, string|void name, void|string desc, void|mapping data)
+mixed create_object(string|void objectclass, string|void name, void|mapping data, void|string desc, )
 {
   if(!objectclass && !name)
   {
@@ -449,6 +542,7 @@ string getstring(int i)
       return curpath+">> ";
   else if(i==2&&(flag==0))
       return curpath+"~~ ";
+
 }
 
 int list(string what)
@@ -475,59 +569,87 @@ int list(string what)
       write(str+"\n");
     }
   }
-  if(flag==0)
-    write(toappend+a+"\n\n");
+  if(flag==0){
+    mapping mp = Process.run("tput cols");
+    int screenwidth = (int)mp["stdout"];
+    write(toappend + "\n");
+    write("%-$*s\n", screenwidth,a);
+    write("\n");
+  }  
   return 0;
 }
 
 array(string) get_list(string what,string|object|void lpath)
 {
-//  string name;
-//  object to;
-  array(string) gates=({}),containers=({}),documents=({}),rooms = ({}),rest=({});
-//  mapping(string:object) s = ([ ]);
+  array(string) whatlist = ({});
   object pathobj;
-  if(!lpath)
-    pathobj = OBJ(getpath());
-  else if(stringp(lpath))
-    pathobj = OBJ(lpath);
-  else if(objectp(lpath))
-    pathobj = lpath;
-//  string pathfact = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
-  mixed all = pathobj->get_inventory_by_class(0x3cffffff); //CLASS_ALL
-  foreach(all, object obj)
+      if(!lpath)
+       pathobj = OBJ(getpath());
+      else if(stringp(lpath))
+       pathobj = OBJ(lpath);
+      else if(objectp(lpath))
+       pathobj = lpath;
+  switch (what)  
   {
-    string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
-    string obj_name = obj->query_attribute("OBJ_NAME");
-//    write("normally : "+obj_name+"\n");
-    if(fact_name=="Document.factory")
-        documents = Array.push(documents,obj_name);
-//          write(obj_name+"\n");
-    else if(fact_name=="Exit.factory"){
-        string fullgate = obj_name+" : "+obj->get_exit()->query_attribute("OBJ_NAME");
-        gates = Array.push(gates,fullgate);
-//          write("in gates : "+fullgate+"\n");
+    case "containers":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_CONTAINER);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
     }
-    else if(fact_name=="Container.factory")
-        containers = Array.push(containers,obj_name);
-//          write("in containers : "+obj_name+"\n");
-    else if(fact_name=="Room.factory")
-        rooms = Array.push(rooms,obj_name);
-    else
-        rest = Array.push(rest, obj_name);
+    break;
+    case "files":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_DOCUMENT|CLASS_DOCLPC|CLASS_DOCEXTERN|CLASS_DOCHTML|CLASS_DOCXML|CLASS_DOCXSL);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "exits":
+    case "gates":
+    case "rooms":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_ROOM|CLASS_EXIT);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "groups":
+    {
+      array(object) groups = _Server->get_module("groups")->get_groups();
+      foreach(groups,object group)
+      {
+        string obj_name = group->get_name();
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "users":
+    {
+      array(object) users = _Server->get_module("users")->get_users();
+      foreach(users,object user)
+      {
+        string obj_name = user->get_user_name();
+        whatlist = Array.push(whatlist,obj_name);
+      }      
+    }
+    break;
+    default:
+      whatlist = ({"Invalid command"});
   }
-  if(what=="gates")
-    return gates;
-  else if(what=="rooms")
-    return rooms;
-  else if(what=="containers")
-    return containers;
-  else if(what=="files")
-    return documents;
-  else if(what=="others")
-    return rest;
-  else
-    return ({"Invalid command"});
+  return whatlist;
 }
 
 
@@ -548,16 +670,8 @@ int goto_room(string where)
     pathobj = OBJ(where);
     if(!pathobj)    //Relative room checking
     {
-      if(getpath()[-1]==47)    //check last "/"
-      {
-        pathobj = OBJ(getpath()+where);
-        where=getpath()+where;
-      }
-      else
-      {
-        pathobj = OBJ(getpath()+"/"+where);
-        where=getpath()+"/"+where;
-      }
+      pathobj = OBJ(getpath()+"/"+where);
+      where=getpath()+"/"+where;
     }
     roomname = pathobj->query_attribute("OBJ_NAME");
     string factory = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
@@ -628,10 +742,7 @@ int look(string|void str)
 int take(string name)
 {
     string fullpath="";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+name;
-    else
-      fullpath = getpath()+"/"+name;
+    fullpath = getpath()+"/"+name;
     object orig_file = OBJ(fullpath);
     if(orig_file)
     {
@@ -647,10 +758,7 @@ int take(string name)
 int gothrough(string gatename)
 {
     string fullpath = "";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+gatename;
-    else
-      fullpath = getpath()+"/"+gatename;
+    fullpath = getpath()+"/"+gatename;
     object gate = OBJ(fullpath);
     if(gate)
     {
@@ -673,40 +781,124 @@ int gothrough(string gatename)
     return 0;
 }
 
-int delete(string file_cont_name)
-{
-  string fullpath="";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+file_cont_name;
-  else
-      fullpath = getpath()+"/"+file_cont_name;
-  if(OBJ(fullpath))
+int delete(string type, string name) 
+{  
+    type = String.capitalize(type);
+    switch(type)
+    {
+      case "Container":
+      case "File":
+      case "Exit":
+      case "Gate":
+      case "Room":
+      {  
+        string fullpath = "";
+        fullpath = getpath() + "/" + name;
+        if(OBJ(fullpath)){
+          OBJ(fullpath)->delete(); 
+          write(type + ": "+ name + " deleted successfully.\n");
+        }
+        else write("Object does not exist.\n") ;  }
+    break;
+    case "User":
+      if(options->user!="root"){
+        write("You cannot create a user. You need to be a root user.\n");
+      return 0;
+      }
+      else{        
+        _Server->get_module("users")->get_user(name)->delete();
+        write("User: " + name + " deleted successfully.\n");    
+      return 0;
+      }
+    default:
+      write("Invalid Command. Enter the type of the object carefully.\n");
+    }
     return 0;
-  return 0;
 }
 
-int create_ob(string type,string name)
+
+int create_ob(string type,string name,string destination)
 {
-  string desc = readln->read("How would you describe it?\n");
   mapping data = ([]);
+  string desc;
   type = String.capitalize(type);
-  if(type=="Exit")
+  if(destination == ".")
+    destination = getpath();
+  object myobj ;
+  switch(type)
   {
-    object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
-    object exit_from = OBJ(getpath());
-    data = ([ "exit_from":exit_from, "exit_to":exit_to ]);
-  }
-  else if(type=="Link")
-  {
-    object link_to = OBJ(readln->read("Where does the link lead?\n"));
-    data = ([ "link_to":link_to ]);
-  }
-  object myobj = create_object(type,name,desc,data);
-  if(type=="Room")
-    myobj->move(OBJ(getpath()));
-
+    case "User":
+      {
+        if(options->user!="root"){
+          write("You cannot create a user. You need to be a root user.\n");
+        }
+        else{
+          string pass = Input->read_password("Please enter the password for the user.",name);
+          write("Enter the email id for the user. ");
+          string email = readln->read();
+          _Server->get_factory("User")->execute( (["name": name, "pw":pass, "email": email]) );
+          _Server->get_module("users")->get_user(name)->activate_user();
+          write("User: " + name + " created successfully.\n");     
+        }
+      }
+    break;
+    case "Group":
+    {
+      if(options->user != "root"){
+        write("Only a root user can create a group.\n");
+      return 0;
+      }
+      string parent = readln->read("Subgroup of?\n");
+      data = (["parentgroup":parent]);
+      desc = readln->read("How would you describe it?\n");
+      myobj = create_object(type,name,data,desc);
+      myobj->add_member(me);
+    } 
+    break;
+    case "File":
+    {
+       data=(["mimetype":"auto-detect"]);
+       myobj = create_object("Document",name,data,desc);
+       myobj->move(OBJ(destination));
+       write("File type: "+ myobj->query_attribute("DOC_MIME_TYPE") + "\n");
+    }
+    break;
+    case "Gate" :
+    case "Exit" :
+    {
+      desc = readln->read("How would you describe it?\n");
+      object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
+      data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
+      myobj = create_object(type,name,data,desc);
+    }
+    break;
+    case "Link" :
+    {
+      desc = readln->read("How would you describe it?\n");    
+      object link_to = OBJ(readln->read("Where does the link lead?\n"));
+      data = ([ "link_to":link_to ]);
+      myobj = create_object(type,name,data,desc);
+      myobj->move(OBJ(destination));
+    }
+    break;
+    case "Room" :
+    case "Container" :
+    {
+      desc = readln->read("How would you describe it?\n");
+      myobj = create_object(type,name,data,desc);
+      myobj->move(OBJ(destination));
+    }
+    break;
+    default:
+      write("Invalid object type. Enter the object type correctly\n");
+    }
+    if(objectp(myobj))
+      write(type + ": " + name + " created successfully.\n");
+    else write(type + ": " + name + " not created.\n");
   return 0;
 }
+
+
 
 int peek(string container)
 {
