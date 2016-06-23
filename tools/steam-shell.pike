@@ -444,6 +444,16 @@ void group(string command,void|string name)
       }
       return;
     case "leave":
+      if(!stringp(name)){
+        write("group leave <group name>");
+        return;
+      }
+      group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      group->remove_member(me);
       return;
     default:
       write("Group command: list/join/leave\n");
