@@ -24,6 +24,7 @@ constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $
 
 inherit "applauncher.pike";
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
+#include <classes.h>
 
 Stdio.Readline readln;
 mapping options;
@@ -54,7 +55,6 @@ inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
 join            Join a group.
 leave           Leave a group.
-group           Use group commands. (list/join/leave)
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -102,9 +102,6 @@ hilfe           Help for Hilfe commands.
       return;
     case "leave":
       write("Leave a group.\n");
-      return;
-    case "group":
-      write("Use group commands. (list/join/leave)\n");
       return;
     //Hilfe internal help
     case "me more":
@@ -230,7 +227,6 @@ int main(int argc, array(string) argv)
     "edit"        : editfile,
     "join"        : join,
     "leave"       : leave,
-    "group"       : group,
     ]);
 //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
   array(string) command_arr;
@@ -375,7 +371,6 @@ mapping assign(object conn, object _Server, object users)
     "gothrough"   : gothrough,
     "join"        : join,
     "leave"       : leave,
-    "group"       : group,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -405,37 +400,6 @@ mapping assign(object conn, object _Server, object users)
     "_BUILDER" : _Server->get_module("users")->lookup("builder"),
     "_CODER" : _Server->get_module("users")->lookup("coder"),
     ]);
-}
-
-void group(string command,void|string name)
-{
-  switch(command)
-  {
-    case "list":
-      mapping mp = Process.run("tput cols");
-      int screenwidth = (int)mp["stdout"];
-      string toappend="";
-      write("My groups\n");
-      array(object) joined_groups = me->get_groups();
-      foreach(joined_groups,object group)
-      {
-        toappend = toappend + group->get_name() +"\n";
-      }
-      write("%-$*s\n", screenwidth,toappend);
-      write("\nOther groups\n");
-      toappend="";
-      array(object) other_groups = _Server->get_module("groups")->get_groups();
-      foreach(other_groups,object group)
-      {
-        if(search(joined_groups,group)==-1)
-        toappend = toappend + group->get_name() + "\n";
-      }
-      write("%-$*s\n", screenwidth,toappend);
-      write("\n");
-      return;
-    default:
-      write("Group command: list/join/leave\n");
-  }
 }
 
 void leave(string what,void|string name)
@@ -560,71 +524,88 @@ int list(string what)
   if(sizeof(display)==0)
     toappend = "There are no "+what+" in this room\n";
   else
-    toappend = "Here is a list of all "+what+" in the current room\n";
+    toappend = "Here is a list of all "+what+"\n";
   foreach(display,string str)
   {
-    a=a+(str+"    ");
+    a=a+(str+"\n");
     if(str=="Invalid command")
     {
       flag=1;
       write(str+"\n");
     }
   }
-  if(flag==0)
-    write(toappend+a+"\n\n");
+  if(flag==0){
+    mapping mp = Process.run("tput cols");
+    int screenwidth = (int)mp["stdout"];
+    write(toappend + "\n");
+    write("%-$*s\n", screenwidth,a);
+    write("\n");
+  }  
   return 0;
 }
 
 array(string) get_list(string what,string|object|void lpath)
 {
-//  string name;
-//  object to;
-  array(string) gates=({}),containers=({}),documents=({}),rooms = ({}),rest=({});
-//  mapping(string:object) s = ([ ]);
+  array(string) whatlist = ({});
   object pathobj;
-  if(!lpath)
-    pathobj = OBJ(getpath());
-  else if(stringp(lpath))
-    pathobj = OBJ(lpath);
-  else if(objectp(lpath))
-    pathobj = lpath;
-//  string pathfact = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
-  mixed all = pathobj->get_inventory_by_class(0x3cffffff); //CLASS_ALL
-  foreach(all, object obj)
+      if(!lpath)
+       pathobj = OBJ(getpath());
+      else if(stringp(lpath))
+       pathobj = OBJ(lpath);
+      else if(objectp(lpath))
+       pathobj = lpath;
+  switch (what)  
   {
-    string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
-    string obj_name = obj->query_attribute("OBJ_NAME");
-//    write("normally : "+obj_name+"\n");
-    if(fact_name=="Document.factory")
-        documents = Array.push(documents,obj_name);
-//          write(obj_name+"\n");
-    else if(fact_name=="Exit.factory"){
-        string fullgate = obj_name+" : "+obj->get_exit()->query_attribute("OBJ_NAME");
-        gates = Array.push(gates,fullgate);
-//          write("in gates : "+fullgate+"\n");
+    case "containers":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_CONTAINER);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
     }
-    else if(fact_name=="Container.factory")
-        containers = Array.push(containers,obj_name);
-//          write("in containers : "+obj_name+"\n");
-    else if(fact_name=="Room.factory")
-        rooms = Array.push(rooms,obj_name);
-    else
-        rest = Array.push(rest, obj_name);
+    break;
+    case "files":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_DOCUMENT|CLASS_DOCLPC|CLASS_DOCEXTERN|CLASS_DOCHTML|CLASS_DOCXML|CLASS_DOCXSL);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "exits":
+    case "gates":
+    case "rooms":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_ROOM|CLASS_EXIT);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "groups":
+    {
+      array(object) groups = _Server->get_module("groups")->get_groups();
+      foreach(groups,object group)
+      {
+        string obj_name = group->get_name();
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    default:
+      whatlist = ({"Invalid command"});
   }
-  if(what=="gates")
-    return gates;
-  else if(what=="rooms")
-    return rooms;
-  else if(what=="containers")
-    return containers;
-  else if(what=="files")
-    return documents;
-  else if(what=="others")
-    return rest;
-  else
-    return ({"Invalid command"});
+  return whatlist;
 }
-
 
 int goto_room(string where)
 {
