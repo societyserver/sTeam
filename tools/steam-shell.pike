@@ -52,6 +52,8 @@ create          Create an object (File/Container/Exit). Provide the full path of
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
+join            Join a group.
+leave           Leave a group.
 group           Use group commands. (list/join/leave)
 hilfe           Help for Hilfe commands.
 ";
@@ -95,8 +97,14 @@ hilfe           Help for Hilfe commands.
     case "edit":
       write("Edit a file in the current Room.\n");
       return;
+    case "join":
+      write("Join a group.\n");
+      return;
+    case "leave":
+      write("Leave a group.\n");
+      return;
     case "group":
-      write("Use group commands. (list/join/leave)");
+      write("Use group commands. (list/join/leave)\n");
       return;
     //Hilfe internal help
     case "me more":
@@ -220,6 +228,8 @@ int main(int argc, array(string) argv)
     "inventory"   : inventory,
     "i"           : inventory,
     "edit"        : editfile,
+    "join"        : join,
+    "leave"       : leave,
     "group"       : group,
     ]);
 //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
@@ -363,6 +373,8 @@ mapping assign(object conn, object _Server, object users)
     "look"        : look,
     "take"        : take,
     "gothrough"   : gothrough,
+    "join"        : join,
+    "leave"       : leave,
     "group"       : group,
 
     // from database.h :
@@ -421,9 +433,34 @@ void group(string command,void|string name)
       write("%-$*s\n", screenwidth,toappend);
       write("\n");
       return;
-    case "join":
-      if(!stringp(name)){
-        write("group join <name of the group>");
+    default:
+      write("Group command: list/join/leave\n");
+  }
+}
+
+void leave(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("leave group <group name>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      group->remove_member(me);
+  }
+}
+
+void join(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("join group <name of the group>\n");
         return;
       }
       object group = _Server->get_module("groups")->get_group(name);
@@ -442,24 +479,8 @@ void group(string command,void|string name)
         case -2:write("pending failed");
           break;
       }
-      return;
-    case "leave":
-      if(!stringp(name)){
-        write("group leave <group name>");
-        return;
-      }
-      group = _Server->get_module("groups")->get_group(name);
-      if(group == 0){
-        write("The group does not exists\n");
-        return;
-      }
-      group->remove_member(me);
-      return;
-    default:
-      write("Group command: list/join/leave\n");
   }
 }
-
 
 // create new sTeam objects
 // with code taken from the web script create.pike
