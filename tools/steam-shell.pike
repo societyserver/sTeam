@@ -545,34 +545,48 @@ string getstring(int i)
 
 }
 
-int list(string what)
+int list(string what,string|void command)
 {
-  if(what==""||what==0)
+  if(what==""||what==0 || what=="members")
   {
     write("Wrong usage\n");
     return 0;
   }
-  int flag=0;
+  else if(what=="my" && command == "groups")
+  what+=command; 
+  int flag=1;
   string toappend="";
-  array(string) display = get_list(what);
+  array(string) display;
+  if(command=="members"){
+    what+=command;
+    command=what-command;
+    what=what-command;
+    display = get_list(what,command);
+  }
+  else  display = get_list(what);
   string a="";
   if(sizeof(display)==0)
-    toappend = "There are no "+what+" in this room\n";
+    toappend = "There are no "+what+".\n";
+  else if(display[0]=="Invalid command")
+    write("Invalid command.\n");
   else
-    toappend = "Here is a list of all "+what+" in the current room\n";
-  foreach(display,string str)
-  {
-    a=a+(str+"    ");
-    if(str=="Invalid command")
-    {
-      flag=1;
-      write(str+"\n");
-    }
+  { 
+    flag = 0;
+    if(what=="users"||what=="groups")
+      toappend = "Here is a list of all " + what +".\n";
+    else if(what=="mygroups")
+      toappend = "Here is a list of all the groups that "+me->get_user_name() + " is member.\n";
+    else if(what=="members")
+      toappend = "Here is a list of all the users who are member of the group "+ command +".\n";
+    else toappend = "Here is a list of all "+what+" in the current room.\n";
+    foreach(display,string str)
+      a+=(str+"    ");
   }
+  write(toappend);
   if(flag==0){
     mapping mp = Process.run("tput cols");
     int screenwidth = (int)mp["stdout"];
-    write(toappend + "\n");
+    write("\n");
     write("%-$*s\n", screenwidth,a);
     write("\n");
   }  
@@ -636,6 +650,33 @@ array(string) get_list(string what,string|object|void lpath)
       }
     }
     break;
+    case "mygroups":
+    {
+       array(object) groups = _Server->get_module("groups")->get_groups();
+       foreach(groups,object group)
+       {
+          if(group->is_member(me)){ 
+            string obj_name = group->get_name();          
+	    whatlist = Array.push(whatlist,obj_name); 
+          }  
+       }
+    }
+    break;
+    case "members":
+    {
+     if(!objectp(_Server->get_module("groups")->lookup(lpath))){
+	write("Group does not exist.\n");        
+     }
+     else {
+       array(object) members = _Server->get_module("groups")->lookup(lpath)->get_members();
+       foreach(members,object member)
+       {
+         string obj_name = member->get_user_name();
+         whatlist = Array.push(whatlist,obj_name);
+       }
+      }
+    }
+    break;
     case "users":
     {
       array(object) users = _Server->get_module("users")->get_users();
@@ -651,7 +692,6 @@ array(string) get_list(string what,string|object|void lpath)
   }
   return whatlist;
 }
-
 
 int goto_room(string where)
 {
@@ -799,6 +839,13 @@ int delete(string type, string name)
           write(type + ": "+ name + " deleted successfully.\n");
         }
         else write("Object does not exist.\n") ;  }
+    break;
+    case "group":
+    {
+      if(!_Server->get_factory("Group")->delete_group(_Server->get_module("groups")->lookup(name)))
+         write("Group deleted successfully.\n");
+      else write("Only the admin of the group can delete the group.\n");
+    }
     break;
     case "User":
       if(options->user!="root"){
