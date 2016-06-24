@@ -56,6 +56,7 @@ inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
 join            Join a group.
 leave           Leave a group.
+send_email      Send an email to the sTeam user, user group or external email.
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -107,6 +108,9 @@ hilfe           Help for Hilfe commands.
     		    case "leave":
       			write("Leave a group.\n");
      			 return;
+                    case "send_email":
+                        write("Send an email to the sTeam user, user group or external email.\n");
+                        return;
    			 //Hilfe internal help
                     case "me more":
                         write(documentation_help_me_more);
@@ -279,6 +283,7 @@ void exec_command(string command) {
             "edit" : editfile,
             "join" : join,
             "leave" : leave,
+            "send_email" : send_email,
             ]);
 
             command_arr = command / " ";
@@ -405,6 +410,7 @@ mapping assign(object conn, object _Server, object users) {
             "gothrough" : gothrough,
             "join" : join,
             "leave" : leave,
+            "send_email" : send_email,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -1012,6 +1018,157 @@ int editfile(string filename)
     write("You can't edit a "+pathfact[0..sizeof(pathfact)-8]);
   return 0;
 }
+
+void send_email(){
+          mapping vars;
+          string users,subject,messagebody;
+          write("The recipients can be an sTeam user, User group or an external email. Enter the receipents of the email.\nNote: The recipients should be separated by \",\".\n");
+          users = readln->read();
+	  write("Enter the subject of the email.The subject should not be blank.\n");
+          subject = readln->read();
+          write("Enter the body of the email.The subject should not be blank.\n");
+          messagebody = readln->read();
+          vars = (["to_free" : users, "messagesubject" : subject, "messagebody" : messagebody,]);
+          //write("\n"+users+"\t" + subject + "\t" + messagebody + "\n");
+	  array tousers = ({ });
+	  array(string) invalid = ({ });
+	  object smtp = _Server->get_module("smtp");
+	  object mail;
+	  int noContent = 0;
+	  int produceWarnings = 0;
+          string errTextE = "Failed to send Message!Causes:";
+	  array(string) to_free;
+	  if(stringp(users) && sizeof(users) != 0) {
+		  to_free = users / ",";
+		  foreach(to_free, string elem) {
+			  elem = String.trim_all_whites(elem);
+			  if(elem != "" && !isEmptyString(elem)) {
+				  if(objectp(_Server->get_module("users")->lookup(elem))) {
+					  tousers += ({ _Server->get_module("users")->lookup(elem) });
+				  }else if(objectp(_Server->get_module("groups")->lookup(elem))){
+					  tousers += ({ _Server->get_module("groups")->lookup(elem)});
+
+				  }else if(mailAdressValid(elem)) {
+					  tousers += ({ elem });
+
+			      }else {
+					  invalid += ({ elem });
+				  }
+			  }
+		  }
+
+	  }
+	  if(sizeof(tousers) != 0 && stringp(subject) && subject != ""){
+		  string body = "";
+		  
+		  string message_name = replace(subject,"/","_");
+//write("\n" + message_name +"\n");
+		  mail = _Server->get_factory("Document")->execute( ([ "name":message_name, "mimetype":"text/plain"]));
+		  mail->set_attribute("OBJ_DESC", subject);
+		  if(stringp(messagebody) && messagebody != "") {
+			  mail->set_content(messagebody);
+			  body = messagebody;
+		  }else {
+			  noContent = 1;
+		  }
+		  mail->set_attribute("DOC_ENCODING", "utf-8");
+// To support attachments, induce a variable called as annotfile.
+	/*	  string annotfile = readln("Enter the file to be attached.(sTeam address).\n");
+                  string url = annotfile;
+		  if ( stringp(url) && strlen(url) > 0 &&
+		  stringp(annotfile  ) {
+			  object factory = _Server->get_factory(CLASS_DOCUMENT);
+                          object obj;
+			  object ann = factory->execute( ([ "name":url, "acquire":obj, ]) );
+			  function f = ann->receive_content(strlen(vars["annotfile"]));
+			  f(vars["annotfile"]);
+			  f(0);
+			  mail->add_annotation(ann); 
+		  }*/
+//write("Mail : %O\n",mail);
+//write("\nMail Content = %s", mail->get_content());
+          array(string) stringadresses = ({}); 
+		  foreach(tousers, mixed user) {
+			  if(objectp(user)) {
+          			if (objectp(mail->get_annotating())) {
+            				mail = mail->duplicate();
+        			  }
+				  user->mail(mail);
+			  }
+			  else if(stringp(user)) {
+				  stringadresses += ({ user });
+			  }
+		  }
+      //write( "\nString addresses\n");
+      //write( "%O\n",stringadresses );
+      //write("Sizeof stringaddr %d \n",sizeof(stringadresses) );
+      if (sizeof(stringadresses) > 0) {
+        smtp->send_mail(stringadresses, vars["messagesubject"], body);
+      }
+      //write("Sizeof invalid and noContent %d %d \n",sizeof(invalid), noContent );
+      write("Mail Successfully sent\n");  	   
+      if(sizeof(invalid) != 0 || noContent == 1) {
+	produceWarnings = 1;
+	errTextE = "Mail successfully sent!But there were some warnings:";
+	  if(sizeof(invalid) != 0) {
+            errTextE += "There were invalid entries. The entries";
+     	    foreach(invalid, string s) {
+		errTextE += ""+s+"";
+            }
+      errTextE += " do not seem to be valid users or groups in your sTeam system. No messags have been send there!";
+      }	  
+           if(noContent == 1) {
+	     errTextE += "Your message contains no text.";
+            }
+            else{
+	      errTextE += "";
+            }
+      }
+      if(produceWarnings)
+        write(errTextE +"\n");
+      }
+      else {
+	errTextE += "";
+	if(sizeof(tousers) == 0) {
+          errTextE += "There are no valid recipients for your message because ";
+	  if(sizeof(invalid) == 0) {
+	     errTextE += "you have not specified any for your message.";
+	  } else {
+	      errTextE += "you only entered invalid recipients:";
+	      foreach(invalid, string s) {
+		errTextE += ""+s+"";
+	      }
+              errTextE += "";
+	   }
+	}
+	if(stringp(!subject) || subject == "") {
+	  errTextE += "No subject is specified for your message. Please give an subject.";
+	}
+        write("\n"+ errTextE +"\n");
+      }  
+}
+
+int isEmptyString(string s) {
+  for(int i = 0; i < sizeof(s); i++)
+    if(s[i] != ' ') return 0;
+      return 1;
+}
+
+
+int mailAdressValid(string adress){
+  string localPart;
+  string domainPart;
+  if(sscanf(adress, "%s@%s", localPart, domainPart) != 2){
+    return 0;
+  }
+  else if(sscanf(localPart, "%*[A-Za-z0-9.!#$%&'*+-/=?^_`{|}~]") != 1 || sizeof(localPart) == 0 || sizeof(localPart) > 64){
+    return 0;
+  }
+  else if(sscanf(domainPart, "%*[A-Za-z0-9.-]") != 1 || sizeof(domainPart) == 0 || sizeof(domainPart) > 255){
+    return 0;
+   }else return 1;
+}
+
 
 void exitnow()
 {}
