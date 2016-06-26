@@ -591,7 +591,7 @@ int list(string what,string|void command)
       toappend = "Here is a list of all the users who are member of the group "+ command +".\n";
     else toappend = "Here is a list of all "+what+" in the current room.\n";
     foreach(display,string str)
-      a+=(str+"    ");
+      a+=(str+"\n");
   }
   write(toappend);
   if(flag==0){
