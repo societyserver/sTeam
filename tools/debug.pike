@@ -603,6 +603,7 @@ mapping assign(object conn, object _Server, object users)
     "me"          : users->lookup(options->user),
     "edit"        : applaunch,
     "create"      : create_object,
+    "login"       : login,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -633,6 +634,15 @@ mapping assign(object conn, object _Server, object users)
     "_CODER" : _Server->get_module("users")->lookup("coder"),
     ]);
 }
+
+int login(string user)
+{
+  //conn->logout();
+  init(({"","-u",user}));
+  handler->p->set_server_filepath(_Server->get_module("filepath:tree")); 
+  return 1;
+}
+
 
 // create new sTeam objects
 // with code taken from the web script create.pike
