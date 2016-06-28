@@ -39,6 +39,7 @@ mapping init(array argv)
   mapping options = ([ ]);
 
   array opt=Getopt.find_all_options(argv,aggregate(
+    ({"file",Getopt.HAS_ARG,({"-f","--file"})}),
     ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
     ({"user",Getopt.HAS_ARG,({"-u","--user"})}),
     ({"port",Getopt.HAS_ARG,({"-p","--port"})}),
