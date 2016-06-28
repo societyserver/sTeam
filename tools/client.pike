@@ -33,6 +33,7 @@ void ping()
 object conn;
 
 mapping options = ([ ]);
+string pw;
 
 mapping init(array argv)
 {
@@ -86,7 +87,6 @@ mapping init(array argv)
     return options;
 
   mixed err;
-  string pw;
   int tries=3;
   //readln->set_echo( 0 );
   do

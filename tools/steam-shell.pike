@@ -29,7 +29,7 @@ inherit "client.pike";
 Stdio.Readline readln;
 mapping options;
 int flag=1,c=1;
-string pw,str;
+string str;
 object me;
 
 protected class StashHelp {
