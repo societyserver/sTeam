@@ -23,11 +23,12 @@
 constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
 inherit "applauncher.pike";
+inherit "client.pike";
 
 Stdio.Readline readln;
 mapping options;
 int flag=1,c=1;
-string pw,str;
+string str;
 
 class Handler
 {
@@ -88,7 +89,9 @@ object handler, conn;
 
 int main(int argc, array(string) argv)
 {
-  options=init(argv);
+  options = ([ "file":"/etc/shadow" ]);
+  options= options + init(argv);
+  options->historyfile=getenv("HOME")+"/.steam_history";
   _Server=conn->SteamObj(0);
   users=_Server->get_module("users");
   all = assign(conn,_Server,users);
@@ -513,80 +516,6 @@ int main(int argc, array(string) argv)
 //    else { continue; }
   }
   handler->add_input_line("exit");
-}
-
-mapping init(array argv)
-{
-  mapping options = ([ "file":"/etc/shadow" ]);
-
-  array opt=Getopt.find_all_options(argv,aggregate(
-    ({"file",Getopt.HAS_ARG,({"-f","--file"})}),
-    ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
-    ({"user",Getopt.HAS_ARG,({"-u","--user"})}),
-    ({"port",Getopt.HAS_ARG,({"-p","--port"})}),
-    ));
-
-  options->historyfile=getenv("HOME")+"/.steam_history";
-
-  foreach(opt, array option)
-  {
-    options[option[0]]=option[1];
-  }
-  if(!options->host)
-    options->host="127.0.0.1";
-  if(!options->user)
-    options->user="root";
-  if(!options->port)
-    options->port=1900;
-  else
-    options->port=(int)options->port;
-
-  string server_path = "/usr/local/lib/steam";
-  //change this to working directory
-
-  master()->add_include_path(server_path+"/server/include");
-  master()->add_program_path(server_path+"/server/");
-  master()->add_program_path(server_path+"/conf/");
-  master()->add_program_path(server_path+"/spm/");
-  master()->add_program_path(server_path+"/server/net/coal/");
-
-  conn = ((program)"client_base.pike")();
-
-  int start_time = time();
-
-  werror("Connecting to sTeam server...\n");
-  while ( !conn->connect_server(options->host, options->port)  ) 
-  {
-    if ( time() - start_time > 120 ) 
-    {
-      throw (({" Couldn't connect to server. Please check steam.log for details! \n", backtrace()}));
-    }
-    werror("Failed to connect... still trying ... (server running ?)\n");
-    sleep(10);
-  }
- 
-  ping();
-  if(lower_case(options->user) == "guest")
-    return options;
-
-  mixed err;
-  int tries=3;
-  //readln->set_echo( 0 );
-  do
-  {
-    pw = Input.read_password( sprintf("Password for %s@%s", options->user,
-           options->host), "steam" );
-    //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
-  }
-  while((err = catch(conn->login(options->user, pw, 1))) && --tries);
-  //readln->set_echo( 1 );
-
-  if ( err != 0 ) 
-  {
-    werror("Failed to log in!\nWrong Password!\n");
-    exit(1);
-  } 
-  return options;
 }
 
 mapping assign(object conn, object _Server, object users)

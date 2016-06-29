@@ -23,6 +23,7 @@
 constant cvs_version="$Id: edit.pike.in,v 1.0 2010/09/15 14:19:52 martin Exp $";
 
 inherit "applauncher.pike";
+inherit "client.pike";
 //inherit "/usr/local/lib/steam/server/modules/groups.pike";
 void ping(string host, string port, string user, string|void pw)
 {
@@ -51,13 +52,15 @@ object conn;
 mapping conn_options = ([]);
 object _Server,user_obj,file;
 array(object) gp;
+mapping options = ([ ]);
 
 int main(int argc, array(string) argv)
 {
- 
- 
+
 //  program pGroup = (program)"/classes/Group.pike";
-  mapping options=init(argv);
+   options=init(argv);
+   options->file = argv[-1];
+   ping(options->host, options->port, options->user, pw);
 //  gp=_Server->get_module("groups")->lookup("helloworld");
   _Server=conn->SteamObj(0);
   user_obj = _Server->get_module("users")->lookup(options->user); 
@@ -118,82 +121,3 @@ void get_file_object()
   if (file->get_class() == "Link")
       file = file->get_link_object();
 }
-
-  mapping options = ([ ]);
-mapping init(array argv)
-{
-
-  array opt=Getopt.find_all_options(argv,aggregate(
-    ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
-    ({"user",Getopt.HAS_ARG,({"-u","--user"})}),
-    ({"port",Getopt.HAS_ARG,({"-p","--port"})}),
-    ));
-
-  foreach(opt, array option)
-  {
-    options[option[0]]=option[1];
-  }
-  if(!options->host)
-    options->host="127.0.0.1";
-  if(!options->user)
-    options->user="root";
-  if(!options->port)
-    options->port=1900;
-  else
-    options->port=(int)options->port;
-
-  options->file = argv[-1];
-
-  string server_path = "/usr/local/lib/steam";
-
-  master()->add_include_path(server_path+"/server/include");
-  master()->add_program_path(server_path+"/server/");
-  master()->add_program_path(server_path+"/server/modules/groups.pike");
-  master()->add_program_path(server_path+"/conf/");
-  master()->add_program_path(server_path+"/spm/");
-  master()->add_program_path(server_path+"/server/net/coal/");
-
-  conn = ((program)"client_base.pike")();
-//  groups_pgm = ((program)"groups.pike")();
-  int start_time = time();
-
-  werror("Connecting to sTeam server...\n");
-  while ( !conn->connect_server(options->host, options->port)  ) 
-  {
-    if ( time() - start_time > 120 ) 
-    {
-      throw (({" Couldn't connect to server. Please check steam.log for details! \n", backtrace()}));
-    }
-    werror("Failed to connect... still trying ... (server running ?)\n");
-    sleep(10);
-  }
- 
-  if(lower_case(options->user) == "guest")
-  {
-    ping(options->host, options->port, options->user);
-    return options;
-  }
-
-  mixed err;
-  string pw;
-  int tries=3;
-  //readln->set_echo( 0 );
-  do
-  {
-    pw = Input.read_password( sprintf("Password for %s@%s", options->user,
-           options->host), "steam" );
-//    pw ="steam"; 
-    //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
-  }
-  while((err = catch(conn->login(options->user, pw, 1))) && --tries);
-  //readln->set_echo( 1 );
-
-  if ( err != 0 ) 
-  {
-    werror("Failed to log in!\nWrong Password!\n");
-    exit(1);
-  } 
-  ping(options->host, options->port, options->user, pw);
-  return options;
-}
-
