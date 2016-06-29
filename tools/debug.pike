@@ -88,7 +88,7 @@ object handler, conn;
 
 int main(int argc, array(string) argv)
 {
-  init(argv);
+  initialize(argv);
   handler->add_input_line("start backend");
   string command;
   handler->p->set_server_filepath(_Server->get_module("filepath:tree")); //sending the filepath module to tab completion for query/set attribute.
@@ -113,80 +113,11 @@ int main(int argc, array(string) argv)
   handler->add_input_line("exit");
 }
 
-void init(array argv)
+void initialize(array argv)
 {
   options = ([ "file":"/etc/shadow" ]);
-
-  array opt=Getopt.find_all_options(argv,aggregate(
-    ({"file",Getopt.HAS_ARG,({"-f","--file"})}),
-    ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
-    ({"user",Getopt.HAS_ARG,({"-u","--user"})}),
-    ({"port",Getopt.HAS_ARG,({"-p","--port"})}),
-    ));
-
+  options = options + init(argv);
   options->historyfile=getenv("HOME")+"/.steam_history";
-
-  foreach(opt, array option)
-  {
-    options[option[0]]=option[1];
-  }
-  if(!options->host)
-    options->host="127.0.0.1";
-  if(!options->user)
-    options->user="root";
-  if(!options->port)
-    options->port=1900;
-  else
-    options->port=(int)options->port;
-
-  string server_path = "/usr/local/lib/steam";
-  //change this to working directory
-
-  master()->add_include_path(server_path+"/server/include");
-  master()->add_program_path(server_path+"/server/");
-  master()->add_program_path(server_path+"/conf/");
-  master()->add_program_path(server_path+"/spm/");
-  master()->add_program_path(server_path+"/server/net/coal/");
-
-  conn = ((program)"client_base.pike")();
-
-  int start_time = time();
-
-  //connect to the server
-  werror("Connecting to sTeam server...\n");
-  while ( !conn->connect_server(options->host, options->port)  ) 
-  {
-    if ( time() - start_time > 120 ) 
-    {
-      throw (({" Couldn't connect to server. Please check steam.log for details! \n", backtrace()}));
-    }
-    werror("Failed to connect... still trying ... (server running ?)\n");
-    sleep(10);
-  }
- 
-  ping();
-
-  //No password is required for user guest
-  if(lower_case(options->user) != "guest")
-  {
-    mixed err;
-    int tries=3;
-    //readln->set_echo( 0 );
-    do
-    {
-      pw = Input.read_password( sprintf("Password for %s@%s", options->user,
-           options->host), "steam" );
-    }
-    while((err = catch(conn->login(options->user, pw, 1))) && --tries);
-    //readln->set_echo( 1 );
-
-    if ( err != 0 ) 
-    {
-      werror("Failed to log in!\nWrong Password!\n");
-      exit(1);
-    }
-  }
-
   //initialize global variables
   _Server=conn->SteamObj(0);
   users=_Server->get_module("users");
@@ -588,6 +519,85 @@ void init(array argv)
   readline_history=Stdio.Readline.History(512, history);
 
   readln->enable_history(readline_history);
+
+}
+
+mapping init(array argv)
+{
+  mapping options = ([ "file":"/etc/shadow" ]);
+
+  array opt=Getopt.find_all_options(argv,aggregate(
+    ({"file",Getopt.HAS_ARG,({"-f","--file"})}),
+    ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
+    ({"user",Getopt.HAS_ARG,({"-u","--user"})}),
+    ({"port",Getopt.HAS_ARG,({"-p","--port"})}),
+    ));
+
+  options->historyfile=getenv("HOME")+"/.steam_history";
+
+  foreach(opt, array option)
+  {
+    options[option[0]]=option[1];
+  }
+  if(!options->host)
+    options->host="127.0.0.1";
+  if(!options->user)
+    options->user="root";
+  if(!options->port)
+    options->port=1900;
+  else
+    options->port=(int)options->port;
+
+  string server_path = "/usr/local/lib/steam";
+  //change this to working directory
+
+  master()->add_include_path(server_path+"/server/include");
+  master()->add_program_path(server_path+"/server/");
+  master()->add_program_path(server_path+"/conf/");
+  master()->add_program_path(server_path+"/spm/");
+  master()->add_program_path(server_path+"/server/net/coal/");
+
+  conn = ((program)"client_base.pike")();
+
+  int start_time = time();
+
+  //connect to the server
+  werror("Connecting to sTeam server...\n");
+  while ( !conn->connect_server(options->host, options->port)  ) 
+  {
+    if ( time() - start_time > 120 ) 
+    {
+      throw (({" Couldn't connect to server. Please check steam.log for details! \n", backtrace()}));
+    }
+    werror("Failed to connect... still trying ... (server running ?)\n");
+    sleep(10);
+  }
+ 
+  ping();
+
+  //No password is required for user guest
+  if(lower_case(options->user) == "guest")
+    return options;
+  
+    mixed err;
+    int tries=3;
+    //readln->set_echo( 0 );
+    do
+    {
+      pw = Input.read_password( sprintf("Password for %s@%s", options->user,
+           options->host), "steam" );
+    }
+    while((err = catch(conn->login(options->user, pw, 1))) && --tries);
+    //readln->set_echo( 1 );
+
+    if ( err != 0 ) 
+    {
+      werror("Failed to log in!\nWrong Password!\n");
+      exit(1);
+    }
+  
+
+  return options;
 }
 
 mapping assign(object conn, object _Server, object users)
@@ -637,8 +647,8 @@ mapping assign(object conn, object _Server, object users)
 
 int login(string user)
 {
-  //conn->logout();
-  init(({"","-u",user}));
+  conn->logout();
+  initialize(({"","-u",user}));
   handler->p->set_server_filepath(_Server->get_module("filepath:tree")); 
   return 1;
 }
