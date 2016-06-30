@@ -64,44 +64,44 @@ hilfe           Help for Hilfe commands.
       return;
 
     case "list":
-      write("List Gates/Exits, Documents, Containers in the current Room.\n");
+      write("list command is used to list down the objects (Files, Container, Group, Room, Exits) present in the current room.\nFor example to list down the documents in the current room use: list files\nSyntax: list <object type>\n");
       return;
     case "goto":
-      write("Goto a Room using a full path to the Room.\n");
+      write("goto command is used to goto to a room using a full path to the room.\nFor a room abc present inside room new present inside /, the command to goto room abc will be:\ngoto /new1/abc\nSyntax: goto <full path to room>\n");
       return;
     case "title":
-      write("Set your own description.\n");
+      write("title command is used to change the description of the current user.\nSyntax: title <description>\n");
       return;
     case "room":
-      write("Describe the Room you are currently in.\n");
+      write("room command is used to see the description of the current room.\nSyntax: room\n");
       return;
     case "look":
-      write("Look around the Room.\n");
+      write("look command is used to look around the room. It lists the Documents, Containers, Gates or Exits and Rooms present in the current room.\nSyntax: look\n");
       return;
     case "take":
-      write("Copy a object in your inventory.\n");
+      write("take command is used to copy a particular object to the inventory or the rucksack carried around by the user. For example to copy a file named test to the inventory use:\ntake test\nSynatx: take <object name>\n");
       return;
     case "gothrough":
-      write("Go through a gate.\n");
+      write("gothrough command is used to go through a gate. A gate connects two rooms so if the user goes through the gate he reaches the other room.\nFor example if a gate G connects room A and room B and the user is present in room A, then using the command:\ngothrouh G\nwill take the user to room B.\nSyntax: gothrough <gate name>\n");
       return;
     case "create":
-      write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
+      write("create command is used to create new objects (Document, Container, Group, Room, Exits). The new object created can be placed anywhere by providing the full path for the destination parameter or a '.' if it is to be created in the current location.\nSyntax: create <object type> <name> <destination>\n");
       return;
     case "peek":
-      write("Peek through a container.\n");
+      write("peek through a container. Look inside the conatiner, list the containers and files inside that particular container.\nSyntax: peek <container name>\n");
       return;
     case "i":
     case "inventory":
-      write("Lists your inventory\n");
+      write("inventory(i) is used to see the contents of the rucksack. It lists the containers, files and any other object present in the inventory.\nSyntax: inventory or i\n");
       return;
     case "edit":
-      write("Edit a file in the current Room.\n");
+      write("edit is used to edit the files present in the current room. Multiple files can be opened for editing at once.\nSyntax: edit <filename1> <filename2> ...\n");
       return;
     case "join":
-      write("Join a group.\n");
+      write("join is used to join a group.\nSyntax: join group <group name>\n");
       return;
     case "leave":
-      write("Leave a group.\n");
+      write("leave is used to leave a group.\nSyntax: leave group <group name>\n");
       return;
     //Hilfe internal help
     case "me more":
