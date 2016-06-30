@@ -580,9 +580,19 @@ array(string) get_list(string what,string|object|void lpath)
     break;
     case "exits":
     case "gates":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_EXIT);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
     case "rooms":
     {
-      mixed all = pathobj->get_inventory_by_class(CLASS_ROOM|CLASS_EXIT);
+      mixed all = pathobj->get_inventory_by_class(CLASS_ROOM);
       foreach(all, object obj)
       {
         string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
