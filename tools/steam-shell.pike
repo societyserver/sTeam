@@ -48,7 +48,7 @@ title           Set your own description.
 room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
-gothrough       Go through a gate.
+enter           Enter a Room, Gate or Exit.
 create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
 peek            Peek through a container.
 inventory(i)    List your inventory.
@@ -81,8 +81,8 @@ hilfe           Help for Hilfe commands.
     case "take":
       write("Copy a object in your inventory.\n");
       return;
-    case "gothrough":
-      write("Go through a gate.\n");
+    case "enter":
+      write("Enter a Room, Gate or Exit.\n");
       return;
     case "create":
       write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
@@ -219,7 +219,7 @@ int main(int argc, array(string) argv)
     "room"        : desc_room,
     "look"        : look,
     "take"        : take,
-    "gothrough"   : gothrough,
+    "enter"       : enter,
     "create"      : create_ob,
     "peek"        : peek,
     "inventory"   : inventory,
@@ -368,7 +368,7 @@ mapping assign(object conn, object _Server, object users)
     "room"        : desc_room,
     "look"        : look,
     "take"        : take,
-    "gothrough"   : gothrough,
+    "enter"       : enter,
     "join"        : join,
     "leave"       : leave,
 
@@ -729,15 +729,19 @@ int take(string name)
     return 0;
 }
 
-int gothrough(string gatename)
+int enter(string gatename)
 {
     string fullpath = "";
     fullpath = getpath()+"/"+gatename;
     object gate = OBJ(fullpath);
     if(gate)
     {
-      object exit = gate->get_exit();
-      string exit_path1 = "",exit_path2 = "";
+      string exit_path1 = fullpath,exit_path2 = "";
+      if(_Server->get_factory(gate)->query_attribute("OBJ_NAME")=="Exit.factory")
+      {
+        object exit = gate->get_exit();
+        exit_path1 = exit->query_attribute("OBJ_PATH"); //change to object_to_path
+      }
 //      exit_path1 = _Server->get_module("filepath:tree")->check_tilde(exit);
 //      exit_path2 = _Server->get_module("filepath:tree")->object_to_path(exit);
 //      if(exit_path1!="")
@@ -746,7 +750,7 @@ int gothrough(string gatename)
 //          goto_room(exit_path2);
 //      else
 //          write("Problem with object_to_path\n");
-      exit_path1 = exit->query_attribute("OBJ_PATH"); //change to object_to_path
+      
       if(exit_path1!="")
         goto_room(exit_path1);
     }
