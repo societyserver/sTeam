@@ -24,6 +24,7 @@ constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $
 
 inherit "applauncher.pike";
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
+#include <classes.h>
 
 Stdio.Readline readln;
 mapping options;
@@ -48,10 +49,12 @@ room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
 gothrough       Go through a gate.
-create          Create an object (File/Container/Exit) in current Room.
+create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
+join            Join a group.
+leave           Leave a group.
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -61,38 +64,44 @@ hilfe           Help for Hilfe commands.
       return;
 
     case "list":
-      write("List Gates/Exits, Documents, Containers in the current Room.\n");
+      write("list command is used to list down the objects (Files, Container, Group, Room, Exits) present in the current room.\nFor example to list down the documents in the current room use: list files\nSyntax: list <object type>\n");
       return;
     case "goto":
-      write("Goto a Room using a full path to the Room.\n");
+      write("goto command is used to goto to a room using a full path to the room.\nFor a room abc present inside room new present inside /, the command to goto room abc will be:\ngoto /new1/abc\nSyntax: goto <full path to room>\n");
       return;
     case "title":
-      write("Set your own description.\n");
+      write("title command is used to change the description of the current user.\nSyntax: title <description>\n");
       return;
     case "room":
-      write("Describe the Room you are currently in.\n");
+      write("room command is used to see the description of the current room.\nSyntax: room\n");
       return;
     case "look":
-      write("Look around the Room.\n");
+      write("look command is used to look around the room. It lists the Documents, Containers, Gates or Exits and Rooms present in the current room.\nSyntax: look\n");
       return;
     case "take":
-      write("Copy a object in your inventory.\n");
+      write("take command is used to copy a particular object to the inventory or the rucksack carried around by the user. For example to copy a file named test to the inventory use:\ntake test\nSynatx: take <object name>\n");
       return;
     case "gothrough":
-      write("Go through a gate.\n");
+      write("gothrough command is used to go through a gate. A gate connects two rooms so if the user goes through the gate he reaches the other room.\nFor example if a gate G connects room A and room B and the user is present in room A, then using the command:\ngothrouh G\nwill take the user to room B.\nSyntax: gothrough <gate name>\n");
       return;
     case "create":
-      write("Create an object (File/Container/Exit) in current Room.\n");
+      write("create command is used to create new objects (Document, Container, Group, Room, Exits). The new object created can be placed anywhere by providing the full path for the destination parameter or a '.' if it is to be created in the current location.\nSyntax: create <object type> <name> <destination>\n");
       return;
     case "peek":
-      write("Peek through a container.\n");
+      write("peek through a container. Look inside the conatiner, list the containers and files inside that particular container.\nSyntax: peek <container name>\n");
       return;
     case "i":
     case "inventory":
-      write("Lists your inventory\n");
+      write("inventory(i) is used to see the contents of the rucksack. It lists the containers, files and any other object present in the inventory.\nSyntax: inventory or i\n");
       return;
     case "edit":
-      write("Edit a file in the current Room.\n");
+      write("edit is used to edit the files present in the current room. Multiple files can be opened for editing at once.\nSyntax: edit <filename1> <filename2> ...\n");
+      return;
+    case "join":
+      write("join is used to join a group.\nSyntax: join group <group name>\n");
+      return;
+    case "leave":
+      write("leave is used to leave a group.\nSyntax: leave group <group name>\n");
       return;
     //Hilfe internal help
     case "me more":
@@ -216,6 +225,8 @@ int main(int argc, array(string) argv)
     "inventory"   : inventory,
     "i"           : inventory,
     "edit"        : editfile,
+    "join"        : join,
+    "leave"       : leave,
     ]);
 //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
   array(string) command_arr;
@@ -240,6 +251,8 @@ int main(int argc, array(string) argv)
           myarray[command_arr[0]](command_arr[1],command_arr[2]);
         else if(num==1)
           myarray[command_arr[0]]();
+        else if(num==4)
+          myarray[command_arr[0]](command_arr[1],command_arr[2],command_arr[3]);
         };
 
         if(result!=0)
@@ -356,6 +369,8 @@ mapping assign(object conn, object _Server, object users)
     "look"        : look,
     "take"        : take,
     "gothrough"   : gothrough,
+    "join"        : join,
+    "leave"       : leave,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -385,6 +400,50 @@ mapping assign(object conn, object _Server, object users)
     "_BUILDER" : _Server->get_module("users")->lookup("builder"),
     "_CODER" : _Server->get_module("users")->lookup("coder"),
     ]);
+}
+
+void leave(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("leave group <group name>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      group->remove_member(me);
+  }
+}
+
+void join(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("join group <name of the group>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      int result = group->add_member(me);
+      switch(result){
+        case 1:write("Joined group "+name+"\n");
+          break;
+        case 0:write("Couldn't join group "+name+"\n");
+          break;
+        case -1:write("pending\n");
+          break;
+        case -2:write("pending failed");
+          break;
+      }
+  }
 }
 
 // create new sTeam objects
@@ -465,71 +524,98 @@ int list(string what)
   if(sizeof(display)==0)
     toappend = "There are no "+what+" in this room\n";
   else
-    toappend = "Here is a list of all "+what+" in the current room\n";
+    toappend = "Here is a list of all "+what+"\n";
   foreach(display,string str)
   {
-    a=a+(str+"    ");
+    a=a+(str+"\n");
     if(str=="Invalid command")
     {
       flag=1;
       write(str+"\n");
     }
   }
-  if(flag==0)
-    write(toappend+a+"\n\n");
+  if(flag==0){
+    mapping mp = Process.run("tput cols");
+    int screenwidth = (int)mp["stdout"];
+    write(toappend + "\n");
+    write("%-$*s\n", screenwidth,a);
+    write("\n");
+  }  
   return 0;
 }
 
 array(string) get_list(string what,string|object|void lpath)
 {
-//  string name;
-//  object to;
-  array(string) gates=({}),containers=({}),documents=({}),rooms = ({}),rest=({});
-//  mapping(string:object) s = ([ ]);
+  array(string) whatlist = ({});
   object pathobj;
-  if(!lpath)
-    pathobj = OBJ(getpath());
-  else if(stringp(lpath))
-    pathobj = OBJ(lpath);
-  else if(objectp(lpath))
-    pathobj = lpath;
-//  string pathfact = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
-  mixed all = pathobj->get_inventory_by_class(0x3cffffff); //CLASS_ALL
-  foreach(all, object obj)
+      if(!lpath)
+       pathobj = OBJ(getpath());
+      else if(stringp(lpath))
+       pathobj = OBJ(lpath);
+      else if(objectp(lpath))
+       pathobj = lpath;
+  switch (what)  
   {
-    string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
-    string obj_name = obj->query_attribute("OBJ_NAME");
-//    write("normally : "+obj_name+"\n");
-    if(fact_name=="Document.factory")
-        documents = Array.push(documents,obj_name);
-//          write(obj_name+"\n");
-    else if(fact_name=="Exit.factory"){
-        string fullgate = obj_name+" : "+obj->get_exit()->query_attribute("OBJ_NAME");
-        gates = Array.push(gates,fullgate);
-//          write("in gates : "+fullgate+"\n");
+    case "containers":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_CONTAINER);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
     }
-    else if(fact_name=="Container.factory")
-        containers = Array.push(containers,obj_name);
-//          write("in containers : "+obj_name+"\n");
-    else if(fact_name=="Room.factory")
-        rooms = Array.push(rooms,obj_name);
-    else
-        rest = Array.push(rest, obj_name);
+    break;
+    case "files":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_DOCUMENT|CLASS_DOCLPC|CLASS_DOCEXTERN|CLASS_DOCHTML|CLASS_DOCXML|CLASS_DOCXSL);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "exits":
+    case "gates":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_EXIT);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "rooms":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_ROOM);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "groups":
+    {
+      array(object) groups = _Server->get_module("groups")->get_groups();
+      foreach(groups,object group)
+      {
+        string obj_name = group->get_name();
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    default:
+      whatlist = ({"Invalid command"});
   }
-  if(what=="gates")
-    return gates;
-  else if(what=="rooms")
-    return rooms;
-  else if(what=="containers")
-    return containers;
-  else if(what=="files")
-    return documents;
-  else if(what=="others")
-    return rest;
-  else
-    return ({"Invalid command"});
+  return whatlist;
 }
-
 
 int goto_room(string where)
 {
@@ -548,16 +634,8 @@ int goto_room(string where)
     pathobj = OBJ(where);
     if(!pathobj)    //Relative room checking
     {
-      if(getpath()[-1]==47)    //check last "/"
-      {
-        pathobj = OBJ(getpath()+where);
-        where=getpath()+where;
-      }
-      else
-      {
-        pathobj = OBJ(getpath()+"/"+where);
-        where=getpath()+"/"+where;
-      }
+      pathobj = OBJ(getpath()+"/"+where);
+      where=getpath()+"/"+where;
     }
     roomname = pathobj->query_attribute("OBJ_NAME");
     string factory = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
@@ -628,10 +706,7 @@ int look(string|void str)
 int take(string name)
 {
     string fullpath="";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+name;
-    else
-      fullpath = getpath()+"/"+name;
+    fullpath = getpath()+"/"+name;
     object orig_file = OBJ(fullpath);
     if(orig_file)
     {
@@ -647,10 +722,7 @@ int take(string name)
 int gothrough(string gatename)
 {
     string fullpath = "";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+gatename;
-    else
-      fullpath = getpath()+"/"+gatename;
+    fullpath = getpath()+"/"+gatename;
     object gate = OBJ(fullpath);
     if(gate)
     {
@@ -676,45 +748,56 @@ int gothrough(string gatename)
 int delete(string file_cont_name)
 {
   string fullpath="";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+file_cont_name;
-  else
-      fullpath = getpath()+"/"+file_cont_name;
+  fullpath = getpath()+"/"+file_cont_name;
   if(OBJ(fullpath))
     return 0;
   return 0;
 }
 
-int create_ob(string type,string name)
+int create_ob(string type,string name,string destination)
 {
   string desc = readln->read("How would you describe it?\n");
   mapping data = ([]);
   type = String.capitalize(type);
+  if(destination == ".")
+    destination = getpath();
   if(type=="Exit")
   {
     object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
-    object exit_from = OBJ(getpath());
-    data = ([ "exit_from":exit_from, "exit_to":exit_to ]);
+//    object exit_from = OBJ(getpath());
+    data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
   }
   else if(type=="Link")
   {
     object link_to = OBJ(readln->read("Where does the link lead?\n"));
     data = ([ "link_to":link_to ]);
   }
+  else if(type=="Group")
+  {
+    string parent = readln->read("Subgroup of?\n");
+    data = (["parentgroup":parent]);
+  }
   object myobj = create_object(type,name,desc,data);
-  if(type=="Room")
-    myobj->move(OBJ(getpath()));
-
+/*  if(type=="Room" || type=="Container"){
+    if(destination==".")
+      myobj->move(OBJ(getpath()));
+    else
+      myobj->move(OBJ(destination));
+  }
+ */
+  if(!(type == "Exit" || type=="Group"))
+    myobj->move(OBJ(destination));
+  if(type=="Group")
+  {
+    myobj->add_member(me);
+  }
   return 0;
 }
 
 int peek(string container)
 {
   string fullpath = "";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+container;
-  else
-      fullpath = getpath()+"/"+container;
+  fullpath = getpath()+"/"+container;
   string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
   if(pathfact=="Room.factory")
   {
@@ -762,10 +845,7 @@ int inventory()
 int editfile(string filename)
 {
   string fullpath = "";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+filename;
-  else
-      fullpath = getpath()+"/"+filename;
+  fullpath = getpath()+"/"+filename;
   string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
   if(pathfact=="Document.factory")
     applaunch(OBJ(fullpath),exitnow);
