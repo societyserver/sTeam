@@ -561,7 +561,6 @@ array(string) get_list(string what,string|object|void lpath)
       mixed all = pathobj->get_inventory_by_class(CLASS_CONTAINER);
       foreach(all, object obj)
       {
-        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
         string obj_name = obj->query_attribute("OBJ_NAME");
         whatlist = Array.push(whatlist,obj_name);
       }
@@ -572,7 +571,6 @@ array(string) get_list(string what,string|object|void lpath)
       mixed all = pathobj->get_inventory_by_class(CLASS_DOCUMENT|CLASS_DOCLPC|CLASS_DOCEXTERN|CLASS_DOCHTML|CLASS_DOCXML|CLASS_DOCXSL);
       foreach(all, object obj)
       {
-        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
         string obj_name = obj->query_attribute("OBJ_NAME");
         whatlist = Array.push(whatlist,obj_name);
       }
@@ -584,7 +582,6 @@ array(string) get_list(string what,string|object|void lpath)
       mixed all = pathobj->get_inventory_by_class(CLASS_EXIT);
       foreach(all, object obj)
       {
-        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
         string obj_name = obj->query_attribute("OBJ_NAME");
         whatlist = Array.push(whatlist,obj_name);
       }
@@ -595,7 +592,6 @@ array(string) get_list(string what,string|object|void lpath)
       mixed all = pathobj->get_inventory_by_class(CLASS_ROOM);
       foreach(all, object obj)
       {
-        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
         string obj_name = obj->query_attribute("OBJ_NAME");
         whatlist = Array.push(whatlist,obj_name);
       }
@@ -608,6 +604,20 @@ array(string) get_list(string what,string|object|void lpath)
       {
         string obj_name = group->get_name();
         whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "others":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_ALL);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        if(!(fact_name == "Group.factory" || fact_name == "Room.factory" || fact_name == "Exit.factory" || fact_name == "Container.factory" || fact_name == "Document.factory" || fact_name == "DocExtern.factory"))
+        {
+          string obj_name = obj->query_attribute("OBJ_NAME");
+          whatlist = Array.push(whatlist,obj_name);
+        }
       }
     }
     break;
