@@ -1,0 +1,22 @@
+The tests here use the pike scripts included to generate and run testsuites. 
+
+mktestsuite
+The mktestsuite script is a simple shell script that uses M4 to convert a testsuite input file into a testsuite that can be run by test_pike.pike. This script is found in $PIKE/include/pike.
+
+Usage:
+
+mktestsuite testsuite.in > testsuite
+
+The input file is simply a series of test invocations; any code outside of a test invocation will be ignored and will not appear in the final testsuite file.
+
+
+test_pike
+
+The most important part of the regression testing infrastructure is test_pike, which is the pike script that performs the actual testing. Included in $PIKE/include/pike for Pike releases before 7.7, and as the builtin tool pike -x test_pike in releases 7.7 and higher, test_pike includes a large number of options for performing testing.
+
+Usage:
+
+  pike -x test_pike testuitefile
+
+The first few cases are used to initialize the client and define global variables which are then used to execute tests.
+We have written these initialization code as tests as there is no other way to execute simple pike code before running the tests.
