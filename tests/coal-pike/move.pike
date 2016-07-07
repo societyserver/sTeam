@@ -1,6 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
-int testcase_move(object me,object _Server)
+int testcase1(object me,object _Server)
 {
 	int pass = 0;
 	me->move(OBJ("/home/root"));

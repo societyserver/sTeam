@@ -5,7 +5,7 @@ The mktestsuite script is a simple shell script that uses M4 to convert a testsu
 
 Usage:
 
-mktestsuite testsuite.in > testsuite
+mktestsuite test.in > test
 
 The input file is simply a series of test invocations; any code outside of a test invocation will be ignored and will not appear in the final testsuite file.
 
@@ -16,7 +16,7 @@ The most important part of the regression testing infrastructure is test_pike, w
 
 Usage:
 
-  pike -x test_pike testuitefile
+  pike -x test_pike test
 
 The first few cases are used to initialize the client and define global variables which are then used to execute tests.
 We have written these initialization code as tests as there is no other way to execute simple pike code before running the tests.
