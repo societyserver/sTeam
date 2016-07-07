@@ -477,7 +477,7 @@ int list(string what)
   }
   if(flag==0)
     write(toappend+a+"\n\n");
-  return 0;
+  return !flag;//flag = 1 when str = Invalid command that means execution failed
 }
 
 array(string) get_list(string what,string|object|void lpath)
@@ -574,24 +574,28 @@ int goto_room(string where)
     {
       write("Please specify path to room. Not a "+((factory/".")[0])+"\n");
       me->move(OBJ(oldpath));
+      return 0;
     }
     else if(error)
     {
       write("Please specify correct path to a room.\n");
+      return 0;
     }
 //  }
 //  roomname = pathobj->query_attribute("OBJ_NAME");
 //  write("You are now inside "+roomname+"\n");
-  return 0;
+  return 1;
 }
 
 int set_title(string desc)
 {
  if(users->lookup(options->user)->set_attribute("OBJ_DESC",desc))
     write("You are now described as - "+desc+"\n");
-  else
+  else{
     write("Cannot set description.\n");
-  return 0;
+    return 0;
+  }
+  return 1;
 }
 
 int desc_room()
@@ -603,7 +607,7 @@ int desc_room()
   if((desc=="")||(Regexp.match("^ +$",desc)))
     desc = "This room does not have a description yet.\n";
   write("You are currently in "+pathobj->query_attribute("OBJ_NAME")+"\n"+desc+"\n");
-  return 0;
+  return 1;
 }
 
 int look(string|void str)
@@ -622,7 +626,7 @@ int look(string|void str)
   write("---------------\n");
   list("rooms");
   write("---------------\n");
-  return 0;
+  return 1;
 }
 
 int take(string name)
@@ -639,9 +643,11 @@ int take(string name)
       dup_file->move(me);
       write(name+" copied to your rucksack.\n");
     }
-    else
+    else{
       write("Please mention a file in this room.");
-    return 0;
+      return 0;
+    }
+    return 1;
 }
 
 int gothrough(string gatename)
@@ -669,8 +675,11 @@ int gothrough(string gatename)
         goto_room(exit_path1);
     }
     else
+    {
       write(gatename+" is not reachable from current room\n");
-    return 0;
+      return 0;
+    }
+    return 1;
 }
 
 int delete(string file_cont_name)
@@ -705,7 +714,7 @@ int create_ob(string type,string name)
   if(type=="Room")
     myobj->move(OBJ(getpath()));
 
-  return 0;
+  return 1;
 }
 
 int peek(string container)
@@ -731,6 +740,7 @@ int peek(string container)
   write("You peek into "+container+"\n\n");
   display("containers", conts);
   display("files", files);
+  return 1;
 }
 
 void display(string type, array(string) strs)
@@ -757,6 +767,7 @@ int inventory()
   display("containers", conts);
   display("files", files);
   display("other files", others);
+  return 1;
 }
 
 int editfile(string filename)
@@ -769,9 +780,11 @@ int editfile(string filename)
   string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
   if(pathfact=="Document.factory")
     applaunch(OBJ(fullpath),exitnow);
-  else
+  else{
     write("You can't edit a "+pathfact[0..sizeof(pathfact)-8]);
-  return 0;
+    return 0;
+  }
+  return 1;
 }
 
 void exitnow()
