@@ -22,15 +22,6 @@ void init(){
 
 int main(){
 	init();
-	int pass = 0;
-	string path = me->get_last_trail()->query_attribute("OBJ_PATH");
-	write("Current location of user: "+path+"\n");
-	me->move(OBJ("/new1"));
-	write("Moving user to /new1\n");
-	path = me->get_last_trail()->query_attribute("OBJ_PATH");
-	write("New location of user: "+path+"\n");
-	if(path=="/new1")pass=1;
-	string result = (pass==1)?"passed\n":"fail\n";
-	write("Test case 1: move user - "+result);
-	me->move(OBJ("/home/root"));
+	object test1 = ((program)"move.pike")();
+	int res = test1->testcase_move(me,_Server);
 }
