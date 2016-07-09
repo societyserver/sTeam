@@ -15,3 +15,15 @@ int testcase1(object me,object _Server)
 	me->move(OBJ("/home/root"));
 	return pass;
 }
+
+int testcase2(object me,object _Server)
+{
+	int pass = 0;
+	me->move("/home/root");
+	string oldpath = me->get_last_trail()->query_attribute("OBJ_PATH");
+	write("Current location of user: "+oldpath+"\n");
+	mixed result = catch{me->move(OBJ("nopath"));};
+	write("Moving to a non existential location nopath.\n");
+	if(result ==0)pass=1; 
+	return pass;
+}

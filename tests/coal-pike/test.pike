@@ -38,9 +38,7 @@ class Test{
 		string n = name +".pike";
 		object code = ((program)n)();
 		array(function) foo = values(code);
-//		code->testcase1(me,_Server);
 		for(int i=0;i< sizeof(cases);i++){
-		//	code->testcase+"i"();
 			foo[i](me,_Server);
 		}
 	}
@@ -49,8 +47,6 @@ class Test{
 
 
 int main(){
-	Test move = Test("move",1);
+	Test move = Test("move",2);
 	move->run();
-//	object test1 = ((program)"move.pike")();
-//	int res = test1->testcase_move(me,_Server);
 }
