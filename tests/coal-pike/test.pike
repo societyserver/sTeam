@@ -19,6 +19,10 @@ class Test{
 		cases = allocate(totalCases);
 		init();
 	}
+	void destroy(){
+		me->move(OBJ("/home/steam"));
+		OBJ("/TestRoom")->delete();
+	}
 	void init(){
 		string host = "127.0.0.1";
 		int port = 1900;
@@ -33,6 +37,10 @@ class Test{
 		conn->login("root","steam",1);
 		_Server = conn->SteamObj(0);
 		me = _Server->get_module("users")->lookup("root");
+		me->move(OBJ("/"));
+		write("Creating test room\n\n");
+		_Server->get_factory("Room")->execute((["name":"TestRoom"]))->move(OBJ("/"));
+		me->move(OBJ("/TestRoom"));
 	}
 	int run(){
 		string n = name +".pike";
@@ -47,6 +55,6 @@ class Test{
 
 
 int main(){
-	Test move = Test("move",2);
-	move->run();
+	Test create = Test("create",4);
+	create->run();
 }
