@@ -38,9 +38,11 @@ class Test{
 		string n = name +".pike";
 		object code = ((program)n)();
 		array(function) foo = values(code);
+		int success = 0;
 		for(int i=0;i< sizeof(cases);i++){
-			foo[i](me,_Server);
+			success += foo[i](me,_Server);
 		}
+		write("success: "+success+"\nfails: "+(sizeof(cases)-success)+"\n");
 	}
 }
 
