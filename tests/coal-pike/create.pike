@@ -4,10 +4,11 @@ int testcase1(object me,object _Server)
 {
 	int pass = 0;
 	write ("creating a new Calendar\n");
-	int result =_Server->get_factory("Calendar")->execute((["name":"TestCalendar"]))->move(OBJ(me->get_last_trail()->query_attribute("OBJ_PATH"))); 
+	object room = OBJ("/TestRoom");
+	int result =_Server->get_factory("Calendar")->execute((["name":"TestCalendar"]))->move(room); 
 	if(result == 1) pass = 1;
-//	if(pass == 1)
-//		OBJ(me->get_last_trail()->query_attribute("OBJ_PATH")+"/TestCalendar")->delete();
+	if(pass == 1)
+		OBJ("TestRoom/TestCalendar")->query_attribute("OBJ_NAME");
 	return pass;
 }
 
@@ -15,10 +16,11 @@ int testcase2(object me,object _Server)
 {
 	int pass = 0;
 	write("creating a new Container\n");
-	int result =_Server->get_factory("Container")->execute((["name":"TestContainer"]))->move(OBJ(me->get_last_trail()->query_attribute("OBJ_PATH"))); 
+	object room = OBJ("/TestRoom");
+	int result =_Server->get_factory("Container")->execute((["name":"TestContainer"]))->move(room); 
 	if(result == 1) pass = 1;
-//	if(pass == 1)
-//		OBJ(me->get_last_trail()->query_attribute("OBJ_PATH")+"/TestContainer")->delete();
+	if(pass == 1)
+		OBJ("TestRoom/TestContainer")->query_attribute("OBJ_NAME");
 	return pass;
 
 }
@@ -27,10 +29,11 @@ int testcase3(object me,object _Server)
 {
 	int pass = 0;
 	write("creating a new Date\n");
-	int result =_Server->get_factory("Date")->execute((["name":"TestDate"]))->move(OBJ(me->get_last_trail()->query_attribute("OBJ_PATH"))); 
+	object room = OBJ("/TestRoom");
+	int result =_Server->get_factory("Date")->execute((["name":"TestDate"]))->move(room); 
 	if(result == 1) pass = 1;
-//	if(pass == 1)
-//		OBJ(me->get_last_trail()->query_attribute("OBJ_PATH")+"/TestDate")->delete();
+	if(pass == 1)
+		OBJ("TestRoom/TestDate")->query_attribute("OBJ_NAME");
 	return pass;
 
 }
@@ -39,10 +42,21 @@ int testcase4(object me,object _Server)
 {
 	int pass = 0;
 	write("creating a new Document\n");
-	int result =_Server->get_factory("Document")->execute((["name":"TestDocument"]))->move(OBJ(me->get_last_trail()->query_attribute("OBJ_PATH"))); 
+	object room = OBJ("/TestRoom");
+	int result =_Server->get_factory("Document")->execute((["name":"TestDocument"]))->move(room); 
 	if(result == 1) pass = 1;
-//	if(pass == 1)
-//		OBJ(me->get_last_trail()->query_attribute("OBJ_PATH")+"/TestDocument")->delete();
+	if(pass == 1)
+		OBJ("TestRoom/TestDocument")->query_attribute("OBJ_NAME");
 	return pass;
 
 }
+
+int testcase5(object me,object _Server)
+{
+	int pass=0;
+	write("Creating a class that does not exists\n");
+	mixed result = _Server->get_factory("NoClass");
+	if(result == 0) pass =1;
+	return pass;
+}
+
