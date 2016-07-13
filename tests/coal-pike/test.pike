@@ -19,6 +19,10 @@ class Test{
 		cases = allocate(totalCases);
 		init();
 	}
+	void destroy(){
+		me->move(OBJ("/home/steam"));
+		OBJ("/TestRoom")->delete();
+	}
 	void init(){
 		string host = "127.0.0.1";
 		int port = 1900;
@@ -33,6 +37,8 @@ class Test{
 		conn->login("root","steam",1);
 		_Server = conn->SteamObj(0);
 		me = _Server->get_module("users")->lookup("root");
+		_Server->get_factory("Room")->execute((["name":"TestRoom"]))->move(OBJ("/"));
+		me->move(OBJ("/TestRoom"));
 	}
 	int run(){
 		string n = name +".pike";
@@ -40,7 +46,10 @@ class Test{
 		array(function) foo = values(code);
 		int success = 0;
 		for(int i=0;i< sizeof(cases);i++){
-			success += foo[i](me,_Server);
+			if(foo[i](me,_Server)==1){
+				success+=1;
+			}
+			
 		}
 		write("success: "+success+"\nfails: "+(sizeof(cases)-success)+"\n");
 	}
@@ -49,6 +58,6 @@ class Test{
 
 
 int main(){
-	Test move = Test("move",2);
+	Test move = Test("move",4);
 	move->run();
 }
