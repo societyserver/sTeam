@@ -1,0 +1,38 @@
+test_do(add_constant("host","127.0.0.1");
+	add_constant("port",1900);
+	add_constant("server_path","/usr/local/lib/steam");
+)
+
+test_do([[
+	
+	master()->add_include_path(server_path+"/server/include");
+	master()->add_program_path(server_path+"/server/");
+  	master()->add_program_path(server_path+"/conf/");
+  	master()->add_program_path(server_path+"/spm/");
+  	master()->add_program_path(server_path+"/server/net/coal/");
+]])
+
+test_do(add_constant("conn",((program)"../spm/client_base.pike")());)
+
+test_do([[
+	conn->connect_server(host,port);
+	conn->login("root","steam",1);
+]])
+
+test_do(
+	add_constant("_Server",conn->SteamObj(0));
+)
+test_do(
+	add_constant("me",_Server->get_module("users")->lookup("root"));	
+)
+
+test_any([[
+	#define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
+	me->move(OBJ("/home/root"));
+	string oldpath = me->get_last_trail()->query_attribute("OBJ_PATH");
+	me->move(OBJ("/new1"));
+	string newpath = me->get_last_trail()->query_attribute("OBJ_PATH");
+	if(oldpath=="/home/root" && newpath=="/new1") return 1;
+	else return 0;
+]],1)
+
