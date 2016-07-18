@@ -48,7 +48,7 @@ int testcase2(object me,object _Server)
 		write("Moving "+testObjects[i]->get_class()+ " to a non existential path: ");
 		int ctr = foo[0](me,_Server,testObjects[i]);
 		if(ctr == 0)success =0;
-		if(success == 1)write("passed\n");
+		if(ctr == 1)write("passed\n");
 		else write("failed\n");
 	}
 	
