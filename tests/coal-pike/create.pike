@@ -1,6 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
-int testcase1(object me,object _Server)
+int generalCreate(object me,object _Server)
 {
 	object code = ((program)"create_object.pike")();
 	array(function) foo = values(code);
@@ -16,7 +16,7 @@ int testcase1(object me,object _Server)
 	return success;
 }
 
-int testcase2(object me,object _Server)
+int invalidClass(object me,object _Server)
 {
 	int pass=0;
 	write("Creating a class that does not exists\n");
@@ -25,4 +25,18 @@ int testcase2(object me,object _Server)
 	return pass;
 }
 
+int createUser(object me,object _Server)
+{
+	int pass = 0;
+	write("Creating a new user: ");
+	mixed result = catch{_Server->get_factory("User")->execute((["name":"testUser1","pw":"password","email":"user@steam.com"])); };
+	if(result ==0)pass=1;
+	if(pass == 1)
+	{
+		write("passed\n");
+		_Server->get_module("users")->get_user("testUser1")->delete();
+	}	
+	else write("failed\n");
+	return pass;
+}
 
