@@ -6,6 +6,7 @@ int testcase(object me,object _Server,string type)
 	object room = OBJ("/TestRoom");
 	mixed result =catch{ _Server->get_factory(type)->execute((["name":"TestObj"+type]))->move(room); };
 	if(result ==0)pass=1;
+	else if((type=="User"||type=="Group")&& result!=0)pass=1;
 	object ref = OBJ("/TestRoom/TestObj");
 	if(ref!=0)ref->delete();
 	return pass;
