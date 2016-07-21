@@ -48,7 +48,7 @@ room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
 gothrough       Go through a gate.
-create          Create an object (File/Container/Exit) in current Room.
+create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
@@ -82,7 +82,7 @@ hilfe           Help for Hilfe commands.
       write("Go through a gate.\n");
       return;
     case "create":
-      write("Create an object (File/Container/Exit) in current Room.\n");
+      write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
       return;
     case "peek":
       write("Peek through a container.\n");
@@ -240,6 +240,8 @@ int main(int argc, array(string) argv)
           myarray[command_arr[0]](command_arr[1],command_arr[2]);
         else if(num==1)
           myarray[command_arr[0]]();
+        else if(num==4)
+          myarray[command_arr[0]](command_arr[1],command_arr[2],command_arr[3]);
         };
 
         if(result!=0)
@@ -548,16 +550,8 @@ int goto_room(string where)
     pathobj = OBJ(where);
     if(!pathobj)    //Relative room checking
     {
-      if(getpath()[-1]==47)    //check last "/"
-      {
-        pathobj = OBJ(getpath()+where);
-        where=getpath()+where;
-      }
-      else
-      {
-        pathobj = OBJ(getpath()+"/"+where);
-        where=getpath()+"/"+where;
-      }
+      pathobj = OBJ(getpath()+"/"+where);
+      where=getpath()+"/"+where;
     }
     roomname = pathobj->query_attribute("OBJ_NAME");
     string factory = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
@@ -628,10 +622,7 @@ int look(string|void str)
 int take(string name)
 {
     string fullpath="";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+name;
-    else
-      fullpath = getpath()+"/"+name;
+    fullpath = getpath()+"/"+name;
     object orig_file = OBJ(fullpath);
     if(orig_file)
     {
@@ -647,10 +638,7 @@ int take(string name)
 int gothrough(string gatename)
 {
     string fullpath = "";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+gatename;
-    else
-      fullpath = getpath()+"/"+gatename;
+    fullpath = getpath()+"/"+gatename;
     object gate = OBJ(fullpath);
     if(gate)
     {
@@ -676,25 +664,24 @@ int gothrough(string gatename)
 int delete(string file_cont_name)
 {
   string fullpath="";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+file_cont_name;
-  else
-      fullpath = getpath()+"/"+file_cont_name;
+  fullpath = getpath()+"/"+file_cont_name;
   if(OBJ(fullpath))
     return 0;
   return 0;
 }
 
-int create_ob(string type,string name)
+int create_ob(string type,string name,string destination)
 {
   string desc = readln->read("How would you describe it?\n");
   mapping data = ([]);
   type = String.capitalize(type);
+  if(destination == ".")
+    destination = getpath();
   if(type=="Exit")
   {
     object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
-    object exit_from = OBJ(getpath());
-    data = ([ "exit_from":exit_from, "exit_to":exit_to ]);
+//    object exit_from = OBJ(getpath());
+    data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
   }
   else if(type=="Link")
   {
@@ -702,8 +689,15 @@ int create_ob(string type,string name)
     data = ([ "link_to":link_to ]);
   }
   object myobj = create_object(type,name,desc,data);
-  if(type=="Room")
-    myobj->move(OBJ(getpath()));
+/*  if(type=="Room" || type=="Container"){
+    if(destination==".")
+      myobj->move(OBJ(getpath()));
+    else
+      myobj->move(OBJ(destination));
+  }
+ */
+  if(!(type == "Exit"))
+    myobj->move(OBJ(destination));
 
   return 0;
 }
@@ -711,10 +705,7 @@ int create_ob(string type,string name)
 int peek(string container)
 {
   string fullpath = "";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+container;
-  else
-      fullpath = getpath()+"/"+container;
+  fullpath = getpath()+"/"+container;
   string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
   if(pathfact=="Room.factory")
   {
@@ -762,10 +753,7 @@ int inventory()
 int editfile(string filename)
 {
   string fullpath = "";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+filename;
-  else
-      fullpath = getpath()+"/"+filename;
+  fullpath = getpath()+"/"+filename;
   string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
   if(pathfact=="Document.factory")
     applaunch(OBJ(fullpath),exitnow);
