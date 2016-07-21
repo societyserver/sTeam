@@ -64,4 +64,6 @@ int main(){
 	move->run();
 	Test create = Test("create",3);
 	create->run();
+	Test getEnv = Test("getEnv",1);
+	getEnv->run();
 }
