@@ -1,6 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
-int callingFunction(object me,object _Server)
+int callingFunction(object me,object _Server,object...args)
 {
 	object parent = OBJ("/TestRoom");
 	_Server->get_factory("Room")->execute((["name":"getEnv"]))->move(parent);
