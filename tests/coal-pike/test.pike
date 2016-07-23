@@ -12,6 +12,7 @@ class Test{
 	string name;
 	object _Server;
 	object me;
+	object conn;
 	array(Testcase) cases;
 	int failures;
 	void create(string name,int totalCases){
@@ -24,6 +25,7 @@ class Test{
 		object obj = OBJ("/TestRoom");
 		if(obj!=0)
 		obj->delete();
+		write("===============================\n");
 	}
 	void init(){
 		string host = "127.0.0.1";
@@ -34,13 +36,14 @@ class Test{
 		master()->add_program_path(server_path+"/conf/");
 		master()->add_program_path(server_path+"/spm/");
 		master()->add_program_path(server_path+"/server/net/coal/");
-		object conn = ((program)"../spm/client_base.pike")();
+		conn = ((program)"../spm/client_base.pike")();
 		conn->connect_server(host,port);
 		conn->login("root","steam",1);
 		_Server = conn->SteamObj(0);
 		me = _Server->get_module("users")->lookup("root");
 		_Server->get_factory("Room")->execute((["name":"TestRoom"]))->move(OBJ("/"));
 		me->move(OBJ("/TestRoom"));
+		write("===============================\n");
 	}
 	int run(){
 		string n = name +".pike";
@@ -48,7 +51,7 @@ class Test{
 		array(function) foo = values(code);
 		int success = 0;
 		for(int i=0;i< sizeof(cases);i++){
-			if(foo[i](me,_Server)==1){
+			if(foo[i](me,_Server,conn)==1){
 				success+=1;
 			}
 			
@@ -66,4 +69,7 @@ int main(){
 	create->run();
 	Test getEnv = Test("getEnv",1);
 	getEnv->run();
+
+	Test perm = Test("userPermission",1);
+	perm->run();
 }
