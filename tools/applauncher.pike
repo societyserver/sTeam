@@ -30,6 +30,7 @@ int set=0;
 string dir;
 array(string) debugfilearr;
 array(string) olderrorsarr;
+int exitcall=0;
 
 void upload(object editor, array(string) filearr ,array(int) last_mtimearr, array(object) objarr, array(object) xslobjarr, function|void exit_callback)
 {
@@ -117,7 +118,8 @@ void upload(object editor, array(string) filearr ,array(int) last_mtimearr, arra
   else if (exit_callback)
   {
     exit_callback(editor->wait());
-    exit(1);  
+    if(exitcall==1)
+	exit(1);  
   }
   
   }
