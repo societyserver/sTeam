@@ -786,4 +786,3 @@ string getpath()
   return me->get_last_trail()->query_attribute("OBJ_PATH");
 }
 
-constant stash_help_doc = #"This is a sTeam Advanced Shell. All the STASH commands work with normal pike commands. Tab completion is available for both STASH commands and pike commands.\n\n";
