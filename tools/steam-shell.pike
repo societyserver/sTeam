@@ -495,10 +495,11 @@ int list(string what) {
         }
     }
     if (flag == 0) {
-
+    mapping mp = Process.run("tput cols");
+    int screenwidth = (int)mp["stdout"];
         write(toappend + "\n");
-                write(sprintf("%#-80s", a));
-                write("\n");
+	write("%-$*s\n", screenwidth,a);
+        write("\n");
     }
     return 0;
 }
