@@ -1,6 +1,17 @@
-#!/usr/local/lib/steam/bin/steam
-int main()
+#!/usr/local/pike/7.8.866/bin/pike
+
+void resolveParam(int argc,array(string) argv)
 {
+    if(argv[1]=="shell")
+    {
+        mapping response = Process.run("/usr/local/lib/steam/tools/steam-shell.pike");
+    }
+}
+
+int main(int argc,array(string) argv)
+{
+    if(argc==1)write("No arguments provided\n");//print help
+    else resolveParam(argc,argv);
     return 0;
 }
 
