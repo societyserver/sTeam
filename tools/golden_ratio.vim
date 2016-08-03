@@ -17,6 +17,10 @@ if !exists('g:golden_ratio_wrap_ignored')
   let g:golden_ratio_wrap_ignored = 0
 endif
 
+if !exists('g:golden_ratio_exclude_nonmodifiable')
+  let g:golden_ratio_exclude_nonmodifiable = 0
+endif
+
 function! s:golden_ratio_width()
   return &columns / 1.618
 endfunction
@@ -25,19 +29,31 @@ function! s:golden_ratio_height()
   return &lines / 1.618
 endfunction
 
+function! s:window_list()
+  let wl = range(1, winnr('$'))
+  if g:golden_ratio_exclude_nonmodifiable
+    let wl = filter(wl, 'getwinvar(v:val, "&modifiable")')
+  endif
+  return wl
+endfunction
+
 function! s:find_parallel_windows(current_window)
   return {
-         \ 'width' : filter(reverse(range(1, winnr('$'))),
+         \ 'width' : filter(reverse(s:window_list()),
            \ 'winheight(v:val) == winheight(a:current_window) ' .
            \ '&& v:val != a:current_window'),
-         \ 'height': filter(reverse(range(1, winnr('$'))),
+         \ 'height': filter(reverse(s:window_list()),
            \ 'winwidth(v:val) == winwidth(a:current_window) ' .
            \ '&& v:val != a:current_window')
         \}
 endfunction
 
 function! s:resize_ignored_window(windows, ignored_width, ignored_height)
-  let l:wrap = g:golden_ratio_wrap_ignored
+  if !exists('b:golden_ratio_saved_wrap')
+    let b:golden_ratio_saved_wrap = &wrap
+  endif
+
+  let &l:wrap = g:golden_ratio_wrap_ignored
 
   if len(a:windows.width) > 0 && index(a:windows.width, winnr()) >= 0
     let l:width_size = a:ignored_width / len(a:windows.width)
@@ -71,9 +87,9 @@ endfunction
 function! s:resize_main_window(window,
       \ main_width, main_height,
       \ ignored_width, ignored_height)
-  if exists('&b:golden_ratio_saved_wrap')
+  if exists('b:golden_ratio_saved_wrap')
     " restore previously saved state
-    let l:wrap = b:golden_ratio_saved_wrap
+    let &l:wrap = b:golden_ratio_saved_wrap
   endif
 
   " Height has an special condition:
@@ -100,6 +116,10 @@ endfunction
 function! s:resize_to_golden_ratio()
   if exists("b:golden_ratio_resizing_ignored") &&
         \ b:golden_ratio_resizing_ignored
+    return
+  endif
+
+  if g:golden_ratio_exclude_nonmodifiable && !&modifiable
     return
   endif
 
@@ -153,3 +173,4 @@ call <SID>initiate_golden_ratio()
 let &cpo = s:save_cpo
 
 " vim:et:ts=2:sw=2:sts=2
+
