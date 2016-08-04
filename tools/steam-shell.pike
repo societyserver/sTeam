@@ -53,8 +53,9 @@ room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
 gothrough       Go through a gate.
+create_user     Create a user. You can create a user only if you are a root user.
 create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
-delete           Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.
+delete          Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
@@ -87,12 +88,15 @@ hilfe           Help for Hilfe commands.
                     case "gothrough":
                         write("Go through a gate.\n");
                         return;
-                    case "create":
+                    case "create_user":
+                        write("Create a user. You can create a user only if you are a root user.\n");
+                        return;
+	            case "create":
                         write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
                         return;
-		    case "delete":
-                       write("Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.\n");
-                        return;
+                    case "delete":
+                        write("Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.\n");
+                        return; 
                     case "peek":
                         write("Peek through a container.\n");
                         return;
@@ -209,8 +213,7 @@ int main(int argc, array(string) argv) {
             handler->add_input_line("start backend");
             string command;
             //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
-            // To run commands from the steam-shell.pike by passing them as argument to the script, note that the special characters which have been entered in the bash shell. In order to escape the special characters, pass them through the ''. The character's would lose their special meaning.
-	    // eg: ./steam-shell.pike '_Server->get_module("users")->get_users();'
+
             if (sizeof (argv) > 1) {
 	    	string cmd = "";
           	if (sizeof (argv) >= 3){
@@ -257,7 +260,8 @@ void exec_command(string command) {
             "look" : look,
             "take" : take,
             "gothrough" : gothrough,
-            "create" : create_ob,
+            "create_user" : create_user,
+	    "create" : create_ob,
             "delete" : delete,
             "peek" : peek,
             "inventory" : inventory,
@@ -378,7 +382,8 @@ mapping assign(object conn, object _Server, object users) {
             "groups" : _Server->get_module("groups"),
             "me" : users->lookup(options->user),
             "edit" : applaunch,
-            "create" : create_object,
+            "create_user" : create_user,
+	    "create" : create_object,
             "delete" : delete,
             "list" : list,
             "goto" : goto_room,
@@ -501,11 +506,10 @@ int list(string what) {
         }
     }
     if (flag == 0) {
-    mapping mp = Process.run("tput cols");
-    int screenwidth = (int)mp["stdout"];
+
         write(toappend + "\n");
-	write("%-$*s\n", screenwidth,a);
-        write("\n");
+                write(sprintf("%#-80s", a));
+                write("\n");
     }
     return 0;
 }
@@ -530,12 +534,9 @@ array(string) get_list(string what, string | object | void lpath) {
             string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
                     string obj_name = obj->query_attribute("OBJ_NAME");
                     //    write("normally : "+obj_name+"\n");
-            if (fact_name == "Document.factory"){
-//Check the Mimetype for the object created		    
-//write("Object: %s Mimetype: %s \n",obj_name,obj->query_attribute("DOC_MIME_TYPE"));
+            if (fact_name == "Document.factory")
                     documents = Array.push(documents, obj_name);
                     //          write(obj_name+"\n");
-}
             else if (fact_name == "Exit.factory") {
                 string fullgate = obj_name + " : " + obj->get_exit()->query_attribute("OBJ_NAME");
                         gates = Array.push(gates, fullgate);
@@ -684,16 +685,13 @@ int gothrough(string gatename) {
     }
 
 int delete(string file_cont_name) {
-
     string fullpath = "";
-    fullpath = getpath() + "/" + file_cont_name;
-    if(OBJ(fullpath)){
-       OBJ(fullpath)->delete(); 
-       write("Object deleted successfully.\n");
-    }
+            fullpath = getpath() + "/" + file_cont_name;
+    if(OBJ(fullpath))
+      OBJ(fullpath)->delete(); 
     else write("Object does not exist.\n") ;  
     return 0;
-}
+    }
 
 int create_ob(string type, string name, string destination) {
     string desc = readln->read("How would you describe it?\n");
@@ -722,6 +720,19 @@ int create_ob(string type, string name, string destination) {
 
         return 0;
     }
+
+int create_user(string uname, string pass, string email){
+    
+     if(options->user=="root"){
+         _Server->get_factory("User")->execute( (["name": uname, "pw":pass, "email": email]) );
+         _Server->get_module("users")->get_user(uname)->activate_user();
+         write("User: " + uname + " created successfully.\n");
+     }
+     else
+         write("You cannot create a user. You need to be a root user.\n");
+     
+     return 0;
+}
 
 int peek(string container) {
     string fullpath = "";
