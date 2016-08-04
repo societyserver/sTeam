@@ -4,8 +4,10 @@ void resolveParam(int argc,array(string) argv)
 {
     if(argv[1]=="shell")
     {
-        mapping response = Process.run("/usr/local/lib/steam/tools/steam-shell.pike");
-    }
+        array command =({"/usr/local/lib/steam/tools/steam-shell.pike"});
+        object shell = Process.create_process(command,(["stdin":Stdio.stdin,"stdout":Stdio.stdout,"stderr":Stdio.stderr]));
+        shell->wait();
+    } 
 }
 
 int main(int argc,array(string) argv)
