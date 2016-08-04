@@ -244,11 +244,22 @@ string dir_check(string def, string dir)
   return "";
 }
  
-void git_create_branch(string to)
+void git_create_branch(array(string) argv, string to)
 {
     string cur_time = replace(Calendar.now()->set_timezone("UTC")->format_nice(),([":":"-" , " ":"-"]));
-    Process.create_process(({ "git", "checkout", "--orphan", cur_time }), ([ "cwd": to ]))->wait();
+    string branchname,branch_desc;
+    array(string) source = allocate(sizeof(argv)-2);
+    if(sizeof(argv)>3)
+      branchname = "MultipleSources-"+cur_time;
+    else 
+      branchname = OBJ(argv[-2])->query_attribute("OBJ_PATH")[1..]+"-"+cur_time;
+    for(int i =1; i < sizeof(argv)-1; i++)
+      source[i-1] = argv[i];       
+    Process.create_process(({ "git", "checkout", "--orphan", branchname }), ([ "cwd": to ]))->wait();
     Process.create_process(({ "git", "rm", "-rf", "."}),([ "cwd": to]))->wait();
+    branchname="branch."+branchname+".description";
+    branch_desc = "This branch contains the source folders: "+ String.implode_nicely(source);
+    Process.create_process(({"git", "config", branchname, branch_desc}),(["cwd": to]))->wait();
     dir_check("",to);
 }
 
@@ -257,7 +268,7 @@ void export_to_git(array(string) argv, void|array(object) exclude)
     string complete_path;
     string to = argv[-1];
     git_init(to);
-    git_create_branch(to);
+    git_create_branch(argv,to);
     write("Commit message : sTeam export-to-git\n");
     git_commit("sTeam export-to-git", to, "root", "root@localhost", 0, 1);  //empty commit        
   for(int i =1;i<sizeof(argv)-1;i++){
