@@ -54,6 +54,7 @@ look            Look around the Room.
 take            Copy a object in your inventory.
 gothrough       Go through a gate.
 create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
+delete           Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
@@ -88,6 +89,9 @@ hilfe           Help for Hilfe commands.
                         return;
                     case "create":
                         write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
+                        return;
+		    case "delete":
+                       write("Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.\n");
                         return;
                     case "peek":
                         write("Peek through a container.\n");
@@ -254,6 +258,7 @@ void exec_command(string command) {
             "take" : take,
             "gothrough" : gothrough,
             "create" : create_ob,
+            "delete" : delete,
             "peek" : peek,
             "inventory" : inventory,
             "i" : inventory,
@@ -374,6 +379,7 @@ mapping assign(object conn, object _Server, object users) {
             "me" : users->lookup(options->user),
             "edit" : applaunch,
             "create" : create_object,
+            "delete" : delete,
             "list" : list,
             "goto" : goto_room,
             "title" : set_title,
@@ -678,13 +684,16 @@ int gothrough(string gatename) {
     }
 
 int delete(string file_cont_name) {
-    string fullpath = "";
-            fullpath = getpath() + "/" + file_cont_name;
-    if (OBJ(fullpath))
 
-        return 0;
-        return 0;
+    string fullpath = "";
+    fullpath = getpath() + "/" + file_cont_name;
+    if(OBJ(fullpath)){
+       OBJ(fullpath)->delete(); 
+       write("Object deleted successfully.\n");
     }
+    else write("Object does not exist.\n") ;  
+    return 0;
+}
 
 int create_ob(string type, string name, string destination) {
     string desc = readln->read("How would you describe it?\n");
