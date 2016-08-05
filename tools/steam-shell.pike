@@ -24,6 +24,7 @@ constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $
 
 inherit "applauncher.pike";
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
+#include <classes.h>
 
 Stdio.Readline readln;
 mapping options;
@@ -52,6 +53,8 @@ create          Create an object (File/Container/Exit). Provide the full path of
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
+join            Join a group.
+leave           Leave a group.
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -93,6 +96,12 @@ hilfe           Help for Hilfe commands.
       return;
     case "edit":
       write("Edit a file in the current Room.\n");
+      return;
+    case "join":
+      write("Join a group.\n");
+      return;
+    case "leave":
+      write("Leave a group.\n");
       return;
     //Hilfe internal help
     case "me more":
@@ -219,6 +228,8 @@ int main(int argc, array(string) argv)
     "inventory"   : inventory,
     "i"           : inventory,
     "edit"        : editfile,
+    "join"        : join,
+    "leave"       : leave,
     ]);
 //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
   array(string) command_arr;
@@ -363,6 +374,8 @@ mapping assign(object conn, object _Server, object users)
     "look"        : look,
     "take"        : take,
     "gothrough"   : gothrough,
+    "join"        : join,
+    "leave"       : leave,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -392,6 +405,50 @@ mapping assign(object conn, object _Server, object users)
     "_BUILDER" : _Server->get_module("users")->lookup("builder"),
     "_CODER" : _Server->get_module("users")->lookup("coder"),
     ]);
+}
+
+void leave(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("leave group <group name>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      group->remove_member(me);
+  }
+}
+
+void join(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("join group <name of the group>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      int result = group->add_member(me);
+      switch(result){
+        case 1:write("Joined group "+name+"\n");
+          break;
+        case 0:write("Couldn't join group "+name+"\n");
+          break;
+        case -1:write("pending\n");
+          break;
+        case -2:write("pending failed");
+          break;
+      }
+  }
 }
 
 // create new sTeam objects
@@ -471,78 +528,100 @@ int list(string what)
   string a="";
   if(sizeof(display)==0)
     toappend = "There are no "+what+" in this room\n";
-  else if(display[0]=="Invalid command")
+  else
+    toappend = "Here is a list of all "+what+"\n";
+    
+  foreach(display,string str)
+  {
+    a=a+(str+"\n");
+    if(str=="Invalid command")
     {
       flag=1;
-      write(display[0]+"\n");
-    }
-  else
-  {
-    toappend = "Here is a list of all "+what+" in the current room\n";
-    foreach(display,string str)
-    {
-      a=a+(str+"\n");
+      write(str+"\n");
     }
   }
-  if(flag==0)
-    {
-      write(toappend+"\n");
-      write(sprintf("%#-80s",a));
-      write("\n");
-    }
+  if(flag==0){
+    mapping mp = Process.run("tput cols");
+    int screenwidth = (int)mp["stdout"];
+    write(toappend + "\n");
+    write("%-$*s\n", screenwidth,a);
+    write("\n");
+  }  
   return 0;
 }
 
 array(string) get_list(string what,string|object|void lpath)
 {
-//  string name;
-//  object to;
-  array(string) gates=({}),containers=({}),documents=({}),rooms = ({}),rest=({});
-//  mapping(string:object) s = ([ ]);
+  array(string) whatlist = ({});
   object pathobj;
-  if(!lpath)
-    pathobj = OBJ(getpath());
-  else if(stringp(lpath))
-    pathobj = OBJ(lpath);
-  else if(objectp(lpath))
-    pathobj = lpath;
-//  string pathfact = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
-  mixed all = pathobj->get_inventory_by_class(0x3cffffff); //CLASS_ALL
-  foreach(all, object obj)
+      if(!lpath)
+       pathobj = OBJ(getpath());
+      else if(stringp(lpath))
+       pathobj = OBJ(lpath);
+      else if(objectp(lpath))
+       pathobj = lpath;
+  switch (what)  
   {
-    string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
-    string obj_name = obj->query_attribute("OBJ_NAME");
-//    write("normally : "+obj_name+"\n");
-    if(fact_name=="Document.factory")
-        documents = Array.push(documents,obj_name);
-//          write(obj_name+"\n");
-    else if(fact_name=="Exit.factory"){
-        string fullgate = obj_name+" : "+obj->get_exit()->query_attribute("OBJ_NAME");
-        gates = Array.push(gates,fullgate);
-//          write("in gates : "+fullgate+"\n");
+    case "containers":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_CONTAINER);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
     }
-    else if(fact_name=="Container.factory")
-        containers = Array.push(containers,obj_name);
-//          write("in containers : "+obj_name+"\n");
-    else if(fact_name=="Room.factory")
-        rooms = Array.push(rooms,obj_name);
-    else
-        rest = Array.push(rest, obj_name);
+    break;
+    case "files":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_DOCUMENT|CLASS_DOCLPC|CLASS_DOCEXTERN|CLASS_DOCHTML|CLASS_DOCXML|CLASS_DOCXSL);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "exits":
+    case "gates":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_EXIT);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "rooms":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_ROOM);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "groups":
+    {
+      array(object) groups = _Server->get_module("groups")->get_groups();
+      foreach(groups,object group)
+      {
+        string obj_name = group->get_name();
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    default:
+      whatlist = ({"Invalid command"});
   }
-  if(what=="gates")
-    return gates;
-  else if(what=="rooms")
-    return rooms;
-  else if(what=="containers")
-    return containers;
-  else if(what=="files")
-    return documents;
-  else if(what=="others")
-    return rest;
-  else
-    return ({"Invalid command"});
+  return whatlist;
 }
-
 
 int goto_room(string where)
 {
@@ -699,6 +778,11 @@ int create_ob(string type,string name,string destination)
     object link_to = OBJ(readln->read("Where does the link lead?\n"));
     data = ([ "link_to":link_to ]);
   }
+  else if(type=="Group")
+  {
+    string parent = readln->read("Subgroup of?\n");
+    data = (["parentgroup":parent]);
+  }
   object myobj = create_object(type,name,desc,data);
 /*  if(type=="Room" || type=="Container"){
     if(destination==".")
@@ -707,9 +791,12 @@ int create_ob(string type,string name,string destination)
       myobj->move(OBJ(destination));
   }
  */
-  if(!(type == "Exit"))
+  if(!(type == "Exit" || type=="Group"))
     myobj->move(OBJ(destination));
-
+  if(type=="Group")
+  {
+    myobj->add_member(me);
+  }
   return 0;
 }
 
