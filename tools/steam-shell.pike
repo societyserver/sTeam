@@ -166,12 +166,15 @@ void ping()
 {
   call_out(ping, 10);
   mixed a = conn->send_command(14, 0);
+
+
   if(a=="sTeam connection lost.")
   {
       flag = 0;
       readln->set_prompt(getpath()+"~ ");
-      conn = ((program)"client_base.pike")();
-      conn->close();
+    //  conn = ((program)"client_base.pike")();
+        conn = ((program)compile_file("../server/client_base.pike"))();
+        conn->close();
       if(conn->connect_server(options->host, options->port))
       {
           remove_call_out(ping);
@@ -230,8 +233,7 @@ int main(int argc, array(string) argv)
     ]);
 //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
   array(string) command_arr;
-  while((command=readln->read(
-           sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
+  while((command=readln->read(sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
   {
     if(sizeof(command))
     {
@@ -253,10 +255,13 @@ int main(int argc, array(string) argv)
           myarray[command_arr[0]]();
         else if(num==4)
           myarray[command_arr[0]](command_arr[1],command_arr[2],command_arr[3]);
+        else
+          myarray[command_arr[0]](@command_arr[1..]);
         };
 
         if(result!=0)
         {
+          write(result[0]);
           write("Wrong command.||maybe some bug.\n");
         }
       }
@@ -298,7 +303,7 @@ mapping init(array argv)
   if(!options->user)
     options->user="root";
   if(!options->port)
-    options->port=1900;
+    options->port=1999;
   else
     options->port=(int)options->port;
 
@@ -310,8 +315,8 @@ mapping init(array argv)
   master()->add_program_path(server_path+"/spm/");
   master()->add_program_path(server_path+"/server/net/coal/");
 
-  conn = ((program)"client_base.pike")();
-
+  conn = ((program)"../server/client_base.pike")();
+//    conn = ((program)compile_file("../server/client_base.pike"))();
   int start_time = time();
 
   werror("Connecting to sTeam server...\n");
@@ -324,8 +329,8 @@ mapping init(array argv)
     werror("Failed to connect... still trying ... (server running ?)\n");
     sleep(10);
   }
- 
   ping();
+
   if(lower_case(options->user) == "guest")
     return options;
 
@@ -525,6 +530,7 @@ int list(string what)
     toappend = "There are no "+what+" in this room\n";
   else
     toappend = "Here is a list of all "+what+"\n";
+    
   foreach(display,string str)
   {
     a=a+(str+"\n");
@@ -842,15 +848,29 @@ int inventory()
   display("other files", others);
 }
 
-int editfile(string filename)
+int editfile(string...args)
 {
-  string fullpath = "";
-  fullpath = getpath()+"/"+filename;
-  string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
-  if(pathfact=="Document.factory")
-    applaunch(OBJ(fullpath),exitnow);
-  else
-    write("You can't edit a "+pathfact[0..sizeof(pathfact)-8]);
+  int size = sizeof(args);
+  if(size<1){
+    write("Please provide a file name\n");
+    return 0;
+  }
+  array(string) fullpatharr = allocate(size);
+  array(string) pathfactarr = allocate(size);
+  array(object) obj = allocate(size);
+  for(int j = 0;j<size;j++){
+    fullpatharr[j] = getpath()+"/"+args[j];
+    pathfactarr[j]=_Server->get_factory(OBJ(fullpatharr[j]))->query_attribute("OBJ_NAME");
+
+    if(pathfactarr[j]!="Document.factory"){
+      write("You can't edit a "+pathfactarr[j][0..sizeof(pathfactarr[j])-8]);
+      return 0;
+    }
+    obj[j] = OBJ(fullpatharr[j]);
+  }
+
+  applaunch(obj,exitnow); 
+  
   return 0;
 }
 
@@ -861,5 +881,4 @@ string getpath()
 {
   return me->get_last_trail()->query_attribute("OBJ_PATH");
 }
-
 constant stash_help_doc = #"This is a sTeam Advanced Shell. All the STASH commands work with normal pike commands. Tab completion is available for both STASH commands and pike commands.\n\n";
