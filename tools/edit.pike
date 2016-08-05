@@ -82,6 +82,7 @@ int main(int argc, array(string) argv)
 // array(string) gps = ({ "Admin" , "coder" , "help" , "PrivGroups" , "WikiGroups" , "sTeam" });
   get_file_object();
   array(object) filearr = ({file});
+  exitcall=1;
   return applaunch(filearr,demo);
 }
 
