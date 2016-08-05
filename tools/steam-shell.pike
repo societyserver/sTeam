@@ -304,8 +304,8 @@ mapping init(array argv)
   master()->add_program_path(server_path+"/spm/");
   master()->add_program_path(server_path+"/server/net/coal/");
 
-//  conn = ((program)"client_base.pike")();
-    conn = ((program)compile_file("../server/client_base.pike"))();
+  conn = ((program)"../server/client_base.pike")();
+//    conn = ((program)compile_file("../server/client_base.pike"))();
   int start_time = time();
 
   werror("Connecting to sTeam server...\n");
