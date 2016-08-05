@@ -55,6 +55,7 @@ take            Copy a object in your inventory.
 gothrough       Go through a gate.
 create_user     Create a user. You can create a user only if you are a root user.
 delete_user     Delete a user only if the user is a root user.
+list_user       List all the users only if you are a root user.
 create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
 delete          Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.
 peek            Peek through a container.
@@ -94,6 +95,9 @@ hilfe           Help for Hilfe commands.
                         return;
                     case "delete_user":
                         write("Create a user only if the user a root user.\n");
+                        return;
+	            case "list_user":
+                        write("List all the users only if the user a root user.\n");
                         return;
 	            case "create":
                         write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
@@ -273,6 +277,7 @@ void exec_command(string command) {
             "gothrough" : gothrough,
             "create_user" : create_user,
             "delete_user" : delete_user,
+	    "list_user" : list_user,
 	    "create" : create_ob,
             "delete" : delete,
             "peek" : peek,
@@ -396,6 +401,7 @@ mapping assign(object conn, object _Server, object users) {
             "edit" : applaunch,
             "create_user" : create_user,
             "delete_user" : delete_user,
+            "list_user" : list_user,
 	    "create" : create_object,
             "delete" : delete,
             "list" : list,
@@ -757,6 +763,23 @@ int delete_user(string uname){
     else
         write("You cannot delete a user. You need to be a root user.\n");
     
+    return 0;
+
+}
+
+int list_user(){
+    
+    mapping mp = Process.run("tput cols");
+    int screenwidth = (int)mp["stdout"];
+    string toappend="";
+    write("Users: \n");
+    array(object) users = _Server->get_module("users")->get_users();
+    foreach(users,object user)
+    {
+      toappend +=  user->get_user_name() + "\n";
+    }
+    write("%-$*s\n", screenwidth,toappend);
+    write("\n"); 
     return 0;
 
 }
