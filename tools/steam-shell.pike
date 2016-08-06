@@ -482,7 +482,7 @@ void join(string what,void|string name)
 
 // create new sTeam objects
 // with code taken from the web script create.pike
-mixed create_object(string|void objectclass, string|void name, void|string desc, void|mapping data)
+mixed create_object(string|void objectclass, string|void name, void|mapping data, void|string desc, )
 {
   if(!objectclass && !name)
   {
@@ -822,63 +822,79 @@ int create_ob(string type,string name,string destination)
   mapping data = ([]);
   string desc;
   type = String.capitalize(type);
-  if(type=="User"){
-	if(options->user!="root"){
-        write("You cannot create a user. You need to be a root user.\n");
-        return 0;
-      }
-      else{
-        string pass = Input->read_password("Please enter the password for the user.",name);
-        write("Enter the email id for the user. ");
-        string email = readln->read();
-        _Server->get_factory("User")->execute( (["name": name, "pw":pass, "email": email]) );
-        _Server->get_module("users")->get_user(name)->activate_user();
-        write("User: " + name + " created successfully.\n");  
-        return 0;   
-      }
-  }  
-  if(type=="Group")
-  {
-    if(options->user != "root"){
-      write("Only a root user can create a group.\n");
-      return 0;
-    }
-    string parent = readln->read("Subgroup of?\n");
-    data = (["parentgroup":parent]);
-  } 
-  desc = readln->read("How would you describe it?\n");
   if(destination == ".")
     destination = getpath();
-  if(type=="Exit")
-  {
-    object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
-//    object exit_from = OBJ(getpath());
-    data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
-  }
-  else if(type=="Link")
-  {
-    object link_to = OBJ(readln->read("Where does the link lead?\n"));
-    data = ([ "link_to":link_to ]);
-  }
   object myobj ;
-  if(type != "User")
-    myobj = create_object(type,name,desc,data);
-/*  if(type=="Room" || type=="Container"){
-    if(destination==".")
-      myobj->move(OBJ(getpath()));
-    else
-      myobj->move(OBJ(destination));
-  }
- */
-  if(!(type == "Exit" || type=="Group"))
-    myobj->move(OBJ(destination));
-  if(type=="Group")
+  switch(type)
   {
-    myobj->add_member(me);
-  }
-  if(objectp(myobj))
-    write(type + ": " + name + " created successfully.\n");
-  else write(type + ": " + name + " not created.\n");
+    case "User":
+      {
+        if(options->user!="root"){
+          write("You cannot create a user. You need to be a root user.\n");
+        }
+        else{
+          string pass = Input->read_password("Please enter the password for the user.",name);
+          write("Enter the email id for the user. ");
+          string email = readln->read();
+          _Server->get_factory("User")->execute( (["name": name, "pw":pass, "email": email]) );
+          _Server->get_module("users")->get_user(name)->activate_user();
+          write("User: " + name + " created successfully.\n");     
+        }
+      }
+    break;
+    case "Group":
+    {
+      if(options->user != "root"){
+        write("Only a root user can create a group.\n");
+      return 0;
+      }
+      string parent = readln->read("Subgroup of?\n");
+      data = (["parentgroup":parent]);
+      desc = readln->read("How would you describe it?\n");
+      myobj = create_object(type,name,data,desc);
+      myobj->add_member(me);
+    } 
+    break;
+    case "File":
+    {
+       data=(["mimetype":"auto-detect"]);
+       myobj = create_object("Document",name,data,desc);
+       myobj->move(OBJ(destination));
+       write("File type: "+ myobj->query_attribute("DOC_MIME_TYPE") + "\n");
+    }
+    break;
+    case "Gate" :
+    case "Exit" :
+    {
+      desc = readln->read("How would you describe it?\n");
+      object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
+      data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
+      myobj = create_object(type,name,data,desc);
+    }
+    break;
+    case "Link" :
+    {
+      desc = readln->read("How would you describe it?\n");    
+      object link_to = OBJ(readln->read("Where does the link lead?\n"));
+      data = ([ "link_to":link_to ]);
+      myobj = create_object(type,name,data,desc);
+      myobj->move(OBJ(destination));
+    }
+    break;
+    case "Room" :
+    case "Container" :
+    {
+      desc = readln->read("How would you describe it?\n");
+      myobj = create_object(type,name,data,desc);
+      myobj->move(OBJ(destination));
+    }
+    break;
+    default:
+      write("Invalid object type. Enter the object type correctly\n");
+    }
+    if(objectp(myobj))
+      write(type + ": " + name + " created successfully.\n");
+    else write(type + ": " + name + " not created.\n");
   return 0;
 }
 
