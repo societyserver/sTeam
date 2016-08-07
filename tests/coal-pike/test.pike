@@ -46,9 +46,14 @@ class Test{
 		string n = name +".pike";
 		object code = ((program)n)();
 		array(function) foo = values(code);
+		int success = 0;
 		for(int i=0;i< sizeof(cases);i++){
-			foo[i](me,_Server);
+			if(foo[i](me,_Server)==1){
+				success+=1;
+			}
+			
 		}
+		write("success: "+success+"\nfails: "+(sizeof(cases)-success)+"\n");
 	}
 }
 
