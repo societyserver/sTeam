@@ -423,7 +423,14 @@ void leave(string what,void|string name)
         write("The group does not exists\n");
         return;
       }
-      group->remove_member(me);
+      if(group->remove_member(me))
+      {
+        write("Left group "+name+"\n");
+      }
+      else
+      {
+        write("You are not a member of the group "+name+"\n");
+      }
   }
 }
 
