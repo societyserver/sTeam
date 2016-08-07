@@ -88,10 +88,40 @@ object handler, conn;
 
 int main(int argc, array(string) argv)
 {
-  options=init(argv);
+  initialize(argv);
+  handler->add_input_line("start backend");
+  string command;
+  handler->p->set_server_filepath(_Server->get_module("filepath:tree")); //sending the filepath module to tab completion for query/set attribute.
+  while((command=readln->read(
+           sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
+  {
+    if(sizeof(command))
+    {
+      Stdio.write_file(options->historyfile, readln->get_history()->encode());
+      handler->add_input_line(command);
+      handler->p->set(handler->variables);
+//      array hist = handler->history->status()/"\n";
+//      if(hist)
+//        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
+//          handler->write("came in here\n");
+//          flag=0;
+//        }
+      continue;
+    }
+//    else { continue; }
+  }
+  handler->add_input_line("exit");
+}
+
+void initialize(array argv)
+{
+  options = ([ "file":"/etc/shadow" ]);
+  options = options + init(argv);
+  options->historyfile=getenv("HOME")+"/.steam_history";
+  //initialize global variables
   _Server=conn->SteamObj(0);
   users=_Server->get_module("users");
-  all = assign(conn,_Server,users);
+  all=assign(conn,_Server,users);
   all = all + (([
     "PSTAT_FAIL_DELETED" : -3,
     "PSTAT_FAIL_UNSERIALIZE" : -2,
@@ -481,7 +511,7 @@ int main(int argc, array(string) argv)
 
     ]));
 
-  handler = Handler(all);
+  handler=Handler(all);
   array history=(Stdio.read_file(options->historyfile)||"")/"\n";
   if(history[-1]!="")
     history+=({""});
@@ -490,29 +520,6 @@ int main(int argc, array(string) argv)
 
   readln->enable_history(readline_history);
 
-  handler->add_input_line("start backend");
-
-  string command;
-  handler->p->set_server_filepath(_Server->get_module("filepath:tree")); //sending the filepath module to tab completion for query/set attribute.
-  while((command=readln->read(
-           sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
-  {
-    if(sizeof(command))
-    {
-      Stdio.write_file(options->historyfile, readln->get_history()->encode());
-      handler->add_input_line(command);
-      handler->p->set(handler->variables);
-//      array hist = handler->history->status()/"\n";
-//      if(hist)
-//        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
-//          handler->write("came in here\n");
-//          flag=0;
-//        }
-      continue;
-    }
-//    else { continue; }
-  }
-  handler->add_input_line("exit");
 }
 
 mapping init(array argv)
@@ -554,6 +561,7 @@ mapping init(array argv)
 
   int start_time = time();
 
+  //connect to the server
   werror("Connecting to sTeam server...\n");
   while ( !conn->connect_server(options->host, options->port)  ) 
   {
@@ -566,26 +574,29 @@ mapping init(array argv)
   }
  
   ping();
+
+  //No password is required for user guest
   if(lower_case(options->user) == "guest")
     return options;
-
-  mixed err;
-  int tries=3;
-  //readln->set_echo( 0 );
-  do
-  {
-    pw = Input.read_password( sprintf("Password for %s@%s", options->user,
+  
+    mixed err;
+    int tries=3;
+    //readln->set_echo( 0 );
+    do
+    {
+      pw = Input.read_password( sprintf("Password for %s@%s", options->user,
            options->host), "steam" );
-    //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
-  }
-  while((err = catch(conn->login(options->user, pw, 1))) && --tries);
-  //readln->set_echo( 1 );
+    }
+    while((err = catch(conn->login(options->user, pw, 1))) && --tries);
+    //readln->set_echo( 1 );
 
-  if ( err != 0 ) 
-  {
-    werror("Failed to log in!\nWrong Password!\n");
-    exit(1);
-  } 
+    if ( err != 0 ) 
+    {
+      werror("Failed to log in!\nWrong Password!\n");
+      exit(1);
+    }
+  
+
   return options;
 }
 
@@ -602,6 +613,7 @@ mapping assign(object conn, object _Server, object users)
     "me"          : users->lookup(options->user),
     "edit"        : applaunch,
     "create"      : create_object,
+    "login"       : login,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -632,6 +644,15 @@ mapping assign(object conn, object _Server, object users)
     "_CODER" : _Server->get_module("users")->lookup("coder"),
     ]);
 }
+
+int login(string user)
+{
+  conn->logout();
+  initialize(({"","-u",user}));
+  handler->p->set_server_filepath(_Server->get_module("filepath:tree")); 
+  return 1;
+}
+
 
 // create new sTeam objects
 // with code taken from the web script create.pike
