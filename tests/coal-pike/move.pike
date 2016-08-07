@@ -1,6 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
-int testcase1(object me,object _Server)
+int testcase1(object me,object _Server,object...args)
 {
 	int pass = 0;
 	_Server->get_factory("Room")->execute((["name":"TestsubRoom"]))->move(OBJ("/TestRoom"));
@@ -28,7 +28,7 @@ int testcase2(object me,object _Server)
 }
 */
 
-int testcase2(object me,object _Server)
+int testcase2(object me,object _Server,object...args)
 {
 	int pass = 1;
 	object code = ((program)"move_nonexistential.pike")();
@@ -58,7 +58,7 @@ int testcase2(object me,object _Server)
 	return pass;
 }
 
-int testcase3(object me,object _Server)
+int testcase3(object me,object _Server,object...args)
 {
 	int pass = 0;
 	mixed result = 0;
@@ -73,7 +73,7 @@ int testcase3(object me,object _Server)
 	return pass;	
 }
 
-int testcase4(object me,object _Server)
+int testcase4(object me,object _Server,object...args)
 {
 	int pass = 0;
 	_Server->get_factory("Room")->execute((["name":"Testmove4"]))->move(OBJ("/TestRoom"));

@@ -1,6 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
-int generalCreate(object me,object _Server)
+int generalCreate(object me,object _Server,object...args)
 {
 	object code = ((program)"create_object.pike")();
 	array(function) foo = values(code);
@@ -16,7 +16,7 @@ int generalCreate(object me,object _Server)
 	return success;
 }
 
-int invalidClass(object me,object _Server)
+int invalidClass(object me,object _Server,object...args)
 {
 	int pass=0;
 	write("Creating a class that does not exists\n");
@@ -26,7 +26,7 @@ int invalidClass(object me,object _Server)
 	return pass;
 }
 
-int createUser(object me,object _Server)
+int createUser(object me,object _Server,object...args)
 {
 	int pass = 0;
 	write("Creating a new user: ");
