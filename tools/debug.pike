@@ -23,11 +23,12 @@
 constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
 inherit "applauncher.pike";
+inherit "client.pike";
 
 Stdio.Readline readln;
 mapping options;
 int flag=1,c=1;
-string pw,str;
+string str;
 
 class Handler
 {

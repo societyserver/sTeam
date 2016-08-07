@@ -23,13 +23,14 @@
 constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
 inherit "applauncher.pike";
+inherit "client.pike";
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 #include <classes.h>
 
 Stdio.Readline readln;
 mapping options;
 int flag=1,c=1;
-string pw,str;
+string str;
 object me;
 
 protected class StashHelp {
@@ -196,7 +197,9 @@ object handler, conn;
 mapping myarray;
 int main(int argc, array(string) argv)
 {
-  options=init(argv);
+  options = ([ "file":"/etc/shadow" ]);
+  options = options + init(argv);
+  options->historyfile=getenv("HOME")+"/.steam_history";
   _Server=conn->SteamObj(0);
   users=_Server->get_module("users");
   me = users->lookup(options->user);
