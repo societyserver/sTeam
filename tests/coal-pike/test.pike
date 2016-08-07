@@ -21,7 +21,9 @@ class Test{
 	}
 	void destroy(){
 		me->move(OBJ("/home/steam"));
-		OBJ("/TestRoom")->delete();
+		object obj = OBJ("/TestRoom");
+		if(obj!=0)
+		obj->delete();
 	}
 	void init(){
 		string host = "127.0.0.1";
@@ -62,5 +64,7 @@ class Test{
 int main(){
 	Test move = Test("move",4);
 	move->run();
+	Test create = Test("create",2);
+	create->run();
 
 }
