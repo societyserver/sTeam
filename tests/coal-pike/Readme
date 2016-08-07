@@ -1,0 +1,2 @@
+The tests in this folder are simple pike script. These scripts aim to develop its own testing framework.
+To run the tests start the server and then execute the pike script in this folder.

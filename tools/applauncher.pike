@@ -30,6 +30,7 @@ int set=0;
 string dir;
 array(string) debugfilearr;
 array(string) olderrorsarr;
+int exitcall=0;
 
 void upload(object editor, array(string) filearr ,array(int) last_mtimearr, array(object) objarr, array(object) xslobjarr, function|void exit_callback)
 {
@@ -238,7 +239,8 @@ int applaunch(array(object) objarr,function exit_callback)
 
   olderrorsarr = allocate(size);
   call_out(upload, 1, editor, filearr, filestatarr, objarr, xslobjarr, exit_callback);
-  editor.wait();
+  if(exitcall==0) //exitcall = 0 means it is called by steam-shell otherwise by edit.pike
+    editor->wait();
 
 //  signal(signum("SIGINT"), prompt);
   
