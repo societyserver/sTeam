@@ -19,6 +19,7 @@ int testcase1(object me,object _Server)
 /*
 int testcase1(object me,object _Server)
 {
+
 	int pass = 0;
 	write ("creating a new Calendar\n");
 	object room = OBJ("/TestRoom");
@@ -27,6 +28,7 @@ int testcase1(object me,object _Server)
 	object obj = OBJ("TestRoom/TestCalendar");
 	if(obj!=0)
 		obj->delete();
+
 	return pass;
 }
 
@@ -40,6 +42,7 @@ int testcase2(object me,object _Server)
 	if(result == 1) pass = 1;
 	if(obj != 0)
 		obj->delete();
+
 	return pass;
 
 }
@@ -54,6 +57,7 @@ int testcase3(object me,object _Server)
 	object obj = OBJ("TestRoom/TestDate");
 	if(obj != 0)
 		obj->delete();
+
 	return pass;
 
 }
@@ -72,6 +76,7 @@ int testcase4(object me,object _Server)
 
 }
 */
+
 int testcase5(object me,object _Server)
 {
 	int pass=0;

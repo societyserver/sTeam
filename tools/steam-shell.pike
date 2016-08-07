@@ -23,12 +23,14 @@
 constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
 inherit "applauncher.pike";
+inherit "client.pike";
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
+#include <classes.h>
 
 Stdio.Readline readln;
 mapping options;
 int flag=1,c=1;
-string pw,str;
+string str;
 object me;
 
 protected class StashHelp {
@@ -47,11 +49,13 @@ title           Set your own description.
 room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
-gothrough       Go through a gate.
-create          Create an object (File/Container/Exit) in current Room.
+enter           Enter a Room, Gate or Exit.
+create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
+join            Join a group.
+leave           Leave a group.
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -78,11 +82,11 @@ hilfe           Help for Hilfe commands.
     case "take":
       write("Copy a object in your inventory.\n");
       return;
-    case "gothrough":
-      write("Go through a gate.\n");
+    case "enter":
+      write("Enter a Room, Gate or Exit.\n");
       return;
     case "create":
-      write("Create an object (File/Container/Exit) in current Room.\n");
+      write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
       return;
     case "peek":
       write("Peek through a container.\n");
@@ -93,6 +97,12 @@ hilfe           Help for Hilfe commands.
       return;
     case "edit":
       write("Edit a file in the current Room.\n");
+      return;
+    case "join":
+      write("Join a group.\n");
+      return;
+    case "leave":
+      write("Leave a group.\n");
       return;
     //Hilfe internal help
     case "me more":
@@ -157,12 +167,15 @@ void ping()
 {
   call_out(ping, 10);
   mixed a = conn->send_command(14, 0);
+
+
   if(a=="sTeam connection lost.")
   {
       flag = 0;
       readln->set_prompt(getpath()+"~ ");
-      conn = ((program)"client_base.pike")();
-      conn->close();
+    //  conn = ((program)"client_base.pike")();
+        conn = ((program)compile_file("../server/client_base.pike"))();
+        conn->close();
       if(conn->connect_server(options->host, options->port))
       {
           remove_call_out(ping);
@@ -184,7 +197,9 @@ object handler, conn;
 mapping myarray;
 int main(int argc, array(string) argv)
 {
-  options=init(argv);
+  options = ([ "file":"/etc/shadow" ]);
+  options = options + init(argv);
+  options->historyfile=getenv("HOME")+"/.steam_history";
   _Server=conn->SteamObj(0);
   users=_Server->get_module("users");
   me = users->lookup(options->user);
@@ -210,17 +225,18 @@ int main(int argc, array(string) argv)
     "room"        : desc_room,
     "look"        : look,
     "take"        : take,
-    "gothrough"   : gothrough,
+    "enter"       : enter,
     "create"      : create_ob,
     "peek"        : peek,
     "inventory"   : inventory,
     "i"           : inventory,
     "edit"        : editfile,
+    "join"        : join,
+    "leave"       : leave,
     ]);
 //  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
   array(string) command_arr;
-  while((command=readln->read(
-           sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
+  while((command=readln->read(sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
   {
     if(sizeof(command))
     {
@@ -240,10 +256,15 @@ int main(int argc, array(string) argv)
           myarray[command_arr[0]](command_arr[1],command_arr[2]);
         else if(num==1)
           myarray[command_arr[0]]();
+        else if(num==4)
+          myarray[command_arr[0]](command_arr[1],command_arr[2],command_arr[3]);
+        else
+          myarray[command_arr[0]](@command_arr[1..]);
         };
 
         if(result!=0)
         {
+          write(result[0]);
           write("Wrong command.||maybe some bug.\n");
         }
       }
@@ -285,7 +306,7 @@ mapping init(array argv)
   if(!options->user)
     options->user="root";
   if(!options->port)
-    options->port=1900;
+    options->port=1999;
   else
     options->port=(int)options->port;
 
@@ -297,8 +318,8 @@ mapping init(array argv)
   master()->add_program_path(server_path+"/spm/");
   master()->add_program_path(server_path+"/server/net/coal/");
 
-  conn = ((program)"client_base.pike")();
-
+  conn = ((program)"../server/client_base.pike")();
+//    conn = ((program)compile_file("../server/client_base.pike"))();
   int start_time = time();
 
   werror("Connecting to sTeam server...\n");
@@ -311,8 +332,8 @@ mapping init(array argv)
     werror("Failed to connect... still trying ... (server running ?)\n");
     sleep(10);
   }
- 
   ping();
+
   if(lower_case(options->user) == "guest")
     return options;
 
@@ -355,7 +376,9 @@ mapping assign(object conn, object _Server, object users)
     "room"        : desc_room,
     "look"        : look,
     "take"        : take,
-    "gothrough"   : gothrough,
+    "enter"       : enter,
+    "join"        : join,
+    "leave"       : leave,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -385,6 +408,57 @@ mapping assign(object conn, object _Server, object users)
     "_BUILDER" : _Server->get_module("users")->lookup("builder"),
     "_CODER" : _Server->get_module("users")->lookup("coder"),
     ]);
+}
+
+void leave(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("leave group <group name>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      if(group->remove_member(me))
+      {
+        write("Left group "+name+"\n");
+      }
+      else
+      {
+        write("You are not a member of the group "+name+"\n");
+      }
+  }
+}
+
+void join(string what,void|string name)
+{
+  if(what=="group")
+  {
+    if(!stringp(name)){
+        write("join group <name of the group>\n");
+        return;
+      }
+      object group = _Server->get_module("groups")->get_group(name);
+      if(group == 0){
+        write("The group does not exists\n");
+        return;
+      }
+      int result = group->add_member(me);
+      switch(result){
+        case 1:write("Joined group "+name+"\n");
+          break;
+        case 0:write("Couldn't join group "+name+"\n");
+          break;
+        case -1:write("pending\n");
+          break;
+        case -2:write("pending failed");
+          break;
+      }
+  }
 }
 
 // create new sTeam objects
@@ -465,71 +539,100 @@ int list(string what)
   if(sizeof(display)==0)
     toappend = "There are no "+what+" in this room\n";
   else
-    toappend = "Here is a list of all "+what+" in the current room\n";
+    toappend = "Here is a list of all "+what+"\n";
+    
   foreach(display,string str)
   {
-    a=a+(str+"    ");
+    a=a+(str+"\n");
     if(str=="Invalid command")
     {
       flag=1;
       write(str+"\n");
     }
   }
-  if(flag==0)
-    write(toappend+a+"\n\n");
+  if(flag==0){
+    mapping mp = Process.run("tput cols");
+    int screenwidth = (int)mp["stdout"];
+    write(toappend + "\n");
+    write("%-$*s\n", screenwidth,a);
+    write("\n");
+  }  
   return !flag;//flag = 1 when str = Invalid command that means execution failed
 }
 
 array(string) get_list(string what,string|object|void lpath)
 {
-//  string name;
-//  object to;
-  array(string) gates=({}),containers=({}),documents=({}),rooms = ({}),rest=({});
-//  mapping(string:object) s = ([ ]);
+  array(string) whatlist = ({});
   object pathobj;
-  if(!lpath)
-    pathobj = OBJ(getpath());
-  else if(stringp(lpath))
-    pathobj = OBJ(lpath);
-  else if(objectp(lpath))
-    pathobj = lpath;
-//  string pathfact = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
-  mixed all = pathobj->get_inventory_by_class(0x3cffffff); //CLASS_ALL
-  foreach(all, object obj)
+      if(!lpath)
+       pathobj = OBJ(getpath());
+      else if(stringp(lpath))
+       pathobj = OBJ(lpath);
+      else if(objectp(lpath))
+       pathobj = lpath;
+  switch (what)  
   {
-    string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
-    string obj_name = obj->query_attribute("OBJ_NAME");
-//    write("normally : "+obj_name+"\n");
-    if(fact_name=="Document.factory")
-        documents = Array.push(documents,obj_name);
-//          write(obj_name+"\n");
-    else if(fact_name=="Exit.factory"){
-        string fullgate = obj_name+" : "+obj->get_exit()->query_attribute("OBJ_NAME");
-        gates = Array.push(gates,fullgate);
-//          write("in gates : "+fullgate+"\n");
+    case "containers":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_CONTAINER);
+      foreach(all, object obj)
+      {
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
     }
-    else if(fact_name=="Container.factory")
-        containers = Array.push(containers,obj_name);
-//          write("in containers : "+obj_name+"\n");
-    else if(fact_name=="Room.factory")
-        rooms = Array.push(rooms,obj_name);
-    else
-        rest = Array.push(rest, obj_name);
+    break;
+    case "files":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_DOCUMENT|CLASS_DOCLPC|CLASS_DOCEXTERN|CLASS_DOCHTML|CLASS_DOCXML|CLASS_DOCXSL);
+      foreach(all, object obj)
+      {
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "exits":
+    case "gates":
+    case "rooms":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_ROOM|CLASS_EXIT);
+      foreach(all, object obj)
+      {
+        string obj_name = obj->query_attribute("OBJ_NAME");
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "groups":
+    {
+      array(object) groups = _Server->get_module("groups")->get_groups();
+      foreach(groups,object group)
+      {
+        string obj_name = group->get_name();
+        whatlist = Array.push(whatlist,obj_name);
+      }
+    }
+    break;
+    case "others":
+    {
+      mixed all = pathobj->get_inventory_by_class(CLASS_ALL);
+      foreach(all, object obj)
+      {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
+        if(!(fact_name == "Group.factory" || fact_name == "Room.factory" || fact_name == "Exit.factory" || fact_name == "Container.factory" || fact_name == "Document.factory" || fact_name == "DocExtern.factory"))
+        {
+          string obj_name = obj->query_attribute("OBJ_NAME");
+          whatlist = Array.push(whatlist,obj_name);
+        }
+      }
+    }
+    break;
+    default:
+      whatlist = ({"Invalid command"});
   }
-  if(what=="gates")
-    return gates;
-  else if(what=="rooms")
-    return rooms;
-  else if(what=="containers")
-    return containers;
-  else if(what=="files")
-    return documents;
-  else if(what=="others")
-    return rest;
-  else
-    return ({"Invalid command"});
+  return whatlist;
 }
-
 
 int goto_room(string where)
 {
@@ -548,16 +651,8 @@ int goto_room(string where)
     pathobj = OBJ(where);
     if(!pathobj)    //Relative room checking
     {
-      if(getpath()[-1]==47)    //check last "/"
-      {
-        pathobj = OBJ(getpath()+where);
-        where=getpath()+where;
-      }
-      else
-      {
-        pathobj = OBJ(getpath()+"/"+where);
-        where=getpath()+"/"+where;
-      }
+      pathobj = OBJ(getpath()+"/"+where);
+      where=getpath()+"/"+where;
     }
     roomname = pathobj->query_attribute("OBJ_NAME");
     string factory = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
@@ -622,8 +717,6 @@ int look(string|void str)
   write("---------------\n");
   list("containers");
   write("---------------\n");
-  list("gates");
-  write("---------------\n");
   list("rooms");
   write("---------------\n");
   return 1;
@@ -632,10 +725,7 @@ int look(string|void str)
 int take(string name)
 {
     string fullpath="";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+name;
-    else
-      fullpath = getpath()+"/"+name;
+    fullpath = getpath()+"/"+name;
     object orig_file = OBJ(fullpath);
     if(orig_file)
     {
@@ -650,18 +740,19 @@ int take(string name)
     return 1;
 }
 
-int gothrough(string gatename)
+int enter(string gatename)
 {
     string fullpath = "";
-    if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+gatename;
-    else
-      fullpath = getpath()+"/"+gatename;
+    fullpath = getpath()+"/"+gatename;
     object gate = OBJ(fullpath);
     if(gate)
     {
-      object exit = gate->get_exit();
-      string exit_path1 = "",exit_path2 = "";
+      string exit_path1 = fullpath,exit_path2 = "";
+      if(_Server->get_factory(gate)->query_attribute("OBJ_NAME")=="Exit.factory")
+      {
+        object exit = gate->get_exit();
+        exit_path1 = exit->query_attribute("OBJ_PATH"); //change to object_to_path
+      }
 //      exit_path1 = _Server->get_module("filepath:tree")->check_tilde(exit);
 //      exit_path2 = _Server->get_module("filepath:tree")->object_to_path(exit);
 //      if(exit_path1!="")
@@ -670,7 +761,7 @@ int gothrough(string gatename)
 //          goto_room(exit_path2);
 //      else
 //          write("Problem with object_to_path\n");
-      exit_path1 = exit->query_attribute("OBJ_PATH"); //change to object_to_path
+      
       if(exit_path1!="")
         goto_room(exit_path1);
     }
@@ -685,45 +776,56 @@ int gothrough(string gatename)
 int delete(string file_cont_name)
 {
   string fullpath="";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+file_cont_name;
-  else
-      fullpath = getpath()+"/"+file_cont_name;
+  fullpath = getpath()+"/"+file_cont_name;
   if(OBJ(fullpath))
     return 0;
   return 0;
 }
 
-int create_ob(string type,string name)
+int create_ob(string type,string name,string destination)
 {
   string desc = readln->read("How would you describe it?\n");
   mapping data = ([]);
   type = String.capitalize(type);
+  if(destination == ".")
+    destination = getpath();
   if(type=="Exit")
   {
     object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
-    object exit_from = OBJ(getpath());
-    data = ([ "exit_from":exit_from, "exit_to":exit_to ]);
+//    object exit_from = OBJ(getpath());
+    data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
   }
   else if(type=="Link")
   {
     object link_to = OBJ(readln->read("Where does the link lead?\n"));
     data = ([ "link_to":link_to ]);
   }
+  else if(type=="Group")
+  {
+    string parent = readln->read("Subgroup of?\n");
+    data = (["parentgroup":parent]);
+  }
   object myobj = create_object(type,name,desc,data);
-  if(type=="Room")
-    myobj->move(OBJ(getpath()));
-
+/*  if(type=="Room" || type=="Container"){
+    if(destination==".")
+      myobj->move(OBJ(getpath()));
+    else
+      myobj->move(OBJ(destination));
+  }
+ */
+  if(!(type == "Exit" || type=="Group"))
+    myobj->move(OBJ(destination));
+  if(type=="Group")
+  {
+    myobj->add_member(me);
+  }
   return 1;
 }
 
 int peek(string container)
 {
   string fullpath = "";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+container;
-  else
-      fullpath = getpath()+"/"+container;
+  fullpath = getpath()+"/"+container;
   string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
   if(pathfact=="Room.factory")
   {
@@ -770,20 +872,29 @@ int inventory()
   return 1;
 }
 
-int editfile(string filename)
+int editfile(string...args)
 {
-  string fullpath = "";
-  if(getpath()[-1]==47)    //check last "/"
-      fullpath = getpath()+filename;
-  else
-      fullpath = getpath()+"/"+filename;
-  string pathfact = _Server->get_factory(OBJ(fullpath))->query_attribute("OBJ_NAME");
-  if(pathfact=="Document.factory")
-    applaunch(OBJ(fullpath),exitnow);
-  else{
-    write("You can't edit a "+pathfact[0..sizeof(pathfact)-8]);
+  int size = sizeof(args);
+  if(size<1){
+    write("Please provide a file name\n");
     return 0;
   }
+  array(string) fullpatharr = allocate(size);
+  array(string) pathfactarr = allocate(size);
+  array(object) obj = allocate(size);
+  for(int j = 0;j<size;j++){
+    fullpatharr[j] = getpath()+"/"+args[j];
+    pathfactarr[j]=_Server->get_factory(OBJ(fullpatharr[j]))->query_attribute("OBJ_NAME");
+
+    if(pathfactarr[j]!="Document.factory"){
+      write("You can't edit a "+pathfactarr[j][0..sizeof(pathfactarr[j])-8]);
+      return 0;
+    }
+    obj[j] = OBJ(fullpatharr[j]);
+  }
+
+  applaunch(obj,exitnow); 
+  
   return 1;
 }
 
@@ -794,5 +905,4 @@ string getpath()
 {
   return me->get_last_trail()->query_attribute("OBJ_PATH");
 }
-
 constant stash_help_doc = #"This is a sTeam Advanced Shell. All the STASH commands work with normal pike commands. Tab completion is available for both STASH commands and pike commands.\n\n";
