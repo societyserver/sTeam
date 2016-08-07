@@ -37,6 +37,8 @@ class Test{
 		conn->login("root","steam",1);
 		_Server = conn->SteamObj(0);
 		me = _Server->get_module("users")->lookup("root");
+		me->move(OBJ("/"));
+		write("Creating test room\n\n");
 		_Server->get_factory("Room")->execute((["name":"TestRoom"]))->move(OBJ("/"));
 		me->move(OBJ("/TestRoom"));
 	}
@@ -58,6 +60,6 @@ class Test{
 
 
 int main(){
-	Test move = Test("move",4);
-	move->run();
+	Test create = Test("create",4);
+	create->run();
 }
