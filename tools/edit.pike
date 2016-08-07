@@ -42,7 +42,8 @@ void ping(string host, string port, string user, string|void pw)
           user_obj = _Server->get_module("users")->lookup(options->user);
           gp = user_obj->get_groups();
 	        get_file_object();
-          update(file);
+          array(object) filearr = ({file});
+          update(filearr);
         }
       }
   }
@@ -83,7 +84,9 @@ int main(int argc, array(string) argv)
 //  write(mystr);
 // array(string) gps = ({ "Admin" , "coder" , "help" , "PrivGroups" , "WikiGroups" , "sTeam" });
   get_file_object();
-  return applaunch(file,demo);
+  array(object) filearr = ({file});
+  exitcall=1;
+  return applaunch(filearr,demo);
 }
 
 void demo(){}
