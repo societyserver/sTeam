@@ -60,6 +60,7 @@ class Test{
 
 
 int main(){
-	Test create = Test("create",4);
-	create->run();
+	Test move = Test("move",4);
+	move->run();
+
 }
