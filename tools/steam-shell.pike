@@ -20,7 +20,7 @@
  * $Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $
  */
 
-constant cvs_version="$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
+constant cvs_version = "$Id: debug.pike.in,v 1.1 2008/03/31 13:39:57 exodusd Exp $";
 
 inherit "applauncher.pike";
 inherit "client.pike";
@@ -29,20 +29,26 @@ inherit "client.pike";
 
 Stdio.Readline readln;
 mapping options;
-int flag=1,c=1;
-string str;
+int flag = 1, c = 1;
+string pw, str;
+
 object me;
 
-protected class StashHelp {
-  inherit Tools.Hilfe;
-  string help(string what) { return "Show STASH help"; }
+protected
 
-  void exec(Evaluator e, string line, array(string) words,
-      array(string) tokens) {
-    line = words[1..]*" ";
-    function(array(string)|string, mixed ... : void) write = e->safe_write;
+class StashHelp {
+    inherit Tools.Hilfe;
 
-          constant all = #"
+    string help(string what) {
+        return "Show STASH help";
+    }
+
+    void exec(Evaluator e, string line, array(string) words,
+            array(string) tokens) {
+        line = words[1..]*" ";
+        function(array(string) | string, mixed ... : void) write = e->safe_write;
+
+        constant all =#"
 list            List Gates/Exits, Documents, Containers in the current Room.
 goto            Goto a Room using a full path to the Room.
 title           Set your own description.
@@ -124,44 +130,44 @@ Rewritten by Martin Nilsson 2002
       write(all);
       write("\n\nEnter \"help me more\" for further Hilfe help.\n\n");
     }
-  }
 }
 
-class Handler
-{
-  inherit Tools.Hilfe.Evaluator;
-  inherit Tools.Hilfe;
+class Handler {
 
-  object p;
-  void create(mapping _constants)
-  {
-    readln = Stdio.Readline();
-    p = ((program)"tab_completion.pmod")();
-    readln = p->readln;
-    write=predef::write;
-    ::create();
-    p->load_hilferc();
-    p->constants+=_constants;  //For listing sTeam commands and objects on tab
-    constants = p->constants;  //For running those commands
-    readln->get_input_controller()->bind("\t",p->handle_completions);
-    commands->help = StashHelp();
-    commands->hilfe = CommandHelp();
-  }
+    inherit Tools.Hilfe.Evaluator;
+            inherit Tools.Hilfe;
 
-  void add_constants(mapping a)
-  {
-      constants = constants + a;
-  }
-/*  void add_variables(mapping a)
-  {
-      variables = variables + a;
-  }*/
+            object p;
+            void create(mapping _constants) {
+
+        readln = Stdio.Readline();
+                p = ((program) "tab_completion.pmod")();
+                readln = p->readln;
+                write = predef::write;
+                ::create();
+                p->load_hilferc();
+                p->constants += _constants; //For listing sTeam commands and objects on tab
+                constants = p->constants; //For running those commands
+                readln->get_input_controller()->bind("\t", p->handle_completions);
+                commands->help = StashHelp();
+                commands->hilfe = CommandHelp();
+    }
+
+    void add_constants(mapping a) {
+
+        constants = constants + a;
+    }
+    /*  void add_variables(mapping a)
+      {
+          variables = variables + a;
+      }*/
 }
 
-object _Server,users;
+object _Server, users;
 mapping all;
-string path="/";
+string path = "/";
 Stdio.Readline.History readline_history;
+
 
 void ping()
 {
@@ -195,6 +201,8 @@ void ping()
 
 object handler, conn;
 mapping myarray;
+array(string) command_arr;
+
 int main(int argc, array(string) argv)
 {
   options = ([ "file":"/etc/shadow" ]);
@@ -267,33 +275,71 @@ int main(int argc, array(string) argv)
           write(result[0]);
           write("Wrong command.||maybe some bug.\n");
         }
-      }
-      else
-        handler->add_input_line(command);
-//      array hist = handler->history->status()/"\n";
-//      if(hist)
-//        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
-//          handler->write("came in here\n");
-//          flag=0;
-//        }
-      handler->p->set(handler->variables);
-      continue;
+        //    else { continue; }
     }
-//    else { continue; }
-  }
-  handler->add_input_line("exit");
+    handler->add_input_line("exit");
 }
 
-mapping init(array argv)
-{
-  mapping options = ([ "file":"/etc/shadow" ]);
+void exec_command(string command) {
+    myarray = ([
+            "list" : list,
+            "goto" : goto_room,
+            "title" : set_title,
+            "room" : desc_room,
+            "look" : look,
+            "take" : take,
+            "gothrough" : gothrough,
+            "create" : create_ob,
+            "peek" : peek,
+            "inventory" : inventory,
+            "i" : inventory,
+            "edit" : editfile,
+            ]);
 
-  array opt=Getopt.find_all_options(argv,aggregate(
-    ({"file",Getopt.HAS_ARG,({"-f","--file"})}),
-    ({"host",Getopt.HAS_ARG,({"-h","--host"})}),
-    ({"user",Getopt.HAS_ARG,({"-u","--user"})}),
-    ({"port",Getopt.HAS_ARG,({"-p","--port"})}),
+            command_arr = command / " ";
+
+    if (myarray[command_arr[0]]) {
+        int num = sizeof (command_arr);
+                mixed result = catch {
+            if (num == 2)
+                    myarray[command_arr[0]](command_arr[1]);
+            else if (num == 3)
+                    myarray[command_arr[0]](command_arr[1], command_arr[2]);
+            else if (num == 1)
+                    myarray[command_arr[0]]();
+            else if (num == 4)
+                    myarray[command_arr[0]](command_arr[1], command_arr[2], command_arr[3]);
+            else
+                myarray[command_arr[0]](@command_arr[1..]);
+            };
+
+        if (result != 0) {
+            write(result[0]);
+                    write("Wrong command.||maybe some bug.\n");
+        }
+    }
+
+    else
+
+        handler->add_input_line(command);
+
+
+}
+mapping init(array argv) {
+
+    mapping options = ([ "file" : "/etc/shadow" ]);
+
+            array opt = Getopt.find_all_options(argv, aggregate(
+            ({"file", Getopt.HAS_ARG, (
+        {"-f", "--file"})}),
+    ({"host", Getopt.HAS_ARG, (
+        {"-h", "--host"})}),
+    ({"user", Getopt.HAS_ARG, (
+        {"-u", "--user"})}),
+    ({"port", Getopt.HAS_ARG, (
+        {"-p", "--port"})}),
     ));
+
 
   options->historyfile=getenv("HOME")+"/.steam_history";
 
@@ -335,26 +381,23 @@ mapping init(array argv)
   ping();
 
   if(lower_case(options->user) == "guest")
-    return options;
+     return options;
 
-  mixed err;
-  int tries=3;
-  //readln->set_echo( 0 );
-  do
-  {
-    pw = Input.read_password( sprintf("Password for %s@%s", options->user,
-           options->host), "steam" );
-    //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
-  }
-  while((err = catch(conn->login(options->user, pw, 1))) && --tries);
-  //readln->set_echo( 1 );
+            mixed err;
+            int tries = 3;
+            //readln->set_echo( 0 );
+        do {
+            pw = Input.read_password(sprintf("Password for %s@%s", options->user,
+                    options->host), "steam");
+                    //pw=readln->read(sprintf("passwd for %s@%s: ", options->user, options->host));
+        } while ((err = catch (conn->login(options->user, pw, 1))) && --tries);
+                    //readln->set_echo( 1 );
 
-  if ( err != 0 ) 
-  {
-    werror("Failed to log in!\nWrong Password!\n");
-    exit(1);
-  } 
-  return options;
+                if (err != 0) {
+
+                    werror("Failed to log in!\nWrong Password!\n");
+                            exit(1);
+                }
 }
 
 mapping assign(object conn, object _Server, object users)
@@ -463,67 +506,65 @@ void join(string what,void|string name)
 
 // create new sTeam objects
 // with code taken from the web script create.pike
-mixed create_object(string|void objectclass, string|void name, void|string desc, void|mapping data)
-{
-  if(!objectclass && !name)
-  {
-    write("Usage: create(string objectclass, string name, void|string desc, void|mapping data\n");
-    return 0;
-  }
-  object _Server=conn->SteamObj(0);
-  object created;
-  object factory;
+mixed create_object(string | void objectclass, string | void name, void | string desc, void | mapping data) {
+    if (!objectclass && !name) {
+        write("Usage: create(string objectclass, string name, void|string desc, void|mapping data\n");
+        return 0;
+    }
+    object _Server = conn->SteamObj(0);
+            object created;
+            object factory;
 
-  if ( !stringp(objectclass))
-    return "No object type submitted";
+    if (!stringp(objectclass))
+        return "No object type submitted";
 
-  factory = _Server->get_factory(objectclass);
+        factory = _Server->get_factory(objectclass);
 
-  switch(objectclass)
-  {
-    case "Exit":
-      if(!data->exit_from)
-        return "exit_from missing";
-      break;
-    case "Link":
-      if(!data->link_to)
-        return "link_to missing";
-      break;
-  }
+        switch (objectclass) {
+            case "Exit":
+                if (!data->exit_from)
+                    return "exit_from missing";
+                    break;
+                    case "Link":
+                    if (!data->link_to)
+                        return "link_to missing";
+                        break;
+                    }
 
-  if(!data)
-    data=([]);
-  created = factory->execute(([ "name":name ])+ data );
+    if (!data)
+            data = ([]);
+            created = factory->execute(([ "name" : name ]) + data);
 
-  if(stringp(desc))
-    created->set_attribute("OBJ_DESC", desc);
+        if (stringp(desc))
+                created->set_attribute("OBJ_DESC", desc);
 
-//  if ( kind=="gallery" )
-//  {
-//    created->set_acquire_attribute("xsl:content", 0);
-//    created->set_attribute("xsl:content",
-//      ([ _STEAMUSER:_FILEPATH->path_to_object("/stylesheets/gallery.xsl") ])
-//                          );
-//  }
+                //  if ( kind=="gallery" )
+                //  {
+                //    created->set_acquire_attribute("xsl:content", 0);
+                //    created->set_attribute("xsl:content",
+                //      ([ _STEAMUSER:_FILEPATH->path_to_object("/stylesheets/gallery.xsl") ])
+                //                          );
+                //  }
 
-//  created->move(this_user());
+                //  created->move(this_user());
 
-  return created;
-}
+            return created;
+        }
 
-string getstring(int i)
-{
-//  write("came in here\n");
-  string curpath = getpath();
-  if(i==1&&flag==1)
-      return curpath+"> ";
-  else if(i==1&&(flag==0))
-      return curpath+"~ ";
-  else if(i==2&&flag==1)
-      return curpath+">> ";
-  else if(i==2&&(flag==0))
-      return curpath+"~~ ";
-}
+string getstring(int i) {
+    //  write("came in here\n");
+    string curpath = getpath();
+    if (i == 1 && flag == 1)
+        return curpath + "> ";
+    else if (i == 1 && (flag == 0))
+        return curpath + "~ ";
+    else if (i == 2 && flag == 1)
+        return curpath + ">> ";
+    else if (i == 2 && (flag == 0))
+
+        return curpath + "~~ ";
+    }
+
 
 int list(string what)
 {
@@ -655,16 +696,15 @@ int goto_room(string where)
       where=getpath()+"/"+where;
     }
     roomname = pathobj->query_attribute("OBJ_NAME");
-    string factory = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
-    //DONT NEED THIS. NEED TO USE me->move() to these locations
-//    if(pathobj&&((factory=="Room.factory")||(factory=="User.factory")||(factory=="Container.factory")))
-//        path = where;
-    string oldpath = getpath();
-    mixed error = catch{
+            string factory = _Server->get_factory(pathobj)->query_attribute("OBJ_NAME");
+            //DONT NEED THIS. NEED TO USE me->move() to these locations
+            //    if(pathobj&&((factory=="Room.factory")||(factory=="User.factory")||(factory=="Container.factory")))
+            //        path = where;
+            string oldpath = getpath();
+            mixed error = catch {
         me->move(pathobj);
-        write("You are now inside "+roomname+"\n");
+                write("You are now inside " + roomname + "\n");
     };
-
     if(error && pathobj)
     {
       write("Please specify path to room. Not a "+((factory/".")[0])+"\n");
@@ -845,19 +885,19 @@ int peek(string container)
   return 1;
 }
 
-void display(string type, array(string) strs)
-{
-  if(sizeof(strs)==0)
-   write("There are no "+type+" here\n");
-  else if(sizeof(strs)==1)
-    write("There is 1 "+type[0..sizeof(type)-2]+" here\n");
-  else
-    write("There are "+sizeof(strs)+" "+type+" here\n");
-  foreach(strs, string str)
-  {
-    write(str+"   ");
-  }
-  write("\n-----------------------\n");
+void display(string type, array(string) strs) {
+    if (sizeof (strs) == 0)
+            write("There are no " + type + " here\n");
+    else if (sizeof (strs) == 1)
+            write("There is 1 " + type[0..sizeof (type) - 2] + " here\n");
+
+    else
+        write("There are " + sizeof (strs) + " " + type + " here\n");
+            foreach(strs, string str) {
+
+            write(str + "   ");
+        }
+    write("\n-----------------------\n");
 }
 
 int inventory()
@@ -898,11 +938,12 @@ int editfile(string...args)
   return 1;
 }
 
-void exitnow()
-{}
-
-string getpath()
-{
-  return me->get_last_trail()->query_attribute("OBJ_PATH");
+void exitnow() {
 }
-constant stash_help_doc = #"This is a sTeam Advanced Shell. All the STASH commands work with normal pike commands. Tab completion is available for both STASH commands and pike commands.\n\n";
+
+string getpath() {
+    return me->get_last_trail()->query_attribute("OBJ_PATH");
+}
+
+constant stash_help_doc =#"This is a sTeam Advanced Shell. All the STASH commands work with normal pike commands. Tab completion is available for both STASH commands and pike commands.\n\n";
+
