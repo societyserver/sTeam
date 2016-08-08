@@ -75,6 +75,7 @@ install: install_steam force
 	$(INSTALL) -m755 tools/export_users $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m644 tools/applauncher.pike $(DESTDIR)/$(STEAMDIR)/tools
+	$(INSTALL) -m755 steam /usr/bin
 
 	$(INSTALL) -m755 sources/steam/steam $(DESTDIR)/$(STEAMDIR)/bin/$(STEAMBRAND)
 	$(INSTALL) -m755 start $(DESTDIR)/$(STEAMDIR)
