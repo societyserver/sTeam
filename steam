@@ -7,7 +7,19 @@ void resolveParam(int argc,array(string) argv)
         array command =({"/usr/local/lib/steam/tools/steam-shell.pike"});
         object shell = Process.create_process(command,(["stdin":Stdio.stdin,"stdout":Stdio.stdout,"stderr":Stdio.stderr]));
         shell->wait();
-    } 
+    }
+    else if (argv[1]=="debug")
+    {
+        array command = ({"/usr/local/lib/steam/tools/debug.pike"});
+        object shell = Process.create_process(command,(["stdin":Stdio.stdin,"stdout":Stdio.stdout,"stderr":Stdio.stderr]));
+        shell->wait();
+    }
+    else if(argv[1]=="edit")
+    {
+        array command = ({"/usr/local/lib/steam/tools/edit.pike"})+argv[2..];
+        object shell = Process.create_process(command,(["stdin":Stdio.stdin,"stdout":Stdio.stdout,"stderr":Stdio.stderr]));
+        shell->wait();
+    }
 }
 
 int main(int argc,array(string) argv)
