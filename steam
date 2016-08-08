@@ -20,6 +20,22 @@ void resolveParam(int argc,array(string) argv)
         object shell = Process.create_process(command,(["stdin":Stdio.stdin,"stdout":Stdio.stdout,"stderr":Stdio.stderr]));
         shell->wait();
     }
+    else if(argv[1]=="import-from-git")
+    {
+        array command = ({"/usr/local/lib/steam/tools/import-from-git.pike"})+argv[2..];
+        object shell = Process.create_process(command,(["stdin":Stdio.stdin,"stdout":Stdio.stdout,"stderr":Stdio.stderr]));
+        shell->wait();
+    }
+    else if(argv[1]=="export-from-git")
+    {
+        array command = ({"/usr/local/lib/steam/tools/export-to-git.pike"})+argv[2..];
+        object shell = Process.create_process(command,(["stdin":Stdio.stdin,"stdout":Stdio.stdout,"stderr":Stdio.stderr]));
+        shell->wait();
+    }
+    else
+    {
+        //print help
+    }
 }
 
 int main(int argc,array(string) argv)
