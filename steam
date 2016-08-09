@@ -1,5 +1,18 @@
 #!/usr/local/pike/7.8.866/bin/pike
 
+void help()
+{
+    write("NAME\n");
+    write("\tsteam command is used to run steam tools\n");
+    write("SYNOPSIS\n");
+    write("\tsteam <tool> [arguments]\n");
+    write("DESCRIPTION\n");
+    write("\ttools available: \n");
+    write("\tshell: steam shell\n");
+    write("\tdebug: steam debug\n");
+    write("\tedit: steam edit <filename1> [filename2,..]\n");
+}
+
 void resolveParam(int argc,array(string) argv)
 {
     if(argv[1]=="shell")
@@ -35,12 +48,13 @@ void resolveParam(int argc,array(string) argv)
     else
     {
         //print help
+        help();
     }
 }
 
 int main(int argc,array(string) argv)
 {
-    if(argc==1)write("No arguments provided\n");//print help
+    if(argc==1) help();//print help
     else resolveParam(argc,argv);
     return 0;
 }
