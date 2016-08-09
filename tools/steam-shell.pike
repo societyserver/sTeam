@@ -57,6 +57,7 @@ edit            Edit a file in the current Room.
 join            Join a group.
 leave           Leave a group.
 send_email      Send an email to the sTeam user, user group or external email.
+log             Open sTeam server log files.
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -111,6 +112,8 @@ hilfe           Help for Hilfe commands.
                     case "send_email":
                         write("Send an email to the sTeam user, user group or external email.\n");
                         return;
+		    case "log":
+                        write("Open sTeam server log files.\n");
    			 //Hilfe internal help
                     case "me more":
                         write(documentation_help_me_more);
@@ -284,6 +287,7 @@ void exec_command(string command) {
             "join" : join,
             "leave" : leave,
             "send_email" : send_email,
+            "log" : open_log,
             ]);
 
             command_arr = command / " ";
@@ -411,6 +415,7 @@ mapping assign(object conn, object _Server, object users) {
             "join" : join,
             "leave" : leave,
             "send_email" : send_email,
+            "log" : open_log,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -586,7 +591,7 @@ int list(string what,string|void command)
       toappend = "Here is a list of all the users who are member of the group "+ command +".\n";
     else toappend = "Here is a list of all "+what+" in the current room.\n";
     foreach(display,string str)
-      a+=(str+"    ");
+      a+=(str+"\n");
   }
   write(toappend);
   if(flag==0){
@@ -1169,6 +1174,21 @@ int mailAdressValid(string adress){
    }else return 1;
 }
 
+int open_log(){
+  write("The log files include errors, events, fulltext.pike, graphic.pike, http, search.pike, security, server, slow_requests, smtp, spm.pike and tex.pike.\nEnter the name of the log files you want to open.\nNote: The filenames should be separated by \",\".\n");
+  string files = readln->read();
+  files-=" ";
+  array(string) open_files = files / ",";
+  string command="sudo*vi*-o*-S*/usr/local/lib/steam/tools/steam-shell.vim*-S*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit";
+  foreach(open_files, string cmd){
+      command+= "/var/log/steam/"+cmd+".log*";
+  }
+ open_files = command / "*";
+ object editor=Process.create_process(open_files,
+                                     ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
+ editor->wait();
+return 0;
+}
 
 void exitnow()
 {}
