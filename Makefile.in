@@ -71,7 +71,6 @@ install: install_steam force
 	$(INSTALL) -m644 spms/spm_support*.spm $(DESTDIR)/$(STEAMDIR)/spms/.
 
 	$(INSTALL) -m755 tools/create_cert.pike $(DESTDIR)/$(STEAMDIR)/tools 
-	$(INSTALL) -m775 tools/create_cert.pike.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/import_users $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/export_users $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/tools
@@ -84,7 +83,6 @@ install: install_steam force
 	$(INSTALL) -m664 tools/dbContentReader.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m775 tools/dbcopy $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m755 tools/debug.pike $(DESTDIR)/$(STEAMDIR)/tools
-	$(INSTALL) -m775 tools/debug.pike.in $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m775 tools/edit.pike $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m644 tools/export $(DESTDIR)/$(STEAMDIR)/tools
 	$(INSTALL) -m664 tools/export.pike $(DESTDIR)/$(STEAMDIR)/tools
