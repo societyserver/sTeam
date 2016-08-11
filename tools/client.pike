@@ -89,6 +89,7 @@ mapping init(array argv)
   mixed err;
   int tries=3;
   //readln->set_echo( 0 );
+  write("User " + options->user +"\n");
   do
   {
     pw = Input.read_password( sprintf("Password for %s@%s", options->user,

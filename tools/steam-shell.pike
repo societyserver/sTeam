@@ -31,7 +31,6 @@ Stdio.Readline readln;
 mapping options;
 int flag = 1, c = 1;
 string pw, str;
-
 object me;
 
 protected
@@ -55,13 +54,16 @@ title           Set your own description.
 room            Describe the Room you are currently in.
 look            Look around the Room.
 take            Copy a object in your inventory.
-enter           Enter a Room, Gate or Exit.
+gothrough       Go through a gate.
 create          Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.
+delete          Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.
 peek            Peek through a container.
 inventory(i)    List your inventory.
 edit            Edit a file in the current Room.
 join            Join a group.
 leave           Leave a group.
+send_email      Send an email to the sTeam user, user group or external email.
+log             Open sTeam server log files.
 hilfe           Help for Hilfe commands.
 ";
     switch(line) {
@@ -70,69 +72,82 @@ hilfe           Help for Hilfe commands.
       write(all);
       return;
 
-    case "list":
-      write("List Gates/Exits, Documents, Containers in the current Room.\n");
-      return;
-    case "goto":
-      write("Goto a Room using a full path to the Room.\n");
-      return;
-    case "title":
-      write("Set your own description.\n");
-      return;
-    case "room":
-      write("Describe the Room you are currently in.\n");
-      return;
-    case "look":
-      write("Look around the Room.\n");
-      return;
-    case "take":
-      write("Copy a object in your inventory.\n");
-      return;
-    case "enter":
-      write("Enter a Room, Gate or Exit.\n");
-      return;
-    case "create":
-      write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
-      return;
-    case "peek":
-      write("Peek through a container.\n");
-      return;
-    case "i":
-    case "inventory":
-      write("Lists your inventory\n");
-      return;
-    case "edit":
-      write("Edit a file in the current Room.\n");
-      return;
-    case "join":
-      write("Join a group.\n");
-      return;
-    case "leave":
-      write("Leave a group.\n");
-      return;
-    //Hilfe internal help
-    case "me more":
-      write( documentation_help_me_more );
-      write("Type \"hilfe\" to get more help on Hilfe commands\n");
-      return;
-    case "hilfe todo":
-      write(hilfe_todo);
-      return;
-    case "about hilfe":
-      e->print_version();
-      write(cvs_version+#"
-Initial version written by Fredrik Hübinette 1996-2000
-Rewritten by Martin Nilsson 2002
-");
-      return;
-    default:
-      write(stash_help_doc);
-      write(all);
-      write("\n\nEnter \"help me more\" for further Hilfe help.\n\n");
+                    case "list":
+                        write("List Gates/Exits, Documents, Containers in the current Room.\n");
+                        return;
+                    case "goto":
+                        write("Goto a Room using a full path to the Room.\n");
+                        return;
+                    case "title":
+                        write("Set your own description.\n");
+                        return;
+                    case "room":
+                        write("Describe the Room you are currently in.\n");
+                        return;
+                    case "look":
+                        write("Look around the Room.\n");
+                        return;
+                    case "take":
+                        write("Copy a object in your inventory.\n");
+                        return;
+                    case "gothrough":
+                        write("Go through a gate.\n");
+                        return;
+ 	            case "create":
+                        write("Create an object (File/Container/Exit). Provide the full path of the destination or a . if you want it in current folder.\n");
+                        return;
+                    case "delete":
+                        write("Delete an object. The user can delete the objects inside the current folder. User can delete objects like documents, containers and rooms.\n");
+                        return; 
+                    case "peek":
+                        write("Peek through a container.\n");
+                        return;
+                    case "i":
+                    case "inventory":
+                        write("Lists your inventory\n");
+                        return;
+                    case "edit":
+                        write("Edit a file in the current Room.\n");
+                        return;
+                    case "join":
+      			write("Join a group.\n");
+      			return;
+    		    case "leave":
+      			write("Leave a group.\n");
+     			 return;
+                    case "send_email":
+                        write("Send an email to the sTeam user, user group or external email.\n");
+                        return;
+		    case "log":
+                        write("Open sTeam server log files.\n");
+   			 //Hilfe internal help
+                    case "me more":
+                        write(documentation_help_me_more);
+                        write("Type \"hilfe\" to get more help on Hilfe commands\n");
+                        return;
+                    case "hilfe todo":
+                        write(hilfe_todo);
+                        return;
+                    case "about hilfe":
+                        e->print_version();
+                        write(cvs_version +#"
+                                Initial version written by Fredrik Hübinette 1996 - 2000
+                                Rewritten by Martin Nilsson 2002
+                                ");
+
+                        return;
+                    default:
+                        write(stash_help_doc);
+                                write(all);
+                                write("\n\nEnter \"help me more\" for further Hilfe help.\n\n");
+                }
     }
 }
 
-class Handler {
+class Handler
+{
+  inherit Tools.Hilfe.Evaluator;
+  inherit Tools.Hilfe;
 
     inherit Tools.Hilfe.Evaluator;
             inherit Tools.Hilfe;
@@ -173,8 +188,6 @@ void ping()
 {
   call_out(ping, 10);
   mixed a = conn->send_command(14, 0);
-
-
   if(a=="sTeam connection lost.")
   {
       flag = 0;
@@ -224,56 +237,45 @@ int main(int argc, array(string) argv)
   readln->enable_history(readline_history);
 
   handler->add_input_line("start backend");
+  write("User: " + options->user +"\n");
+            
+              if (sizeof (argv) > 1) {
+	    	string cmd = "";
+          	if (sizeof (argv) >= 3){
+			for (int i = 1; i<sizeof (argv); i++){
+	        	        if(argv[i]!=0){	        	        
+					if(i==sizeof(argv)-1) 
+						cmd += argv[i];
+					else cmd += argv[i] +" ";
+				}
+	        	}
+		}
+		else cmd += argv[1];
+                write("Command: %s",cmd);
+	        write("\n");
+                exec_command(cmd);
+                if(cmd!="")
+	                exit(0);
+            }
+    while ((command = readln->read(
+            sprintf("%s", (handler->state->finishedp() ? getstring(1) : getstring(2)))))) {
+        if (sizeof (command)) {
+            Stdio.write_file(options->historyfile, readln->get_history()->encode());
+                    command = String.trim_whites(command);
+                    //      if(a->match(command))
+                    //          command_arr = array_sscanf(command,"%s [\"|']%s[\"|']");
+                    //      else
+                    exec_command(command);
 
-  string command;
-  myarray = ([ 
-    "list"        : list,
-    "goto"        : goto_room,
-    "title"       : set_title,
-    "room"        : desc_room,
-    "look"        : look,
-    "take"        : take,
-    "enter"       : enter,
-    "create"      : create_ob,
-    "peek"        : peek,
-    "inventory"   : inventory,
-    "i"           : inventory,
-    "edit"        : editfile,
-    "join"        : join,
-    "leave"       : leave,
-    ]);
-//  Regexp.SimpleRegexp a = Regexp.SimpleRegexp("[a-zA-Z]* [\"|'][a-zA-Z _-]*[\"|']");
-  array(string) command_arr;
-  while((command=readln->read(sprintf("%s", (handler->state->finishedp()?getstring(1):getstring(2))))))
-  {
-    if(sizeof(command))
-    {
-      Stdio.write_file(options->historyfile, readln->get_history()->encode());
-      command = String.trim_whites(command);
-//      if(a->match(command))
-//          command_arr = array_sscanf(command,"%s [\"|']%s[\"|']");
-//      else
-          command_arr = command/" ";
-      if(myarray[command_arr[0]])
-      {
-        int num = sizeof(command_arr);
-        mixed result = catch {
-        if(num==2)
-          myarray[command_arr[0]](command_arr[1]);
-        else if(num==3)
-          myarray[command_arr[0]](command_arr[1],command_arr[2]);
-        else if(num==1)
-          myarray[command_arr[0]]();
-        else if(num==4)
-          myarray[command_arr[0]](command_arr[1],command_arr[2],command_arr[3]);
-        else
-          myarray[command_arr[0]](@command_arr[1..]);
-        };
+                    //      array hist = handler->history->status()/"\n";
+                    //      if(hist)
+                    //        if(search(hist[sizeof(hist)-3],"sTeam connection lost.")!=-1){
+                    //          handler->write("came in here\n");
+                    //          flag=0;
+                    //        }
+                    handler->p->set(handler->variables);
 
-        if(result!=0)
-        {
-          write(result[0]);
-          write("Wrong command.||maybe some bug.\n");
+            continue;
         }
         //    else { continue; }
     }
@@ -289,11 +291,16 @@ void exec_command(string command) {
             "look" : look,
             "take" : take,
             "gothrough" : gothrough,
-            "create" : create_ob,
+	    "create" : create_ob,
+            "delete" : delete,
             "peek" : peek,
             "inventory" : inventory,
             "i" : inventory,
             "edit" : editfile,
+            "join" : join,
+            "leave" : leave,
+            "send_email" : send_email,
+            "log" : open_log,
             ]);
 
             command_arr = command / " ";
@@ -340,48 +347,46 @@ mapping init(array argv) {
         {"-p", "--port"})}),
     ));
 
+    options->historyfile = getenv("HOME") + "/.steam_history";
 
-  options->historyfile=getenv("HOME")+"/.steam_history";
+            foreach(opt, array option) {
+        options[option[0]] = option[1];
+    }
+    if (!options->host)
+            options->host = "127.0.0.1";
+        if (!options->user)
+                options->user = "root";
+            if (!options->port)
+                    options->port = 1900;
+            else
+                options->port = (int) options->port;
 
-  foreach(opt, array option)
-  {
-    options[option[0]]=option[1];
-  }
-  if(!options->host)
-    options->host="127.0.0.1";
-  if(!options->user)
-    options->user="root";
-  if(!options->port)
-    options->port=1999;
-  else
-    options->port=(int)options->port;
+                    string server_path = "/usr/local/lib/steam";
 
-  string server_path = "/usr/local/lib/steam";
+                    master()->add_include_path(server_path + "/server/include");
+                    master()->add_program_path(server_path + "/server/");
+                    master()->add_program_path(server_path + "/conf/");
+                    master()->add_program_path(server_path + "/spm/");
+                    master()->add_program_path(server_path + "/server/net/coal/");
 
-  master()->add_include_path(server_path+"/server/include");
-  master()->add_program_path(server_path+"/server/");
-  master()->add_program_path(server_path+"/conf/");
-  master()->add_program_path(server_path+"/spm/");
-  master()->add_program_path(server_path+"/server/net/coal/");
+ //                   conn = ((program) "client_base.pike")();
 
   conn = ((program)"../server/client_base.pike")();
 //    conn = ((program)compile_file("../server/client_base.pike"))();
   int start_time = time();
 
-  werror("Connecting to sTeam server...\n");
-  while ( !conn->connect_server(options->host, options->port)  ) 
-  {
-    if ( time() - start_time > 120 ) 
-    {
-      throw (({" Couldn't connect to server. Please check steam.log for details! \n", backtrace()}));
-    }
-    werror("Failed to connect... still trying ... (server running ?)\n");
-    sleep(10);
-  }
-  ping();
+                    werror("Connecting to sTeam server...\n");
+                while (!conn->connect_server(options->host, options->port)) {
+                    if (time() - start_time > 120) {
+                        throw (({" Couldn't connect to server. Please check steam.log for details! \n", backtrace()}));
+                    }
+                    werror("Failed to connect... still trying ... (server running ?)\n");
+                            sleep(10);
+                }
 
-  if(lower_case(options->user) == "guest")
-     return options;
+    ping();
+    if (lower_case(options->user) == "guest")
+        return options;
 
             mixed err;
             int tries = 3;
@@ -398,30 +403,35 @@ mapping init(array argv) {
                     werror("Failed to log in!\nWrong Password!\n");
                             exit(1);
                 }
+    return options;
 }
 
-mapping assign(object conn, object _Server, object users)
-{
-	return ([
-    "_Server"     : _Server,
-    "get_module"  : _Server->get_module,
-    "get_factory" : _Server->get_factory,
-    "conn"        : conn,
-    "find_object" : conn->find_object,
-    "users"       : users,
-    "groups"      : _Server->get_module("groups"),
-    "me"          : users->lookup(options->user),
-    "edit"        : applaunch,
-    "create"      : create_object,
-    "list"        : list,
-    "goto"        : goto_room,
-    "title"       : set_title,
-    "room"        : desc_room,
-    "look"        : look,
-    "take"        : take,
-    "enter"       : enter,
-    "join"        : join,
-    "leave"       : leave,
+mapping assign(object conn, object _Server, object users) {
+
+    return ([
+    "_Server" : _Server,
+            "get_module" : _Server->get_module,
+            "get_factory" : _Server->get_factory,
+            "conn" : conn,
+            "find_object" : conn->find_object,
+            "users" : users,
+            "groups" : _Server->get_module("groups"),
+            "me" : users->lookup(options->user),
+            "edit" : applaunch,
+	    "create" : create_object,
+            "delete" : delete,
+            "list" : list,
+            "goto" : goto_room,
+            "title" : set_title,
+            "room" : desc_room,
+            "look" : look,
+            "take" : take,
+            "gothrough" : gothrough,
+            "enter" : enter,
+            "join" : join,
+            "leave" : leave,
+            "send_email" : send_email,
+            "log" : open_log,
 
     // from database.h :
     "_SECURITY" : _Server->get_module("security"),
@@ -565,40 +575,52 @@ string getstring(int i) {
         return curpath + "~~ ";
     }
 
-
-int list(string what)
+int list(string what,string|void command)
 {
-  if(what==""||what==0)
+  if(what==""||what==0 || what=="members")
   {
     write("Wrong usage\n");
     return 0;
   }
-  int flag=0;
+  else if(what=="my" && command == "groups")
+  what+=command; 
+  int flag=1;
   string toappend="";
-  array(string) display = get_list(what);
+  array(string) display;
+  if(command=="members"){
+    what+=command;
+    command=what-command;
+    what=what-command;
+    display = get_list(what,command);
+  }
+  else  display = get_list(what);
   string a="";
   if(sizeof(display)==0)
-    toappend = "There are no "+what+" in this room\n";
+    toappend = "There are no "+what+".\n";
+  else if(display[0]=="Invalid command")
+    write("Invalid command.\n");
   else
-    toappend = "Here is a list of all "+what+"\n";
-    
-  foreach(display,string str)
-  {
-    a=a+(str+"\n");
-    if(str=="Invalid command")
-    {
-      flag=1;
-      write(str+"\n");
-    }
+  { 
+    flag = 0;
+    if(what=="users"||what=="groups")
+      toappend = "Here is a list of all " + what +".\n";
+    else if(what=="mygroups")
+      toappend = "Here is a list of all the groups that "+me->get_user_name() + " is member.\n";
+    else if(what=="members")
+      toappend = "Here is a list of all the users who are member of the group "+ command +".\n";
+    else toappend = "Here is a list of all "+what+" in the current room.\n";
+    foreach(display,string str)
+      a+=(str+"\n");
   }
+  write(toappend);
   if(flag==0){
     mapping mp = Process.run("tput cols");
     int screenwidth = (int)mp["stdout"];
-    write(toappend + "\n");
+    write("\n");
     write("%-$*s\n", screenwidth,a);
     write("\n");
   }  
-  return !flag;//flag = 1 when str = Invalid command that means execution failed
+  return 0;
 }
 
 array(string) get_list(string what,string|object|void lpath)
@@ -618,6 +640,7 @@ array(string) get_list(string what,string|object|void lpath)
       mixed all = pathobj->get_inventory_by_class(CLASS_CONTAINER);
       foreach(all, object obj)
       {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
         string obj_name = obj->query_attribute("OBJ_NAME");
         whatlist = Array.push(whatlist,obj_name);
       }
@@ -628,6 +651,7 @@ array(string) get_list(string what,string|object|void lpath)
       mixed all = pathobj->get_inventory_by_class(CLASS_DOCUMENT|CLASS_DOCLPC|CLASS_DOCEXTERN|CLASS_DOCHTML|CLASS_DOCXML|CLASS_DOCXSL);
       foreach(all, object obj)
       {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
         string obj_name = obj->query_attribute("OBJ_NAME");
         whatlist = Array.push(whatlist,obj_name);
       }
@@ -640,6 +664,7 @@ array(string) get_list(string what,string|object|void lpath)
       mixed all = pathobj->get_inventory_by_class(CLASS_ROOM|CLASS_EXIT);
       foreach(all, object obj)
       {
+        string fact_name = _Server->get_factory(obj)->query_attribute("OBJ_NAME");
         string obj_name = obj->query_attribute("OBJ_NAME");
         whatlist = Array.push(whatlist,obj_name);
       }
@@ -653,6 +678,43 @@ array(string) get_list(string what,string|object|void lpath)
         string obj_name = group->get_name();
         whatlist = Array.push(whatlist,obj_name);
       }
+    }
+    break;
+    case "mygroups":
+    {
+       array(object) groups = _Server->get_module("groups")->get_groups();
+       foreach(groups,object group)
+       {
+          if(group->is_member(me)){ 
+            string obj_name = group->get_name();          
+	    whatlist = Array.push(whatlist,obj_name); 
+          }  
+       }
+    }
+    break;
+    case "members":
+    {
+     if(!objectp(_Server->get_module("groups")->lookup(lpath))){
+	write("Group does not exist.\n");        
+     }
+     else {
+       array(object) members = _Server->get_module("groups")->lookup(lpath)->get_members();
+       foreach(members,object member)
+       {
+         string obj_name = member->get_user_name();
+         whatlist = Array.push(whatlist,obj_name);
+       }
+      }
+    }
+    break;
+    case "users":
+    {
+      array(object) users = _Server->get_module("users")->get_users();
+      foreach(users,object user)
+      {
+        string obj_name = user->get_user_name();
+        whatlist = Array.push(whatlist,obj_name);
+      }      
     }
     break;
     case "others":
@@ -813,53 +875,154 @@ int enter(string gatename)
     return 1;
 }
 
-int delete(string file_cont_name)
+int gothrough(string gatename)
 {
-  string fullpath="";
-  fullpath = getpath()+"/"+file_cont_name;
-  if(OBJ(fullpath))
+    string fullpath = "";
+    fullpath = getpath()+"/"+gatename;
+    object gate = OBJ(fullpath);
+    if(gate)
+    {
+      object exit = gate->get_exit();
+      string exit_path1 = "",exit_path2 = "";
+//      exit_path1 = _Server->get_module("filepath:tree")->check_tilde(exit);
+//      exit_path2 = _Server->get_module("filepath:tree")->object_to_path(exit);
+//      if(exit_path1!="")
+//          goto_room(exit_path1);
+//      else if(exit_path2!="/void/"||exit_path2!="")
+//          goto_room(exit_path2);
+//      else
+//          write("Problem with object_to_path\n");
+      exit_path1 = exit->query_attribute("OBJ_PATH"); //change to object_to_path
+      if(exit_path1!="")
+        goto_room(exit_path1);
+    }
+    else
+      write(gatename+" is not reachable from current room\n");
+    return 0;
+}
+
+int delete(string type, string name) 
+{  
+    type = String.capitalize(type);
+    switch(type)
+    {
+      case "Container":
+      case "File":
+      case "Exit":
+      case "Gate":
+      case "Room":
+      {  
+        string fullpath = "";
+        fullpath = getpath() + "/" + name;
+        if(OBJ(fullpath)){
+          OBJ(fullpath)->delete(); 
+          write(type + ": "+ name + " deleted successfully.\n");
+        }
+        else write("Object does not exist.\n") ;  }
+    break;
+    case "Group":
+    {
+      if(!_Server->get_factory("Group")->delete_group(_Server->get_module("groups")->lookup(name)))
+         write("Group deleted successfully.\n");
+      else write("Only the admin of the group can delete the group.\n");
+    }
+    break;
+    case "User":
+      if(options->user!="root"){
+        write("You cannot create a user. You need to be a root user.\n");
+      return 0;
+      }
+      else{        
+        _Server->get_module("users")->get_user(name)->delete();
+        write("User: " + name + " deleted successfully.\n");    
+      return 0;
+      }
+    default:
+      write("Invalid Command. Enter the type of the object carefully.\n");
+    }
     return 0;
   return 0;
 }
 
 int create_ob(string type,string name,string destination)
 {
-  string desc = readln->read("How would you describe it?\n");
   mapping data = ([]);
+  string desc;
   type = String.capitalize(type);
   if(destination == ".")
     destination = getpath();
-  if(type=="Exit")
+  object myobj ;
+  switch(type)
   {
-    object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
-//    object exit_from = OBJ(getpath());
-    data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
-  }
-  else if(type=="Link")
-  {
-    object link_to = OBJ(readln->read("Where does the link lead?\n"));
-    data = ([ "link_to":link_to ]);
-  }
-  else if(type=="Group")
-  {
-    string parent = readln->read("Subgroup of?\n");
-    data = (["parentgroup":parent]);
-  }
-  object myobj = create_object(type,name,desc,data);
-/*  if(type=="Room" || type=="Container"){
-    if(destination==".")
-      myobj->move(OBJ(getpath()));
-    else
+    case "User":
+      {
+        if(options->user!="root"){
+          write("You cannot create a user. You need to be a root user.\n");
+        }
+        else{
+          string pass = Input->read_password("Please enter the password for the user.",name);
+          write("Enter the email id for the user. ");
+          string email = readln->read();
+          _Server->get_factory("User")->execute( (["name": name, "pw":pass, "email": email]) );
+          _Server->get_module("users")->get_user(name)->activate_user();
+          write("User: " + name + " created successfully.\n");     
+        }
+      }
+    break;
+    case "Group":
+    {
+      if(options->user != "root"){
+        write("Only a root user can create a group.\n");
+      return 0;
+      }
+      string parent = readln->read("Subgroup of?\n");
+      data = (["parentgroup":parent]);
+      desc = readln->read("How would you describe it?\n");
+      myobj = create_object(type,name,data,desc);
+      myobj->add_member(me);
+    } 
+    break;
+    case "File":
+    {
+       data=(["mimetype":"auto-detect"]);
+       myobj = create_object("Document",name,data,desc);
+       myobj->move(OBJ(destination));
+       write("File type: "+ myobj->query_attribute("DOC_MIME_TYPE") + "\n");
+    }
+    break;
+    case "Gate" :
+    case "Exit" :
+    {
+      desc = readln->read("How would you describe it?\n");
+      object exit_to = OBJ(readln->read("Where do you want to exit to?(full path)\n"));
+      data = ([ "exit_from":OBJ(destination), "exit_to":exit_to ]);
+      myobj = create_object(type,name,data,desc);
+    }
+    break;
+    case "Link" :
+    {
+      desc = readln->read("How would you describe it?\n");    
+      object link_to = OBJ(readln->read("Where does the link lead?\n"));
+      data = ([ "link_to":link_to ]);
+      myobj = create_object(type,name,data,desc);
       myobj->move(OBJ(destination));
-  }
- */
-  if(!(type == "Exit" || type=="Group"))
-    myobj->move(OBJ(destination));
-  if(type=="Group")
-  {
-    myobj->add_member(me);
-  }
-  return 1;
+    }
+    break;
+    case "Room" :
+    case "Container" :
+    {
+      desc = readln->read("How would you describe it?\n");
+      myobj = create_object(type,name,data,desc);
+      myobj->move(OBJ(destination));
+    }
+    break;
+    default:
+      write("Invalid object type. Enter the object type correctly\n");
+    }
+    if(objectp(myobj))
+      write(type + ": " + name + " created successfully.\n");
+    else write(type + ": " + name + " not created.\n");
+  return 0;
 }
 
 int peek(string container)
@@ -938,12 +1101,178 @@ int editfile(string...args)
   return 1;
 }
 
-void exitnow() {
+void send_email(){
+          mapping vars;
+          string users,subject,messagebody;
+          write("The recipients can be an sTeam user, User group or an external email. Enter the receipents of the email.\nNote: The recipients should be separated by \",\".\n");
+          users = readln->read();
+	  write("Enter the subject of the email.The subject should not be blank.\n");
+          subject = readln->read();
+          write("Enter the body of the email.The subject should not be blank.\n");
+          messagebody = readln->read();
+          vars = (["to_free" : users, "messagesubject" : subject, "messagebody" : messagebody,]);
+          //write("\n"+users+"\t" + subject + "\t" + messagebody + "\n");
+	  array tousers = ({ });
+	  array(string) invalid = ({ });
+	  object smtp = _Server->get_module("smtp");
+	  object mail;
+	  int noContent = 0;
+	  int produceWarnings = 0;
+          string errTextE = "Failed to send Message!Causes:";
+	  array(string) to_free;
+	  if(stringp(users) && sizeof(users) != 0) {
+		  to_free = users / ",";
+		  foreach(to_free, string elem) {
+			  elem = String.trim_all_whites(elem);
+			  if(elem != "" && !isEmptyString(elem)) {
+				  if(objectp(_Server->get_module("users")->lookup(elem))) {
+					  tousers += ({ _Server->get_module("users")->lookup(elem) });
+				  }else if(objectp(_Server->get_module("groups")->lookup(elem))){
+					  tousers += ({ _Server->get_module("groups")->lookup(elem)});
+
+				  }else if(mailAdressValid(elem)) {
+					  tousers += ({ elem });
+
+			      }else {
+					  invalid += ({ elem });
+				  }
+			  }
+		  }
+
+	  }
+	  if(sizeof(tousers) != 0 && stringp(subject) && subject != ""){
+		  string body = "";
+		  
+		  string message_name = replace(subject,"/","_");
+//write("\n" + message_name +"\n");
+		  mail = _Server->get_factory("Document")->execute( ([ "name":message_name, "mimetype":"text/plain"]));
+		  mail->set_attribute("OBJ_DESC", subject);
+		  if(stringp(messagebody) && messagebody != "") {
+			  mail->set_content(messagebody);
+			  body = messagebody;
+		  }else {
+			  noContent = 1;
+		  }
+		  mail->set_attribute("DOC_ENCODING", "utf-8");
+// To support attachments, induce a variable called as annotfile.
+	/*	  string annotfile = readln("Enter the file to be attached.(sTeam address).\n");
+                  string url = annotfile;
+		  if ( stringp(url) && strlen(url) > 0 &&
+		  stringp(annotfile  ) {
+			  object factory = _Server->get_factory(CLASS_DOCUMENT);
+                          object obj;
+			  object ann = factory->execute( ([ "name":url, "acquire":obj, ]) );
+			  function f = ann->receive_content(strlen(vars["annotfile"]));
+			  f(vars["annotfile"]);
+			  f(0);
+			  mail->add_annotation(ann); 
+		  }*/
+//write("Mail : %O\n",mail);
+//write("\nMail Content = %s", mail->get_content());
+          array(string) stringadresses = ({}); 
+		  foreach(tousers, mixed user) {
+			  if(objectp(user)) {
+          			if (objectp(mail->get_annotating())) {
+            				mail = mail->duplicate();
+        			  }
+				  user->mail(mail);
+			  }
+			  else if(stringp(user)) {
+				  stringadresses += ({ user });
+			  }
+		  }
+      //write( "\nString addresses\n");
+      //write( "%O\n",stringadresses );
+      //write("Sizeof stringaddr %d \n",sizeof(stringadresses) );
+      if (sizeof(stringadresses) > 0) {
+        smtp->send_mail(stringadresses, vars["messagesubject"], body);
+      }
+      //write("Sizeof invalid and noContent %d %d \n",sizeof(invalid), noContent );
+      write("Mail Successfully sent\n");  	   
+      if(sizeof(invalid) != 0 || noContent == 1) {
+	produceWarnings = 1;
+	errTextE = "Mail successfully sent!But there were some warnings:";
+	  if(sizeof(invalid) != 0) {
+            errTextE += "There were invalid entries. The entries";
+     	    foreach(invalid, string s) {
+		errTextE += ""+s+"";
+            }
+      errTextE += " do not seem to be valid users or groups in your sTeam system. No messags have been send there!";
+      }	  
+           if(noContent == 1) {
+	     errTextE += "Your message contains no text.";
+            }
+            else{
+	      errTextE += "";
+            }
+      }
+      if(produceWarnings)
+        write(errTextE +"\n");
+      }
+      else {
+	errTextE += "";
+	if(sizeof(tousers) == 0) {
+          errTextE += "There are no valid recipients for your message because ";
+	  if(sizeof(invalid) == 0) {
+	     errTextE += "you have not specified any for your message.";
+	  } else {
+	      errTextE += "you only entered invalid recipients:";
+	      foreach(invalid, string s) {
+		errTextE += ""+s+"";
+	      }
+              errTextE += "";
+	   }
+	}
+	if(stringp(!subject) || subject == "") {
+	  errTextE += "No subject is specified for your message. Please give an subject.";
+	}
+        write("\n"+ errTextE +"\n");
+      }  
 }
 
-string getpath() {
-    return me->get_last_trail()->query_attribute("OBJ_PATH");
+int isEmptyString(string s) {
+  for(int i = 0; i < sizeof(s); i++)
+    if(s[i] != ' ') return 0;
+      return 1;
 }
 
-constant stash_help_doc =#"This is a sTeam Advanced Shell. All the STASH commands work with normal pike commands. Tab completion is available for both STASH commands and pike commands.\n\n";
 
+int mailAdressValid(string adress){
+  string localPart;
+  string domainPart;
+  if(sscanf(adress, "%s@%s", localPart, domainPart) != 2){
+    return 0;
+  }
+  else if(sscanf(localPart, "%*[A-Za-z0-9.!#$%&'*+-/=?^_`{|}~]") != 1 || sizeof(localPart) == 0 || sizeof(localPart) > 64){
+    return 0;
+  }
+  else if(sscanf(domainPart, "%*[A-Za-z0-9.-]") != 1 || sizeof(domainPart) == 0 || sizeof(domainPart) > 255){
+    return 0;
+   }else return 1;
+}
+
+int open_log(){
+  write("The log files include errors, events, fulltext.pike, graphic.pike, http, search.pike, security, server, slow_requests, smtp, spm.pike and tex.pike.\nEnter the name of the log files you want to open.\nNote: The filenames should be separated by \",\".\n");
+  string files = readln->read();
+  files-=" ";
+  array(string) open_files = files / ",";
+  string command="sudo*vi*-o*-S*/usr/local/lib/steam/tools/steam-shell.vim*-S*/usr/local/lib/steam/tools/watchforchanges.vim*-S*/usr/local/lib/steam/tools/golden_ratio.vim*-c*edit";
+  foreach(open_files, string cmd){
+      command+= "/var/log/steam/"+cmd+".log*";
+  }
+ open_files = command / "*";
+ object editor=Process.create_process(open_files,
+                                     ([ "cwd":getenv("HOME"), "env":getenv(), "stdin":Stdio.stdin, "stdout":Stdio.stdout, "stderr":Stdio.stderr ]));
+ editor->wait();
+return 0;
+}
+
+void exitnow()
+{}
+
+string getpath()
+{
+  return me->get_last_trail()->query_attribute("OBJ_PATH");
+}
+
+constant stash_help_doc = #"This is a sTeam Advanced Shell. All the STASH commands work with normal pike commands. Tab completion is available for both STASH commands and pike commands.\n\n";
