@@ -1,5 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
+// Tests the function getEnvironment
 int callingFunction(object me,object _Server,object...args)
 {
 	object parent = OBJ("/TestRoom");
