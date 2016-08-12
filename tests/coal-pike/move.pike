@@ -1,5 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
+//Move the current user to a room
 int testcase1(object me,object _Server,object...args)
 {
 	int pass = 0;
@@ -14,35 +15,24 @@ int testcase1(object me,object _Server,object...args)
 	if(obj!=0)obj->delete();
 	return pass;
 }
-/*
-int testcase2(object me,object _Server)
-{
-	int pass = 0;
-	mixed result = catch{me->move(OBJ("nopath"));};
-	write("Moving to a non existential location nopath.: ");
-	if(result !=0)pass=1;
-	if(pass==1)write("passed\n");
-	else write("failed\n");
-	me->move(OBJ("/TestRoom")); 
-	return pass;
-}
-*/
 
+// Generalized test case to move objects to non exestential location
+//Currently test Room and User. 
 int testcase2(object me,object _Server,object...args)
 {
 	int pass = 1;
-	object code = ((program)"move_nonexistential.pike")();
+	object code = ((program)"move_nonexistential.pike")();  //imports the file containing the generalized test case
 	array(function) foo = values(code);
-	_Server->get_factory("Room")->execute((["name":"move2Room"]))->move(OBJ("/TestRoom"));
-	_Server->get_factory("User")->execute((["name":"move2User","pw":"testpass","email":"abc@example.com"]));
+	_Server->get_factory("Room")->execute((["name":"move2Room"]))->move(OBJ("/TestRoom"));  //Test Room to move
+	_Server->get_factory("User")->execute((["name":"move2User","pw":"testpass","email":"abc@example.com"])); //Test User to move
 	_Server->get_module("users")->get_user("move2User")->activate_user();
 	array(object) testObjects = allocate(2);
-	do{
+//	do{
 	testObjects[0]=OBJ("/TestRoom/move2Room");
-	}while(testObjects[0]==0);
-	do{
+//	}while(testObjects[0]==0);
+//	do{
 	testObjects[1]=_Server->get_module("users")->get_user("move2User");
-	}while(testObjects[1]==0);
+//	}while(testObjects[1]==0);
 	int success = 1;
 	for(int i = 0;i<sizeof(testObjects);i++){
 		write("Moving "+testObjects[i]->get_class()+ " to a non existential path: ");
@@ -58,6 +48,7 @@ int testcase2(object me,object _Server,object...args)
 	return pass;
 }
 
+//Moving user into a container
 int testcase3(object me,object _Server,object...args)
 {
 	int pass = 0;
@@ -73,6 +64,7 @@ int testcase3(object me,object _Server,object...args)
 	return pass;	
 }
 
+//Moving a room inside a container
 int testcase4(object me,object _Server,object...args)
 {
 	int pass = 0;

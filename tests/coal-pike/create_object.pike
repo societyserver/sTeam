@@ -1,5 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
+//generalized test case for creating objects
 int testcase(object me,object _Server,string type)
 {
 	int pass = 0;

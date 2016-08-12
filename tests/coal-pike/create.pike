@@ -1,8 +1,9 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
+// Generalized test case to create various types of objects
 int generalCreate(object me,object _Server,object...args)
 {
-	object code = ((program)"create_object.pike")();
+	object code = ((program)"create_object.pike")(); //importing the file containing the generalized case
 	array(function) foo = values(code);
 	int success = 1;
 	array(string) testClass = ({"Container","Document","Room","Exit","User","Group"});
@@ -16,6 +17,7 @@ int generalCreate(object me,object _Server,object...args)
 	return success;
 }
 
+//Creating object of a class that does not exists
 int invalidClass(object me,object _Server,object...args)
 {
 	int pass=0;
@@ -26,6 +28,7 @@ int invalidClass(object me,object _Server,object...args)
 	return pass;
 }
 
+//Creating user
 int createUser(object me,object _Server,object...args)
 {
 	int pass = 0;
