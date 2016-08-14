@@ -3,8 +3,9 @@
 #---------------------------------------------------------------------------
 # General configuration options
 #---------------------------------------------------------------------------
-PROJECT_NAME           = steam
-PROJECT_NUMBER         = 2.9.4
+PROJECT_NAME           = "Societyserver"
+PROJECT_NUMBER         = 3.0.0
+PROJECT_BRIEF          = "sTeam (structuring information in a team) is an open-source environment for the structuring and maintenance of virtual knowledge spaces. It provides a wealth of different mechanisms to support communicative and cooperative learning and work processes."
 OUTPUT_DIRECTORY       = docs
 OUTPUT_LANGUAGE        = English
 EXTRACT_ALL            = YES
