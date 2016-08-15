@@ -33,6 +33,7 @@ class Test{
         conn->login("root","steam",1);
         me->move(OBJ("/home/steam"));
         _Server->get_module("users")->get_user("TestUser")->delete();
+        conn->logout();
 //		write("===============================\n");
 	}
 
@@ -82,8 +83,8 @@ class Test{
 
 
 int main(){
-//	Test move = Test("move",4);
-//	move->run();
+	Test move = Test("move",4);
+	move->run();
 //	Test create = Test("create",3);
 //	create->run();
 //	Test getEnv = Test("getEnv",1);
@@ -92,4 +93,3 @@ int main(){
 	Test perm = Test("userPermission",1);
 	perm->run();
 }
-//test
