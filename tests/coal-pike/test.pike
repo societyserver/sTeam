@@ -30,10 +30,9 @@ class Test{
 
     //Delete the objects created by the test suite and exit
 	void destroy(){
-		me->move(OBJ("/home/steam"));
-		object obj = OBJ("/TestRoom");
-		if(obj!=0)
-		obj->delete();
+        conn->login("root","steam",1);
+        me->move(OBJ("/home/steam"));
+        _Server->get_module("users")->get_user("TestUser")->delete();
 //		write("===============================\n");
 	}
 
@@ -51,9 +50,14 @@ class Test{
 		conn->connect_server(host,port);
 		conn->login("root","steam",1);
 		_Server = conn->SteamObj(0);
-		me = _Server->get_module("users")->lookup("root");
-		_Server->get_factory("Room")->execute((["name":"TestRoom"]))->move(OBJ("/"));
-		me->move(OBJ("/TestRoom"));
+        object x = _Server->get_module("users")->get_user("TestUser");
+        if(x) x->delete();
+        _Server->get_factory("User")->execute((["name":"TestUser","pw":"password"]));
+        _Server->get_module("users")->get_user("TestUser")->activate_user();
+        conn->login("TestUser","password",1);
+		me = _Server->get_module("users")->lookup("TestUser");
+		_Server->get_factory("Room")->execute((["name":"TestRoom"]))->move(OBJ("/home/TestUser"));
+		me->move(OBJ("/home/TestUser"));
 		write("===============================\n");
 	}
 
@@ -78,13 +82,14 @@ class Test{
 
 
 int main(){
-	Test move = Test("move",4);
-	move->run();
-	Test create = Test("create",3);
-	create->run();
-	Test getEnv = Test("getEnv",1);
-	getEnv->run();
+//	Test move = Test("move",4);
+//	move->run();
+//	Test create = Test("create",3);
+//	create->run();
+//	Test getEnv = Test("getEnv",1);
+//	getEnv->run();
 
 	Test perm = Test("userPermission",1);
 	perm->run();
 }
+//test

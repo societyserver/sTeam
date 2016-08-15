@@ -4,10 +4,16 @@
 int test(object me,object _Server,object...args)
 {
 	int pass = 0;
-	_Server->get_factory("User")->execute((["name":"testUser1","pw":"password1"]));
-	_Server->get_factory("User")->execute((["name":"testUser2","pw":"password2"]));
-	object user1 = _Server->get_module("users")->get_user("testUser1");
+    args[0]->login("root","steam",1);
+    object user1 = _Server->get_module("users")->get_user("testUser1");
 	object user2 = _Server->get_module("users")->get_user("testUser2");
+    if(user1)user1->delete();
+    if(user2)user2->delete();
+    _Server->get_factory("User")->execute((["name":"testUser1","pw":"password1"]));
+	_Server->get_factory("User")->execute((["name":"testUser2","pw":"password2"]));
+	user1 = _Server->get_module("users")->get_user("testUser1");
+	user2 = _Server->get_module("users")->get_user("testUser2");
+    
 	user1->activate_user();
 	user2->activate_user();
 	args[0]->login("testUser1","password1",1);
@@ -23,5 +29,6 @@ int test(object me,object _Server,object...args)
 	args[0]->login("root","steam",1);
 	user1->delete();
 	user2->delete();
-	return pass;
+	args[0]->login("TestUser","password",1);
+    return pass;
 }
