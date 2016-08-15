@@ -85,8 +85,8 @@ class Test{
 int main(){
 	Test move = Test("move",4);
 	move->run();
-//	Test create = Test("create",3);
-//	create->run();
+	Test create = Test("create",2);
+	create->run();
 	Test getEnv = Test("getEnv",1);
 	getEnv->run();
 

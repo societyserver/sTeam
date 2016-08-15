@@ -64,7 +64,6 @@ int testcase3(object me,object _Server,object...args)
 	if(result != 0)pass=1;
 	if(pass==1)write("passed\n");
 	else write("failed\n");
-	if(obj!=0)obj->delete();
 	return pass;	
 }
 
@@ -81,9 +80,5 @@ int testcase4(object me,object _Server,object...args)
 	if(result!=0)pass=1;
 	if(pass==1)write("passed\n");
 	else write("failed\n");
-	if(room!=0)
-	room->delete();
-	if(container!=0)
-	container->delete();
 	return pass;
 }

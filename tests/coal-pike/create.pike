@@ -26,7 +26,7 @@ int invalidClass(object me,object _Server,object...args)
 	if(result == 0) pass =1;
 	return pass;
 }
-
+/*
 //Creating user
 int createUser(object me,object _Server,object...args)
 {
@@ -42,4 +42,4 @@ int createUser(object me,object _Server,object...args)
 	else write("failed\n");
 	return pass;
 }
-
+*/
