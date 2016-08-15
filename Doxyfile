@@ -53,17 +53,46 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT	               = server/database._pike \
+INPUT	               = client/client_base._pike \
+			 clinet/Input._pmod \
+			 clinet/Service._pmod \
+			 services/fulltext._pike \
+			 services/graphic._pike \
+			 services/search._pike \
+			 services/smtp._pike \
+			 services/spm._pike \
+			 services/tex._pike \
+			 services/torrent._pike \
+			 spm/client_base._pike \
+			 spm/connection._pike \
+			 spm/test._pike \
+			 server/database._pike \
 	                 server/server._pike \
+			 server/Persistence._pike
+			 server/base/access._pike \
+                         server/base/annotateable._pike \
+                         server/base/client_base._pike \
+                         server/base/content._pike \
+			 server/base/decorateable._pike \
+                         server/base/events._pike \
+                         server/base/member._pike \
+                         server/base/references._pike \
+                         server/base/serialize._pike \
+			 server/base/webservice._pike \
+                         server/base/xml_data._pike \
+                         server/base/xml_parser._pike \
+			 server/classes/Calendar._pike \
                          server/classes/Container._pike \
+			 server/classes/Date._pike \
                          server/classes/DocExtern._pike \
+                         server/classes/DocGaphics._pike \
                          server/classes/DocHTML._pike \
                          server/classes/DocLpc._pike \
-                         server/classes/Date._pike \
-                         server/classes/Calendar._pike \
+                         server/classes/DocMP3._pike \
+                         server/classes/DocText._pike \
+                         server/classes/Document._pike \
                          server/classes/DocXML._pike \
                          server/classes/DocXSL._pike \
-                         server/classes/Document._pike \
                          server/classes/Drawing._pike \
                          server/classes/Exit._pike \
                          server/classes/Group._pike \
@@ -74,17 +103,12 @@ INPUT	               = server/database._pike \
                          server/classes/Script._pike \
                          server/classes/TrashBin._pike \
                          server/classes/User._pike \
-                         server/base/access._pike \
-                         server/base/annotateable._pike \
-                         server/base/client_base._pike \
-                         server/base/content._pike \
-                         server/base/events._pike \
-                         server/base/member._pike \
-                         server/base/references._pike \
-                         server/base/serialize._pike \
-                         server/base/xml_data._pike \
-                         server/base/xml_parser._pike \
-                         server/factories/ContainerFactory._pike \
+                         server/classes/Webservice._pike \
+			 server/dbadaptors/handle._pike \
+			 server/dbadaptors/mysql._pike \
+			 server/dbadaptors/postgres.pike \
+			 server/factories/CalendarFactory._pike \
+			 server/factories/ContainerFactory._pike \
                          server/factories/DocExternFactory._pike \
                          server/factories/DocumentFactory._pike \
                          server/factories/DrawingFactory._pike \
@@ -175,7 +199,25 @@ INPUT	               = server/database._pike \
 			 server/libraries/htmllib._pmod \
 			 server/libraries/Messaging._pmod \
 			 server/libraries/Events._pmod \
-			 server/libraries/Attributes._pmod 
+			 server/libraries/Attributes._pmod \
+			 tools/applauncher._pike \
+			 tools/check_database._pike \
+			 tools/checkout._pike \
+			 tools/checkout_web._pike \
+			 tools/client._pike \
+			 tools/dbContentReader._pike \
+			 tools/edit._pike \
+			 tools/export._pike \
+			 tools/export-to-git._pike \
+			 tools/gtklogin._pike \
+			 tools/import._pike \
+			 tools/import-from-git._pike \
+			 tools/maintenance._pike \
+			 tools/new_database._pike \
+			 tools/steam-shell._pike \
+			 tools/tab_completion.pmod \
+			 tools/upd-source._pike \
+			 tools/VisTeam._pike \
 FILE_PATTERNS          = *._pike *._pmod
 RECURSIVE              = YES
 EXCLUDE                = 
@@ -260,7 +302,7 @@ GENERATE_AUTOGEN_DEF   = NO
 # Configuration options related to the preprocessor   
 #---------------------------------------------------------------------------
 ENABLE_PREPROCESSING   = YES
-MACRO_EXPANSION        = NO
+MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = NO
 SEARCH_INCLUDES        = YES
 INCLUDE_PATH           = 
@@ -305,40 +347,4 @@ DOC_URL                =
 DOC_ABSPATH            = 
 BIN_ABSPATH            = /usr/local/bin/
 EXT_DOC_PATHS          = 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
