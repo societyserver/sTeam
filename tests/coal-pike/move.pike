@@ -24,14 +24,7 @@ int testcase2(object me,object _Server,object...args)
 	object code = ((program)"move_nonexistential.pike")();  //imports the file containing the generalized test case
 	array(function) foo = values(code);
 	_Server->get_factory("Room")->execute((["name":"move2Room"]))->move(OBJ("/home/TestUser/TestRoom"));  //Test Room to move
-    object test = _Server->get_module("users")->get_user("move2User");
-    args[0]->login("root","steam",1);
-    if(test)test->delete();
-    args[0]->login("TestUser","password",1);
-	_Server->get_factory("User")->execute((["name":"move2User","pw":"testpass","email":"abc@example.com"])); //Test User to move
-    args[0]->login("root","steam",1);
-	_Server->get_module("users")->get_user("move2User")->activate_user();
-    args[0]->login("TestUser","password",1);
+    args[1]("move2User","testpass");
 	array(object) testObjects = allocate(2);
 	testObjects[0]=OBJ("/home/TestUser/TestRoom/move2Room");
 	testObjects[1]=_Server->get_module("users")->get_user("move2User");
@@ -45,10 +38,6 @@ int testcase2(object me,object _Server,object...args)
 	}
 	
 	if(success==0)pass=0;
-    args[0]->login("root","steam",1);
-	if(testObjects[1]!=0)
-	testObjects[1]->delete();
-	args[0]->login("TestUser","password",1);
     return pass;
 }
 
