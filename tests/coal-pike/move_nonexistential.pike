@@ -1,5 +1,6 @@
 #define OBJ(o) _Server->get_module("filepath:tree")->path_to_object(o)
 
+// Generalized test case to move an object to a non exestential location
 int testcase(object me,object _Server,object x)
 {
 	int pass = 0;
