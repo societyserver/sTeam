@@ -24,6 +24,7 @@ int invalidClass(object me,object _Server,object...args)
 	write("Creating a class that does not exists\n");
 	mixed result = _Server->get_factory("NoClass");
 	if(result == 0) pass =1;
+
 	return pass;
 }
 /*
@@ -40,6 +41,7 @@ int createUser(object me,object _Server,object...args)
 		_Server->get_module("users")->get_user("testUser1")->delete();
 	}	
 	else write("failed\n");
+
 	return pass;
 }
 */
