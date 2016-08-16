@@ -68,7 +68,7 @@ INPUT	               = client/client_base._pike \
 			 spm/test._pike \
 			 server/database._pike \
 	                 server/server._pike \
-			 server/Persistence._pike
+			 server/Persistence._pike \
 			 server/base/access._pike \
                          server/base/annotateable._pike \
                          server/base/client_base._pike \
