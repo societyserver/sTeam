@@ -30,11 +30,11 @@ class Test{
 	}
 
     //Delete the objects created by the test suite and exit
-	void destroy(){
-        conn->login("root","steam",1);
-        me->move(OBJ("/home/steam"));
-        _Server->get_module("users")->get_user("TestUser")->delete();
+	void clear(){
+        object user = _ServerRoot->get_module("users")->get_user("TestUser");
+        if(user)user->delete();
         conn->logout();
+        connRoot->logout();
 //		write("===============================\n");
 	}
 
@@ -98,11 +98,14 @@ class Test{
 int main(){
 	Test move = Test("move",4);
 	move->run();
+    move->clear();
 	Test create = Test("create",2);
 	create->run();
+    create->clear();
 	Test getEnv = Test("getEnv",1);
 	getEnv->run();
-
+    getEnv->clear();
 	Test perm = Test("userPermission",1);
 	perm->run();
+    perm->clear();
 }
