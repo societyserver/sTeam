@@ -463,6 +463,7 @@ mapping assign(object conn, object _Server, object users) {
     ]);
 }
 
+//Command to leave an object. Currently implemented for groups can be extended to rooms
 void leave(string what,void|string name)
 {
   if(what=="group")
@@ -487,6 +488,8 @@ void leave(string what,void|string name)
   }
 }
 
+
+//command to join an object. currently implemented for groups.
 void join(string what,void|string name)
 {
   if(what=="group")
