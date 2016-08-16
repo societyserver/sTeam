@@ -15,7 +15,8 @@ class Test{
 	object _Server;
 	object me;
 	object conn;
-
+    object _ServerRoot;
+    object connRoot;
     
 	//array(Testcase) cases;
 	int cases;
@@ -49,12 +50,12 @@ class Test{
 		master()->add_program_path(server_path+"/server/net/coal/");
 		conn = ((program)"../spm/client_base.pike")();
 		conn->connect_server(host,port);
-		conn->login("root","steam",1);
+		connRoot = ((program)"../spm/client_base.pike")();
+        connRoot->connect_server(host,port);
+        connRoot->login("root","steam",1);
+        _ServerRoot = connRoot->SteamObj(0);
 		_Server = conn->SteamObj(0);
-        object x = _Server->get_module("users")->get_user("TestUser");
-        if(x) x->delete();
-        _Server->get_factory("User")->execute((["name":"TestUser","pw":"password"]));
-        _Server->get_module("users")->get_user("TestUser")->activate_user();
+        createUser("TestUser","password");
         conn->login("TestUser","password",1);
 		me = _Server->get_module("users")->lookup("TestUser");
 		_Server->get_factory("Room")->execute((["name":"TestRoom"]))->move(OBJ("/home/TestUser"));
@@ -71,13 +72,25 @@ class Test{
 		array(function) foo = values(code);
 		int success = 0;
 		for(int i=0;i< cases;i++){  //loop through the cases and execute them one by one
-			if(foo[i](me,_Server,conn)==1){
+			if(foo[i](me,_Server,conn,createUser)==1){
 				success+=1;
 			}
 			
 		}
 		write("success: "+success+"\nfails: "+(cases-success)+"\n");
 	}
+
+    int createUser(string name,string password){
+        int result = 0;
+        object user = _ServerRoot->get_module("users")->get_user(name);
+        if(user)user->delete();
+        mixed res = catch{
+            _ServerRoot->get_factory("User")->execute((["name":name,"pw":password]));
+            _ServerRoot->get_module("users")->get_user(name)->activate_user();
+        };
+        if (res=0){write("Error creating user");return 0;}
+        else return 1;
+    }
 }
 
 
